@@ -55,7 +55,7 @@ const timeFacts: FactSchema[] = [
 ]
 
 describe('edict', () => {
-  it('Match correctly transforms "what" block', () => {
+  it('happy path is happy', () => {
     const e = edict(ruleSet, allFacts)
     const results = e.fire()
     const expectedResults = [

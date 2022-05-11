@@ -1,9 +1,10 @@
-import {FACT_SCHEMA, Rules} from "./types";
+import {FACT_SCHEMA, Rules, WHAT_SCHEMA} from "./types";
 
 export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]) => {
 
   const facts: T[] = initialFacts ?? []
   const findFact = ([id,attr]: [T[0], T[1]]) => facts.findIndex(f =>f[0] == id && f[1] == attr )
+
 
   const insert = (fact: T) => {
     // be dumb about this
@@ -48,20 +49,27 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]
 
   const match = (facts: T[]) => {
     const ruleNames = Object.keys(rules)
-    ruleNames.map(name => {
+    const matches = ruleNames.map(name => {
       const {what} = rules[name]
-      what.map(w => {
+      const byId = _.groupBy(what, (w: WHAT_SCHEMA<T>) => w[0])
+      Object.keys(byId).map(id => {
+        const obj = byId[id]
         const [id, attr] = w
         const matches = (id.startsWith("$")) ? matchAttr(attr, facts) : matchIdAttr(id, attr, facts)
+        const hasMiss = matches.reduce((acc, c) => c[2] !== undefined && acc, true)
+        if(hasMiss) return undefined
+
       })
     })
-    console.log(facts)
     return false
   }
 
-
   const fire = (): any => {
-    return match(facts)
+    match(facts)
+  }
+
+  const query = (ruleName: string): any => {
+
   }
 
   return {
