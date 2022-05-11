@@ -4,14 +4,29 @@
   "license": "MIT",
   "scripts": {},
   "private": true,
-  "dependencies": {},
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "tslib": "^2.3.0"
+  },
   "devDependencies": {
     "@nrwl/cli": "13.10.4",
+    "@nrwl/eslint-plugin-nx": "14.1.4",
+    "@nrwl/jest": "14.1.4",
+    "@nrwl/js": "latest",
+    "@nrwl/linter": "14.1.4",
     "@nrwl/nx-cloud": "latest",
     "@nrwl/workspace": "13.10.4",
+    "@types/jest": "27.4.1",
     "@types/node": "16.11.7",
+    "@typescript-eslint/eslint-plugin": "~5.18.0",
+    "@typescript-eslint/parser": "~5.18.0",
+    "eslint": "~8.12.0",
+    "eslint-config-prettier": "8.1.0",
+    "jest": "27.5.1",
     "nx": "13.10.4",
     "prettier": "^2.5.1",
+    "ts-jest": "27.1.4",
+    "ts-node": "9.1.1",
     "typescript": "~4.6.2"
   },
   "workspaces": [
