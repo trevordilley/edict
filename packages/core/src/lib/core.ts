@@ -1,8 +1,8 @@
 import {FACT_SCHEMA, Rules} from "./types";
 
-export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>) => {
+export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]) => {
 
-  const facts: T[] = []
+  const facts: T[] = initialFacts ?? []
   const findFact = ([id,attr]: [T[0], T[1]]) => facts.findIndex(f =>f[0] == id && f[1] == attr )
 
   const insert = (fact: T) => {
@@ -41,6 +41,9 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>) => {
   //   }
   // }
 
+  const matchAttr = (attr: string, facts: T[]) => facts.filter(f => f[1] === attr)
+  const matchIdAttr = (id: string, attr: string, facts: T[]) => facts.filter(f => f[0] === id && f[1] === attr)
+
 
 
   const match = (facts: T[]) => {
@@ -49,33 +52,22 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>) => {
       const {what} = rules[name]
       what.map(w => {
         const [id, attr] = w
-        if (id.startsWith("$")) {
-          // Grab any facts with the attr and bind them to the id
-        } else {
-          // Grab facts that match the full path
-
-        }
+        const matches = (id.startsWith("$")) ? matchAttr(attr, facts) : matchIdAttr(id, attr, facts)
       })
     })
     console.log(facts)
     return false
   }
 
-  const fire = () => {
-    // This is where all the tranformations happen
+
+  const fire = (): any => {
+    return match(facts)
   }
 
-  const query = (path: [T[0], T[1]] ) => {
-    const idx = findFact(path)
-    if(idx < 0) return undefined
-    else return facts[idx]
-  }
   return {
     insert,
     retract,
     fire,
-    query,
-    match
   }
 }
 
