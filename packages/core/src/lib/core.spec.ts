@@ -1,11 +1,14 @@
 import {edict, Rules} from "@edict/core";
 
 export type NpcId = string
-export type NpcFactSchema =  [NpcId, "x" | "y" | "health" ,number] | [NpcId, "value", number] | [NpcId, "isDying" | "isEvil", boolean]
-export type TimeFactSchema = ["time","dt" | "elapsed", number]
+export type NpcFactSchema =
+  [NpcId, "x" | "y" | "health", number]
+  | [NpcId, "value", number]
+  | [NpcId, "isDying" | "isEvil", boolean]
+export type TimeFactSchema = ["time", "dt" | "elapsed", number]
 export type  FactSchema = NpcFactSchema | TimeFactSchema
 
-const ruleSet:Rules<FactSchema> = {
+const ruleSet: Rules<FactSchema> = {
   "no_health_is_dying": {
     what: [
       ["$npc", "health"],
@@ -16,73 +19,75 @@ const ruleSet:Rules<FactSchema> = {
       ["$treasure", "y"],
       ["time", "dt"],
     ],
-    when: ({$npc}: any) => $npc.health <= 0,
-    then: ({$npc }: any, {insert, retract} ) => {
-      retract([$npc.id, "health"])
-      insert([$npc.id, "isDying", true])
+    when: (obj: any) => obj.$npc.health <= 0,
+    then: (obj: any, {insert, retract}) => {
+      retract([obj.$npc.id, "health"])
+      insert([obj.$npc.id, "isDying", true])
     }
   },
 }
 
-const playerFacts:FactSchema[] =[
-    [ "player", "x",  10],
-  [ "player", "y", 10],
-  [ "player", "health", 100]
+
+const playerFacts: FactSchema[] = [
+  ["player", "x", 10],
+  ["player", "y", 10],
+  ["player", "health", 100]
 ]
 
 const treasureFacts: FactSchema[] = [
   ["treasure1", "x", 12],
-    ["treasure1", "y", -1],
+  ["treasure1", "y", -1],
   ["treasure1", "value", 100],
   ["treasure2", "x", 2],
   ["treasure2", "y", 21],
   ["treasure2", "value", 3230],
 ]
 
-const enemyFacts: FactSchema[] =[
-    [ "enemy1", "x",  0],
-  [ "enemy1", "y", 120],
-  [ "enemy1", "health", 5],
-  [ "enemy1", "isEvil", true],
-  [ "enemy2", "x",  -10],
-  [ "enemy2", "y", 12],
-  [ "enemy2", "health", 10],
-  [ "enemy2", "isEvil", true],
+const enemyFacts: FactSchema[] = [
+  ["enemy1", "x", 0],
+  ["enemy1", "y", 120],
+  ["enemy1", "health", 5],
+  ["enemy1", "isEvil", true],
+  ["enemy2", "x", -10],
+  ["enemy2", "y", 12],
+  ["enemy2", "health", 0],
+  ["enemy2", "isEvil", true],
 ]
 
 const villagerFacts: FactSchema[] = [
-  [ "villager", "x",  30],
-  [ "villager", "y", 120],
-  [ "villager", "health", 30],
+  ["villager", "x", 30],
+  ["villager", "y", 120],
+  ["villager", "health", 30],
 ]
 
 const treeFacts: FactSchema[] = [
-  [ "tree", "x",  0],
-  [ "tree", "y", 120],
+  ["tree", "x", 0],
+  ["tree", "y", 120],
 ]
 
 const timeFacts: FactSchema[] = [
-  [ "time", "dt", 15]
+  ["time", "dt", 15]
 ]
-  const allFacts: FactSchema[] = [
-      ...playerFacts,
-      ...enemyFacts,
-      ...villagerFacts,
-    ...treasureFacts,
-    ...treeFacts,
-    ...timeFacts
+const allFacts: FactSchema[] = [
+  ...playerFacts,
+  ...enemyFacts,
+  ...villagerFacts,
+  ...treasureFacts,
+  ...treeFacts,
+  ...timeFacts
 ]
 
 
 describe('edict', () => {
   it('complicated happy path is happy', () => {
     const e = edict(ruleSet, allFacts)
-    const results:any = e.fire()
+    e.fire()
+    const results:any = e.facts()
     console.log("results", results)
     const expectedResults = [
       // We should return both the player and enemy records
-      {$npc: {id: "enemy",health: 100,  x: 10, y: 10}, time: {id: "time", dt: 15}},
-      {$npc: {id: "villager",health: 30,  x: 30, y: 120}, time: {id: "time", dt: 15}}
+      {$npc: {id: "enemy", health: 100, x: 10, y: 10}, time: {id: "time", dt: 15}},
+      {$npc: {id: "villager", health: 30, x: 30, y: 120}, time: {id: "time", dt: 15}}
       // But not the "tree" record because it does not have a "health" fact
       // And not the "player" record because it's health is 0
     ]

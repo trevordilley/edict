@@ -9,12 +9,13 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]
 
 
   const insert = (fact: T) => {
-    // be dumb about this
+    // be dumb about thiis
     const idx = findFact([fact[0], fact[1]])
+    console.log("inserting", idx, fact)
     if(idx != -1) {
       facts[idx] = fact
     } else {
-      facts.concat(fact)
+      facts.push(fact)
     }
   }
   const retract = (path: [T[0], T[1]]) => {
@@ -50,18 +51,14 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]
     return Object.values(grouped).flat()
   }
 
-  const mergeResults = (...results: any[]) => {
-
-  }
 
   const matchIdAttr = (id: string, attr: string, facts: T[]) => facts.filter(f => f[0] === id && f[1] === attr)
 
-
   // Needs to return a map from rule-name to results
-  const match = (facts: T[]) => {
+  const fire = () => {
     const ruleNames = Object.keys(rules)
      return ruleNames.map(name => {
-      const {what} = rules[name]
+      const {what, when, then, thenFinally} = rules[name]
       const byId = groupRuleById(what)
       const definedFacts = Object.keys(byId).map(id => {
         const attrs = byId[id]
@@ -97,19 +94,27 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]
          })
          mergedResults.push(o)
        }
+       const filtered = when ? mergedResults.filter(when) : mergedResults
 
-       return mergedResults
+       // This needs to be recursive and stuff, but for now let's just keep it simple
+       // (I think derived facts will require recursive stuff)
+       const operations = {insert, retract}
+       if(then) {
+         filtered.map(f => then(f, operations))
+       }
+       if(thenFinally) {
+         filtered.map(f => thenFinally(f, operations))
+       }
     })
   }
 
-  const fire = () =>
-    match(facts)
 
 
   return {
     insert,
     retract,
     fire,
+    facts: () => facts
   }
 }
 

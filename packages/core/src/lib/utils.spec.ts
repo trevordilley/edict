@@ -1,4 +1,4 @@
-import {edict, mergeFactResults, Rules, WHAT_SCHEMA} from "@edict/core";
+import {edict, Rules, WHAT_SCHEMA} from "@edict/core";
 import {groupRuleById} from "./utils";
 
 export type NpcId = string
