@@ -7,9 +7,8 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]
   const facts: T[] = initialFacts ?? []
   const findFact = ([id,attr]: [T[0], T[1]]) => facts.findIndex(f =>f[0] == id && f[1] == attr )
 
-
   const insert = (fact: T) => {
-    // be dumb about thiis
+    // be dumb about this
     const idx = findFact([fact[0], fact[1]])
     console.log("inserting", idx, fact)
     if(idx != -1) {
@@ -55,6 +54,8 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]
   const matchIdAttr = (id: string, attr: string, facts: T[]) => facts.filter(f => f[0] === id && f[1] === attr)
 
   // Needs to return a map from rule-name to results
+  // TODO: extract the query() part of this out so folks can
+  // enjoy nice data structures
   const fire = () => {
     const ruleNames = Object.keys(rules)
      return ruleNames.map(name => {
