@@ -1,4 +1,4 @@
-import {edict, Rules, WHAT_SCHEMA} from "@edict/core";
+import {edict, mergeFactResults, Rules, WHAT_SCHEMA} from "@edict/core";
 import {groupRuleById} from "./utils";
 
 export type NpcId = string
@@ -23,6 +23,8 @@ const ruleSet:Rules<FactSchema> = {
 }
 
 describe('utils', () => {
+
+
   it('can group what by id', () => {
     const e = groupRuleById(ruleSet["no_health_is_dying"].what)
 
@@ -33,4 +35,7 @@ describe('utils', () => {
     }
     expect(e).toStrictEqual(expected)
   });
+
+
+
 });

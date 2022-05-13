@@ -1,4 +1,6 @@
 import {FACT_SCHEMA, Rules, WHAT_SCHEMA} from "./types";
+import {groupFactById, groupRuleById} from "./utils";
+import * as _ from "lodash";
 
 export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]) => {
 
@@ -42,35 +44,67 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]
   //   }
   // }
 
-  const matchAttr = (attr: string, facts: T[]) => facts.filter(f => f[1] === attr)
+  const matchAttr = (attr: string, facts: T[]) => {
+    const filtered = facts.filter(f => f[1] === attr)
+    const grouped = _.groupBy(filtered, (f: T) => f[0])
+    return Object.values(grouped).flat()
+  }
+
+  const mergeResults = (...results: any[]) => {
+
+  }
+
   const matchIdAttr = (id: string, attr: string, facts: T[]) => facts.filter(f => f[0] === id && f[1] === attr)
 
 
-
+  // Needs to return a map from rule-name to results
   const match = (facts: T[]) => {
     const ruleNames = Object.keys(rules)
-    const matches = ruleNames.map(name => {
+     return ruleNames.map(name => {
       const {what} = rules[name]
-      const byId = _.groupBy(what, (w: WHAT_SCHEMA<T>) => w[0])
-      Object.keys(byId).map(id => {
-        const obj = byId[id]
-        const [id, attr] = w
-        const matches = (id.startsWith("$")) ? matchAttr(attr, facts) : matchIdAttr(id, attr, facts)
-        const hasMiss = matches.reduce((acc, c) => c[2] !== undefined && acc, true)
-        if(hasMiss) return undefined
+      const byId = groupRuleById(what)
+      const definedFacts = Object.keys(byId).map(id => {
+        const attrs = byId[id]
+        const matchedFacts = attrs.map((a:string) => {
+          return (id.startsWith("$")) ? matchAttr(a, facts) : matchIdAttr(id, a, facts)
+        }).flat()
 
+        const groupedFacts = groupFactById(matchedFacts)
+        const correctFacts = Object.keys(groupedFacts).map((key) => {
+            const factAttrs = groupedFacts[key].map((f:string) => f[0])
+            const hasEverything = _.isEqual(factAttrs, attrs)
+            if(hasEverything) {
+               return  {[id]:  Object.fromEntries([
+                ["id", key],...groupedFacts[key]
+              ])}
+            } else {
+
+              return undefined
+            }
+        }).filter((f: any) => f !== undefined )
+
+        return  correctFacts
       })
+       const length = definedFacts.reduce((acc, c) => acc * c.length, 1)
+       const mergedResults = []
+       for(let i = 0; i < length; i++) {
+         const f = definedFacts.map(d => d[i % d.length])
+         // TODO: GAH kid's movie is almost over just hack it in!
+         const o: any = {}
+         f.forEach((l: any) => {
+           const k = Object.keys(l)[0]
+           o[k] = l[k]
+         })
+         mergedResults.push(o)
+       }
+
+       return mergedResults
     })
-    return false
   }
 
-  const fire = (): any => {
+  const fire = () =>
     match(facts)
-  }
 
-  const query = (ruleName: string): any => {
-
-  }
 
   return {
     insert,

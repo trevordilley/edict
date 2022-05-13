@@ -2,23 +2,23 @@
   "name": "edict",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
-  "private": true,
   "scripts": {
-    "core:test:watch": "nx test core --watch"
+    "core:test:watch": "nx test core --watch",
+    "nx": "nx"
   },
+  "private": true,
   "dependencies": {
     "lodash": "^4.17.21",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@nrwl/cli": "13.10.4",
-    "@nrwl/eslint-plugin-nx": "14.1.4",
-    "@nrwl/jest": "14.1.4",
-    "@nrwl/js": "latest",
-    "@nrwl/linter": "14.1.4",
-    "@nrwl/nx-cloud": "latest",
-    "@nrwl/workspace": "13.10.4",
+    "@nrwl/cli": "14.0.0",
+    "@nrwl/eslint-plugin-nx": "14.0.0",
+    "@nrwl/jest": "14.0.0",
+    "@nrwl/js": "14.0.0",
+    "@nrwl/linter": "14.0.0",
+    "@nrwl/nx-cloud": "14.0.3",
+    "@nrwl/workspace": "14.0.0",
     "@types/jest": "27.4.1",
     "@types/node": "16.11.7",
     "@types/lodash": "4.14.182",
@@ -27,7 +27,7 @@
     "eslint": "~8.12.0",
     "eslint-config-prettier": "8.1.0",
     "jest": "^27.5.1",
-    "nx": "13.10.4",
+    "nx": "14.0.0",
     "prettier": "^2.5.1",
     "ts-jest": "27.1.4",
     "ts-node": "9.1.1",
@@ -37,3 +37,4 @@
     "packages/**"
   ]
 }
+

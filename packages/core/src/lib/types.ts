@@ -31,7 +31,8 @@
 
 
 export type FACT_SCHEMA = [string, string, any]
-export type WHAT_SCHEMA<T extends FACT_SCHEMA> = [T[0], T[1]] | [T[0], T[1], {then: boolean}]
+export type FACT_ID<T extends FACT_SCHEMA> = [T[0], T[1]]
+export type WHAT_SCHEMA<T extends FACT_SCHEMA> = FACT_ID<T> | [...FACT_ID<T>, {then: boolean}]
 export interface Operations<T extends FACT_SCHEMA> {
   insert: (rule: T) => void
   retract: (rule: [T[0], T[1]]) => void
