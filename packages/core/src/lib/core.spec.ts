@@ -9,7 +9,37 @@ export type TimeFactSchema = ["time", "dt" | "elapsed", number]
 export type  FactSchema = NpcFactSchema | TimeFactSchema
 
 const ruleSet: Rules<FactSchema> = {
+  "all_treasure": {
+    what: [
+      ["$treasure", "value"],
+      ["$treasure", "x"],
+      ["$treasure", "y"],
+    ],
+  },
+  "all_npcs": {
+    what: [
+      ["$npc", "health"],
+      ["$npc", "x"],
+      ["$npc", "y"],
+    ],
+  },
   "no_health_is_dying": {
+    what: [
+      ["$npc", "health"],
+    ],
+    when: (obj: any) => obj.$npc.health <= 0,
+    then: (obj: any, {insert, retract}) => {
+      retract([obj.$npc.id, "health"])
+      insert([obj.$npc.id, "isDying", true])
+    }
+  },
+  "is_dying": {
+    what: [
+      ["$npc", "isDying"],
+    ],
+    when: (obj: any) => obj.$npc.isDying,
+  },
+  "complicated_nonsense": {
     what: [
       ["$npc", "health"],
       ["$npc", "x"],
@@ -19,11 +49,6 @@ const ruleSet: Rules<FactSchema> = {
       ["$treasure", "y"],
       ["time", "dt"],
     ],
-    when: (obj: any) => obj.$npc.health <= 0,
-    then: (obj: any, {insert, retract}) => {
-      retract([obj.$npc.id, "health"])
-      insert([obj.$npc.id, "isDying", true])
-    }
   },
 }
 
@@ -82,16 +107,14 @@ describe('edict', () => {
   it('complicated happy path is happy', () => {
     const e = edict(ruleSet, allFacts)
     e.fire()
-    const results:any = e.facts()
+
+
+    const results:any = e.query("is_dying")
     console.log("results", results)
     const expectedResults = [
-      // We should return both the player and enemy records
-      {$npc: {id: "enemy", health: 100, x: 10, y: 10}, time: {id: "time", dt: 15}},
-      {$npc: {id: "villager", health: 30, x: 30, y: 120}, time: {id: "time", dt: 15}}
-      // But not the "tree" record because it does not have a "health" fact
-      // And not the "player" record because it's health is 0
+      {$npc: {id: "enemy2", "isDying": true}},
     ]
-    expect(results["no_health_is_dying"]).toBe(expectedResults);
+    expect(results).toStrictEqual(expectedResults);
   });
 
 
