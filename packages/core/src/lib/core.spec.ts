@@ -21,6 +21,7 @@ const ruleSet: Rules<FactSchema> = {
       ["$npc", "health"],
       ["$npc", "x"],
       ["$npc", "y"],
+      ["time", "dt"]
     ],
   },
   "no_health_is_dying": {
@@ -118,43 +119,51 @@ describe('edict', () => {
   });
 
 
-  // it('Missing fact will result in empty array', () => {
-  //   const e = edict(ruleSet, playerFacts)
-  //   const results:any = e.fire()
-  //   const expectedResults: any = [
-  //     // There should be no results because we do not have a ["time", "dt"] fact
-  //   ]
-  //   expect(results["no_health_is_dying"]).toBe(expectedResults);
-  // });
-  //
-  // it('Inserting facts imperatively works', () => {
-  //   const e = edict(ruleSet,)
-  //   const facts: FactSchema[] =[
-  //     ...playerFacts,
-  //     ...timeFacts
-  //   ]
-  //   facts.forEach(f => e.insert(f))
-  //   const results:any = e.fire()
-  //   const expectedResults = [
-  //     {$npc: {id: "player",health: 100,  x: 10, y: 10}, time: {dt: 16}},
-  //   ]
-  //   expect(results["no_health_is_dying"]).toBe(expectedResults);
-  // });
-  //
-  // it('Retracting facts works', () => {
-  //   const e = edict(ruleSet,)
-  //   const facts: FactSchema[] =[
-  //     ...playerFacts,
-  //     ...enemyFacts,
-  //     ...timeFacts
-  //   ]
-  //   facts.forEach(f => e.insert(f))
-  //   enemyFacts.forEach(([id, attr]) => e.retract([id, attr]))
-  //   const results:any = e.fire()
-  //   const expectedResults = [
-  //     {$npc: {id: "player",health: 100,  x: 10, y: 10}, time: {dt: 16}},
-  //     // No enemy facts
-  //   ]
-  //   expect(results["no_health_is_dying"]).toBe(expectedResults);
-  // });
+  it('Missing fact will result in empty array', () => {
+    // None of the players are dying, so if those are the only facts the
+    // the is_dying rule should be empty
+    const e = edict(ruleSet, playerFacts)
+    e.fire()
+
+    const results = e.query("is_dying")
+    expect(results).toStrictEqual([]);
+  });
+
+  it('Inserting facts imperatively works', () => {
+    const e = edict(ruleSet,)
+    const facts: FactSchema[] =[
+      ...playerFacts,
+      ...timeFacts
+    ]
+    facts.forEach(f => e.insert(f))
+    e.fire()
+    const results = e.query("all_npcs")
+    const expectedResults = [
+      {$npc: {id: "player",health: 100,  x: 10, y: 10}, time: {id: "time", dt:15}},
+    ]
+    expect(results).toStrictEqual(expectedResults);
+  });
+
+  it('Retracting facts works', () => {
+    const e = edict(ruleSet,)
+    const facts: FactSchema[] =[
+      ...playerFacts,
+      ...villagerFacts,
+      ...timeFacts
+    ]
+    facts.forEach(f => e.insert(f))
+    const beforeRetract = e.query("all_npcs")
+    const expectedBeforeRetract = [
+      {$npc: {id: "player",health: 100,  x: 10, y: 10}, time: {id: "time", dt: 15}},
+      {$npc: {id: "villager",health: 30,  x: 30, y: 120}, time: {id: "time", dt: 15}},
+    ]
+    expect(beforeRetract).toStrictEqual(expectedBeforeRetract);
+    villagerFacts.forEach(([id, attr]) => e.retract([id, attr]))
+    const results = e.query("all_npcs")
+    const expectedResults = [
+      {$npc: {id: "player",health: 100,  x: 10, y: 10}, time: {id: "time", dt: 15}},
+      // No villager facts
+    ]
+    expect(results).toStrictEqual(expectedResults);
+  });
 });
