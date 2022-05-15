@@ -9,8 +9,8 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]
 
   const insert = (fact: T) => {
     // be dumb about this
+
     const idx = findFact([fact[0], fact[1]])
-    console.log("inserting", idx, fact)
     if(idx != -1) {
       facts[idx] = fact
     } else {

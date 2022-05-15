@@ -1,0 +1,4 @@
+{
+  "babelrcRoots": ["*"],
+  "presets": ["@babel/preset-react"]
+}
