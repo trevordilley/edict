@@ -21,6 +21,7 @@ export function App() {
         then: (obj: any, {insert}) => {
           const invert = !obj.button.on
           insert(["button", "on", invert])
+          insert(["button", "clicked", false])
         }
       },
 
