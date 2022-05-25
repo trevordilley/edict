@@ -40,7 +40,7 @@ export type EdictArgs<SCHEMA> =
 
     rules: (operations: {
       insert: (fact: InsertEdictFact<SCHEMA>) => void
-      retract: (id: string, attr: keyof ATTR<SCHEMA>) => void
+      retract: (id: string, ...attr: (keyof ATTR<SCHEMA>)[]) => void
     }) => RuleSet,
     initialFacts?: InsertEdictFact<SCHEMA>
   }

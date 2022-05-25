@@ -1,8 +1,8 @@
-import {edict, FACT_SCHEMA, Rules} from "@edict/core";
+import {edict, EdictArgs,  InsertEdictFact} from "@edict/core";
 import {useEffect, useRef, useState} from "react";
 
-export const useEdict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]) => {
-  const e = useRef(edict(rules, initialFacts))
+export const useEdict = <SCHEMA,>(args: EdictArgs<SCHEMA>) => {
+  const e = useRef(edict(args))
 
   const {query, retract: coreRetract, insert: coreInsert, fire: coreFire, facts} = e.current
   const [dirty, setDirty] = useState(false)
@@ -17,13 +17,13 @@ export const useEdict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: 
     }
   }, [dirty])
 
-  const insert = (fact: T) => {
+  const insert = (fact: InsertEdictFact<SCHEMA>) => {
     setDirty(true)
     return coreInsert(fact)
   }
-  const retract = (path: [T[0], T[1]]) => {
+  const retract = (id: string, ...attrs: (keyof SCHEMA)[]) => {
     setDirty(true)
-    return coreRetract(path)
+    return coreRetract(id, ...attrs)
   }
 
 

@@ -1,7 +1,8 @@
 import styled from 'styled-components';
 
-import { Route, Routes, Link } from 'react-router-dom';
+import {Route, Routes, Link} from 'react-router-dom';
 import {useEdict} from "@edict/react";
+import {AttrTypes, rule} from "@edict/core";
 
 export type FactSchema =
   ["button", "on" | "clicked", boolean]
@@ -10,31 +11,49 @@ const StyledApp = styled.div`
 `;
 
 export function App() {
-  const { query, insert, facts } = useEdict<FactSchema>(
+  const {query, insert, facts} = useEdict(
     {
-      "click_button_inverts": {
-        what: [
-          ["button", "on"],
-          ["button", "clicked"],
-        ],
-        when: (obj: any) => obj.button.clicked,
-        then: (obj: any, {insert}) => {
-          const invert = !obj.button.on
-          insert(["button", "on", invert])
-          insert(["button", "clicked", false])
-        }
+      factSchema: {
+        on: AttrTypes.bool(),
+        clicked: AttrTypes.bool()
       },
+      rules: ({insert}) => ({
+        "click_button_inverts": rule({
+          what: {
+            button: {
+              on: AttrTypes.bool(),
+              clicked: AttrTypes.bool()
+            }
+          },
+          when: ({button}) => button.clicked,
+          then: ({button}) => {
+            const invert = !button.on
+            insert({button: {on: invert, clicked: false}})
+          }
+        })
+        ,
 
-      "button_state": {
-        what: [
-          ["button", "on"],
-        ],
+        "button_state": rule({
+          what: {
+            button: {
+              on: AttrTypes.bool()
+            }
+          }
+        })
+
+      })
+      ,
+      initialFacts: {
+        button: {
+          on: true,
+          clicked: false
+        }
       }
-    }, [["button", "on", true], ["button", "clicked", false]]
+    }
   )
 
   const results = query("button_state")
-  const  isOn = results[0].button.on  ? "On" : "Off"
+  const isOn = results[0].button.on ? "On" : "Off"
   return (
     <StyledApp>
 
@@ -53,7 +72,7 @@ export function App() {
           path="/"
           element={
             <div>
-              <div onClick={() => insert(["button", "clicked", true])}>
+              <div onClick={() => insert({button: {clicked: true}})}>
                 On?: {isOn}
               </div>
               This is the generated root route.{' '}
