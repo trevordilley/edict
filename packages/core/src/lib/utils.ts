@@ -1,20 +1,32 @@
-import {FACT_ID, FACT_SCHEMA, WHAT_SCHEMA} from "@edict/core";
+import { InsertEdictFact, InternalFactRepresentation} from "@edict/core";
 import * as _ from "lodash"
 
-export const groupRuleById = <T extends FACT_SCHEMA>(rules: WHAT_SCHEMA<T>[]) => {
-  const grouped = _.groupBy(rules, (r: WHAT_SCHEMA<T>) => r[0])
-  return Object.keys(grouped).reduce((acc: any, g) => {
-    acc[g] = grouped[g].map(x => x[1])
-    return acc
-  },{})
-}
+// export const groupRuleById = <S>(rules ) => {
+//   const grouped = _.groupBy(rules, (r: WHAT_SCHEMA<T>) => r[0])
+//   return Object.keys(grouped).reduce((acc: any, g) => {
+//     acc[g] = grouped[g].map(x => x[1])
+//     return acc
+//   },{})
+// }
 
-export const groupFactById = <T extends FACT_SCHEMA>(rules: FACT_ID<T>[]) => {
-  const grouped = _.groupBy(rules, (r: FACT_ID<T> ) => r[0])
+export const groupFactById = (facts: InternalFactRepresentation[]) => {
+  const grouped = _.groupBy(facts, (r  ) => r[0])
   return Object.keys(grouped).reduce((acc: any, g) => {
     acc[g] = grouped[g].map(x => x.slice(1))
     return acc
   },{})
 }
 
-
+export const insertFactToFact = <S>(insertion: InsertEdictFact<S>): InternalFactRepresentation => {
+  // TODO: This is just weird, it doesn't like the type and I don't get why. I'm sure I'll find out when I really
+  // don't want to find out!
+  // @ts-ignore
+  return Object.keys(insertion).map((id:string) =>
+    Object.keys(insertion[id]).map((attr: string) => {
+        // @ts-ignore
+      // Just doesn't like indexing with strings. I know it's an any
+      const val: any = insertion[id][attr]
+       return [id, attr, val] as [string, string, any]
+      }
+    )).flat()
+}

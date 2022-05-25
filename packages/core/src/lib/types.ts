@@ -1,47 +1,48 @@
+import {edict} from "./core";
 
-// const ruleSet = {
-//   what: {
-//     npc: ["x", "y", "speed", "name"],
-//     time: [{dt: {then: false}}]
-//   },
-//   then: ({npc, time}: any) => {
-//     npc.x = (npc.x * npc.speed) + time.dt
-//     npc.y = (npc.x * npc.speed) + time.dt
-//   },
-//   when: ({npc}: any) => npc.health > 0,
-//   thenFinally: ({npc}: any) => console.log(`Processed ${npc.name}`)
-// }
-
-// Do advanced what's later
-// export type AdvancedWhatTerm<SCHEMA> = Record<keyof, {then: boolean}>
-// export type What<SCHEMA> = Record<keyof SCHEMA, (string | AdvancedWhatTerm)[]>
-
-
-// export type RecursiveKeyOf<TObj extends object> = {
-//   [TKey in keyof TObj & (string | number)]:
-//   TObj[TKey] extends any[] ? `${TKey}` :
-//     TObj[TKey] extends object
-//       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-//       // @ts-ignore
-//       ? `${TKey}` | `${TKey}.${RecursiveKeyOf<TObj[TKey]>}`
-//       : `${TKey}`;
-// }[keyof TObj & (string | number)];
-
-
-
-
-export type FACT_SCHEMA = [string, string, any]
-export type FACT_ID<T extends FACT_SCHEMA> = [T[0], T[1]]
-export type WHAT_SCHEMA<T extends FACT_SCHEMA> = FACT_ID<T> | [...FACT_ID<T>, {then: boolean}]
-export interface Operations<T extends FACT_SCHEMA> {
-  insert: (rule: T) => void
-  retract: (rule: [T[0], T[1]]) => void
+export interface TypeOptions {
+  then?: boolean
 }
-export interface Rules<FACT extends FACT_SCHEMA> {
-  [key: string]: {
-    what: WHAT_SCHEMA<FACT>[],
-    when?: (bindings: any) => void
-    then?: (bindings: any, operations: Operations<FACT>) => void
-    thenFinally?: (bindings: any, operations: Operations<FACT>) => void
+// use trickery and mischief to force the return type to a primitive for type
+// inference. In the guts of the logic we'll actually pull the options out of the
+// return to inspect them, but the compiler doesn't need to know that!
+export const AttrTypes = {
+  bool : (options?: TypeOptions):boolean => options as unknown as boolean,
+  num : (options?: TypeOptions):number => options as unknown as number,
+  str : (options?: TypeOptions): string => options as unknown as string,
+  object : (options?: TypeOptions): object => options as unknown as object,
+  date : (options?: TypeOptions) => options as unknown as Date,
+}
+
+export interface RuleSet {
+  [key: string]: Rule<any>
+}
+
+type Binding<T> = {[Key in keyof T]:
+  Required<T[Key]> & {id: string }}
+
+export type ATTR<SCHEMA> = {[attr in keyof SCHEMA]: SCHEMA[attr]}
+export interface Rule<T> {
+  what: T,
+  when?: (arg: Binding<T> ) => boolean,
+  then?: (arg: Binding<T> ) => void,
+  thenFinally?: () => void
+}
+export type InsertEdictFact<SCHEMA> = {
+  [key: string]: { [Key in keyof Partial<SCHEMA>]: SCHEMA[Key] }
+}
+export type EdictArgs<SCHEMA> =
+  {
+    // We can't enforce the Schema in the `then` and `when` blocks at compile time,
+    // so we'll just be sure to do a runtime check on boot if there are rules that
+    // have `what` blocks with attrs that aren't in the schema!
+    factSchema: SCHEMA
+
+    rules: (operations: {
+      insert: (fact: InsertEdictFact<SCHEMA>) => void
+      retract: (id: string, attr: keyof ATTR<SCHEMA>) => void
+    }) => RuleSet,
+    initialFacts?: InsertEdictFact<SCHEMA>
   }
-}
+
+export type InternalFactRepresentation = [string, string, any]

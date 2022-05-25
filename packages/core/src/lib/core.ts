@@ -1,65 +1,74 @@
-import {FACT_SCHEMA, Rules, WHAT_SCHEMA} from "./types";
-import {groupFactById, groupRuleById} from "./utils";
+import {EdictArgs, InsertEdictFact, InternalFactRepresentation, Rule,} from "./types";
+import {groupFactById, insertFactToFact} from "./utils";
 import * as _ from "lodash";
 
-export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]) => {
+// TODO: Ideally constrain that any to the value types in the schema someday
 
-  const facts: T[] = initialFacts ?? []
-  const findFact = ([id,attr]: [T[0], T[1]]) => facts.findIndex(f =>f[0] == id && f[1] == attr )
+export const rule = <T>(r: Rule<T>) => r
 
-  const insert = (fact: T) => {
+export const edict = <S>(args: EdictArgs<S> ) => {
+  const facts = insertFactToFact(args.initialFacts ?? {})
+  const findFact = ([id,attr]: [InternalFactRepresentation[0], InternalFactRepresentation[1]]) => facts.findIndex(f =>f[0] == id && f[1] == attr )
+
+  const insert = (insertFacts: InsertEdictFact<S>) => {
     // be dumb about this
+    const factTuples = insertFactToFact(insertFacts)
+    factTuples.forEach(f => {
+      const idx = findFact([f[0], f[1]])
+      if(idx != -1) {
+        facts[idx] = f
+      } else {
+        facts.push(f)
+      }
 
-    const idx = findFact([fact[0], fact[1]])
-    if(idx != -1) {
-      facts[idx] = fact
-    } else {
-      facts.push(fact)
-    }
+    })
   }
-  const retract = (path: [T[0], T[1]]) => {
-    const idx = findFact(path)
-    if(idx < 0) return
-    facts.splice(idx, 1)
+  const retract = (id: string, ...attrs: (keyof S)[]) => {
+    attrs.map(attr => {
+      const idx = findFact([id, `${attr}`])
+      if(idx < 0) return
+      facts.splice(idx, 1)
+    })
   }
 
-  const matchAttr = (attr: string, facts: T[]) => {
-    const filtered = facts.filter(f => f[1] === attr)
-    const grouped = _.groupBy(filtered, (f: T) => f[0])
+  const matchAttr = (attr: string, facts: InternalFactRepresentation[]) => {
+    const filtered = facts.filter(f => f[1] === attr )
+    const grouped = _.groupBy(filtered, (f: InternalFactRepresentation) => f[0])
     return Object.values(grouped).flat()
   }
 
 
-  const matchIdAttr = (id: string, attr: string, facts: T[]) => facts.filter(f => f[0] === id && f[1] === attr)
+  const matchIdAttr = (id: string, attr: string, facts: InternalFactRepresentation[]) => facts.filter(f => f[0] === id && f[1] === attr)
 
+  const rules = args.rules({insert, retract})
   // Needs to return a map from rule-name to results
   // TODO: extract the query() part of this out so folks can
   // enjoy nice data structures
   const query = (ruleName: string ) => {
     const {what, when} = rules[ruleName]
-    const byId = groupRuleById(what)
-    const definedFacts = Object.keys(byId).map(id => {
-      const attrs = byId[id]
-      const matchedFacts = attrs.map((a:string) => {
-        return (id.startsWith("$")) ? matchAttr(a, facts) : matchIdAttr(id, a, facts)
-      }).flat()
+    const definedFacts = Object.keys(what).map(id => {
+      const attrs = Object.keys(what[id])
+      const matchedFacts = attrs.map(attr =>
+           (id.startsWith("$")) ? matchAttr(attr, facts) : matchIdAttr(id, attr, facts)
+        ).flat()
 
-      const groupedFacts = groupFactById(matchedFacts)
-      const correctFacts = Object.keys(groupedFacts).map((key) => {
-        const factAttrs = groupedFacts[key].map((f:string) => f[0])
-        const hasEverything = _.isEqual(factAttrs, attrs)
-        if(hasEverything) {
-          return  {[id]:  Object.fromEntries([
-              ["id", key],...groupedFacts[key]
-            ])}
-        } else {
+        const groupedFacts = groupFactById(matchedFacts)
+        const correctFacts = Object.keys(groupedFacts).map((key) => {
+          const factAttrs = groupedFacts[key].map((f:string) => f[0])
+          const hasEverything = _.isEqual(factAttrs, attrs)
+          if(hasEverything) {
+            return  {[id]:  Object.fromEntries([
+                ["id", key],...groupedFacts[key]
+              ])}
+          } else {
 
-          return undefined
-        }
-      }).filter((f: any) => f !== undefined )
+            return undefined
+          }
+        }).filter((f: any) => f !== undefined )
 
-      return  correctFacts
-    })
+        return  correctFacts
+      })
+
     const length = definedFacts.reduce((acc, c) => acc * c.length, 1)
     const mergedResults = []
     for(let i = 0; i < length; i++) {
@@ -90,12 +99,11 @@ export const edict =<T extends FACT_SCHEMA> (rules: Rules<T>, initialFacts?: T[]
         const results = query(name)
        // This needs to be recursive and stuff, but for now let's just keep it simple
        // (I think derived facts will require recursive stuff)
-       const operations = {insert, retract}
        if(then) {
-         results.map(f => then(f, operations))
+         results.map(f => then(f))
        }
        if(thenFinally) {
-         results.map(f => thenFinally(f, operations))
+         thenFinally()
        }
     })
   }
