@@ -41,9 +41,8 @@ export const edict = <S>(args: EdictArgs<S> ) => {
   const matchIdAttr = (id: string, attr: string, facts: InternalFactRepresentation[]) => facts.filter(f => f[0] === id && f[1] === attr)
 
   const rules = args.rules({insert, retract})
+  // TODO: Make typesafe
   // Needs to return a map from rule-name to results
-  // TODO: extract the query() part of this out so folks can
-  // enjoy nice data structures
   const query = (ruleName: string ) => {
     const {what, when} = rules[ruleName]
     const definedFacts = Object.keys(what).map(id => {
