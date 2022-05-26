@@ -40,7 +40,7 @@ export function GamePage() {
             insert({
               [$npc.id]: {
                 x: $npc.x + dir.x * $npc.speed * time.dt,
-                y: $npc.y + dir.x * $npc.speed * time.dt
+                y: $npc.y + dir.y * $npc.speed * time.dt
               }
             })
           }
