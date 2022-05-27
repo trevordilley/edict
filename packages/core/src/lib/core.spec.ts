@@ -72,78 +72,99 @@ const allFacts = {
 }
 
 
-const mkEdict = () => edict({
-  factSchema: {
-    health: AttrTypes.num(),
-    isDying: AttrTypes.bool(),
-    dt: AttrTypes.num(),
-    value: AttrTypes.num(),
-    x: AttrTypes.num(),
-    y: AttrTypes.num(),
-    isEvil: AttrTypes.bool()
-  },
-  rules: ({insert, retract}) => ({
+// const mkEdict = () => edict({
+//   factSchema: {
+//     health: AttrTypes.num(),
+//     isDying: AttrTypes.bool(),
+//     dt: AttrTypes.num(),
+//     value: AttrTypes.num(),
+//     x: AttrTypes.num(),
+//     y: AttrTypes.num(),
+//     isEvil: AttrTypes.bool()
+//   },
+//   rules: ({insert, retract}) => ({
+//
+//     "all_treasure": rule({
+//       what: {
+//         $treasure: {
+//           value: AttrTypes.num(),
+//           x: AttrTypes.num(),
+//           y: AttrTypes.num()
+//         }
+//       }
+//     }),
+//     "all_npcs": rule({
+//       what: {
+//         $npc: {
+//           health: AttrTypes.num(),
+//           x: AttrTypes.num(),
+//           y: AttrTypes.num(),
+//         },
+//         time: {
+//           dt: AttrTypes.num()
+//         }
+//       }
+//     }),
+//     "no_health_is_dying": rule({
+//       what: {
+//         $npc: {
+//           health: AttrTypes.num()
+//         }
+//       },
+//       when: ({$npc}) => $npc.health <= 0,
+//       then: ({$npc}) => {
+//         retract($npc.id, "health")
+//         insert({[$npc.id]: {isDying: true}})
+//       }
+//     }),
+//     "is_dying": rule({
+//       what: {
+//         $npc: {
+//           isDying: AttrTypes.bool()
+//         }
+//       },
+//       when: ({$npc}) => $npc.isDying,
+//     }),
+//     "complicated_nonsense": rule({
+//       what: {
+//         $npc: {
+//           health: AttrTypes.bool(),
+//           x: AttrTypes.num(),
+//           y: AttrTypes.num()
+//         },
+//         $treasure: {
+//           value: AttrTypes.num(),
+//           x: AttrTypes.num(),
+//           y: AttrTypes.num()
+//         },
+//         time: {
+//           dt: AttrTypes.num()
+//         }
+//       }
+//     }),
+//   })
+// })
 
-    "all_treasure": rule({
-      what: {
-        $treasure: {
-          value: AttrTypes.num(),
-          x: AttrTypes.num(),
-          y: AttrTypes.num()
-        }
-      }
-    }),
-    "all_npcs": rule({
-      what: {
-        $npc: {
-          health: AttrTypes.num(),
-          x: AttrTypes.num(),
-          y: AttrTypes.num(),
-        },
-        time: {
-          dt: AttrTypes.num()
-        }
-      }
-    }),
-    "no_health_is_dying": rule({
-      what: {
-        $npc: {
-          health: AttrTypes.num()
-        }
-      },
-      when: ({$npc}) => $npc.health <= 0,
-      then: ({$npc}) => {
-        retract($npc.id, "health")
-        insert({[$npc.id]: {isDying: true}})
-      }
-    }),
-    "is_dying": rule({
-      what: {
-        $npc: {
-          isDying: AttrTypes.bool()
-        }
-      },
-      when: ({$npc}) => $npc.isDying,
-    }),
-    "complicated_nonsense": rule({
-      what: {
-        $npc: {
-          health: AttrTypes.bool(),
-          x: AttrTypes.num(),
-          y: AttrTypes.num()
-        },
-        $treasure: {
-          value: AttrTypes.num(),
-          x: AttrTypes.num(),
-          y: AttrTypes.num()
-        },
-        time: {
-          dt: AttrTypes.num()
-        }
-      }
-    }),
-  })
-})
+const e = edict<{x: number, y: number, health: number}>({factSchema: {health: AttrTypes.num(), x: AttrTypes.num(), y: AttrTypes.num()}})
+const q = e.what(({x, y, health}) => ({
+  what: {
+    $npc: {
+      x: AttrTypes.num(),
+      zz: AttrTypes.bool()
+    }
+  },
+})).
+// const { what } = e.schema({x: AttrTypes.num()})
+// const {then, finally, query} = what(({x, y, health}) => ({
+//   $npc: {
+//     x,
+//     y
+//   }
+// }))
+//
+// then(({$npc}) => {
+//
+// })
 
 describe('edict', () => {
   it('complicated happy path is happy', () => {
