@@ -1,4 +1,4 @@
-import {EdictArgs, InsertEdictFact, InternalFactRepresentation, Rule,} from "./types";
+import {EdictArgs, EdictOperations, InsertEdictFact, InternalFactRepresentation, Rule,} from "./types";
 import {groupFactById, insertFactToFact} from "./utils";
 import * as _ from "lodash";
 
@@ -7,7 +7,7 @@ import * as _ from "lodash";
 export const rule = <T>(r: Rule<T>) => r
 
 export const edict = <S>(args: EdictArgs<S> ) => {
-  const facts = insertFactToFact(args.initialFacts ?? {})
+  const facts: InternalFactRepresentation[] = []
   const findFact = ([id,attr]: [InternalFactRepresentation[0], InternalFactRepresentation[1]]) => facts.findIndex(f =>f[0] == id && f[1] == attr )
 
   const insert = (insertFacts: InsertEdictFact<S>) => {
@@ -40,12 +40,20 @@ export const edict = <S>(args: EdictArgs<S> ) => {
 
   const matchIdAttr = (id: string, attr: string, facts: InternalFactRepresentation[]) => facts.filter(f => f[0] === id && f[1] === attr)
 
-  const rules = args.rules(args.factSchema, {insert, retract})
+  const rules: {[key: string]: Rule<any>} = {}
+  const addRule = <T>(fn: ( schema: S, operations: EdictOperations<S>) => Rule<T>) => {
+    const rule = fn(args.factSchema, {insert, retract})
+    rules[rule.name] = rule
+    console.log("adding rules", rules)
+    return {query: () => query(rule)}
+  }
   // TODO: Make typesafe
   // Needs to return a map from rule-name to results
-  const query = (ruleName: string ) => {
-    const {what, when} = rules[ruleName]
+  const query = <T>(rule: Rule<T> ): T[] => {
+    const {what, when} = rule
     const definedFacts = Object.keys(what).map(id => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       const attrs = Object.keys(what[id])
       const matchedFacts = attrs.map(attr =>
            (id.startsWith("$")) ? matchAttr(attr, facts) : matchIdAttr(id, attr, facts)
@@ -82,7 +90,7 @@ export const edict = <S>(args: EdictArgs<S> ) => {
     }
     const filtered = when ? mergedResults.filter(when) : mergedResults
 
-    return filtered
+    return filtered as unknown as T[]
   }
 
   const fire = () => {
@@ -94,12 +102,13 @@ export const edict = <S>(args: EdictArgs<S> ) => {
       const {then, thenFinally} = rules[name]
       return then || thenFinally
     }).map(name => {
-      const { then, thenFinally} = rules[name]
-        const results = query(name)
+      const rule = rules[name]
+        const results = query(rule)
        // This needs to be recursive and stuff, but for now let's just keep it simple
-       // (I think derived facts will require recursive stuff)
+       // (I think derived facts will require recursive stuffi)
+      const {then, thenFinally} = rule
        if(then) {
-         results.map(f => then(f))
+         results.map((f: any) => then(f))
        }
        if(thenFinally) {
          thenFinally()
@@ -114,7 +123,8 @@ export const edict = <S>(args: EdictArgs<S> ) => {
     retract,
     fire,
     query,
-    facts: () => facts
+    facts: () => facts,
+    addRule
   }
 }
 

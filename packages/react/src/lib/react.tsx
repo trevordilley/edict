@@ -4,10 +4,11 @@ import {useEffect, useRef, useState} from "react";
 export const useEdict = <SCHEMA,>(args: EdictArgs<SCHEMA>) => {
   const e = useRef(edict(args))
 
-  const {query, retract: coreRetract, insert: coreInsert, fire: coreFire, facts} = e.current
+  const {retract: coreRetract, insert: coreInsert, fire: coreFire, addRule } = e.current
   const [dirty, setDirty] = useState(false)
-
   const fire = () => {
+
+    console.log("fir")
     setDirty(false)
     return coreFire()
   }
@@ -28,10 +29,9 @@ export const useEdict = <SCHEMA,>(args: EdictArgs<SCHEMA>) => {
 
 
   return {
-    query,
     retract,
     insert,
     fire,
-    facts
+    addRule
   }
 }
