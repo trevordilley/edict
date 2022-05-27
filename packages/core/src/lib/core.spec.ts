@@ -1,4 +1,4 @@
-import {AttrTypes, edict, rule, RuleSet} from "@edict/core";
+import {attr, edict, rule, RuleSet} from "@edict/core";
 import * as _ from "lodash";
 
 export type NpcId = string
@@ -74,41 +74,41 @@ const allFacts = {
 
 const mkEdict = () => edict({
   factSchema: {
-    health: AttrTypes.num(),
-    isDying: AttrTypes.bool(),
-    dt: AttrTypes.num(),
-    value: AttrTypes.num(),
-    x: AttrTypes.num(),
-    y: AttrTypes.num(),
-    isEvil: AttrTypes.bool()
+    health: attr<number>(),
+    isDying: attr<boolean>(),
+    dt: attr<number>(),
+    value: attr<number>(),
+    x: attr<number>(),
+    y: attr<number>(),
+    isEvil: attr<boolean>()
   },
-  rules: ({insert, retract}) => ({
+  rules: ({value, x, y, health, dt, isDying}, {insert, retract}) => ({
 
     "all_treasure": rule({
       what: {
         $treasure: {
-          value: AttrTypes.num(),
-          x: AttrTypes.num(),
-          y: AttrTypes.num()
+          value,
+          x,
+          y
         }
       }
     }),
     "all_npcs": rule({
       what: {
         $npc: {
-          health: AttrTypes.num(),
-          x: AttrTypes.num(),
-          y: AttrTypes.num(),
+          health,
+          x,
+          y,
         },
         time: {
-          dt: AttrTypes.num()
+          dt
         }
       }
     }),
     "no_health_is_dying": rule({
       what: {
         $npc: {
-          health: AttrTypes.num()
+          health,
         }
       },
       when: ({$npc}) => $npc.health <= 0,
@@ -120,7 +120,7 @@ const mkEdict = () => edict({
     "is_dying": rule({
       what: {
         $npc: {
-          isDying: AttrTypes.bool()
+          isDying
         }
       },
       when: ({$npc}) => $npc.isDying,
@@ -128,17 +128,17 @@ const mkEdict = () => edict({
     "complicated_nonsense": rule({
       what: {
         $npc: {
-          health: AttrTypes.bool(),
-          x: AttrTypes.num(),
-          y: AttrTypes.num()
+          health,
+          x,
+          y
         },
         $treasure: {
-          value: AttrTypes.num(),
-          x: AttrTypes.num(),
-          y: AttrTypes.num()
+          value,
+          x,
+          y
         },
         time: {
-          dt: AttrTypes.num()
+          dt
         }
       }
     }),

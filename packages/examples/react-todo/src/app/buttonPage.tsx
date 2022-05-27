@@ -1,7 +1,6 @@
 
 import {useEdict} from "@edict/react";
-import {AttrTypes, rule} from "@edict/core";
-import {Route, Routes} from "react-router-dom";
+import {attr, rule} from "@edict/core";
 
 
 const enum BACKGROUND_COLOR {
@@ -17,15 +16,15 @@ export function ButtonPage() {
   const {query, insert} = useEdict(
     {
       factSchema: {
-        count: AttrTypes.num(),
-        color: AttrTypes.str(),
-        fontColor: AttrTypes.str(),
+        count: attr<number>(),
+        color: attr<string>(),
+        fontColor: attr<string>(),
       },
-      rules: ({insert}) => ({
+      rules: ({count, fontColor, color},{insert}) => ({
         "button_count": rule({
           what: {
             button: {
-              count: AttrTypes.num()
+              count
             }
           },
           then: ({button}) => {
@@ -35,7 +34,7 @@ export function ButtonPage() {
         "button_color": rule({
           what: {
             button: {
-              color: AttrTypes.str()
+              color
             }
           },
           then: ({button}) => {
@@ -45,9 +44,9 @@ export function ButtonPage() {
         "button_state": rule({
           what: {
             button: {
-              color: AttrTypes.str(),
-              count: AttrTypes.num(),
-              fontColor: AttrTypes.str()
+              color,
+              count,
+              fontColor
             }
           }
         }),

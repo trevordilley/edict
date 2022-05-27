@@ -6,13 +6,7 @@ export interface TypeOptions {
 // use trickery and mischief to force the return type to a primitive for type
 // inference. In the guts of the logic we'll actually pull the options out of the
 // return to inspect them, but the compiler doesn't need to know that!
-export const AttrTypes = {
-  bool : (options?: TypeOptions):boolean => options as unknown as boolean,
-  num : (options?: TypeOptions):number => options as unknown as number,
-  str : (options?: TypeOptions): string => options as unknown as string,
-  object : (options?: TypeOptions): object => options as unknown as object,
-  date : (options?: TypeOptions) => options as unknown as Date,
-}
+export const attr = <T>(options?: TypeOptions): T => options as unknown as T
 
 export interface RuleSet {
   [key: string]: Rule<any>
@@ -38,7 +32,7 @@ export type EdictArgs<SCHEMA> =
     // have `what` blocks with attrs that aren't in the schema!
     factSchema: SCHEMA
 
-    rules: (operations: {
+    rules: (schema: SCHEMA, operations: {
       insert: (fact: InsertEdictFact<SCHEMA>) => void
       retract: (id: string, ...attr: (keyof ATTR<SCHEMA>)[]) => void
     }) => RuleSet,

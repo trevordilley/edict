@@ -40,7 +40,7 @@ export const edict = <S>(args: EdictArgs<S> ) => {
 
   const matchIdAttr = (id: string, attr: string, facts: InternalFactRepresentation[]) => facts.filter(f => f[0] === id && f[1] === attr)
 
-  const rules = args.rules({insert, retract})
+  const rules = args.rules(args.factSchema, {insert, retract})
   // TODO: Make typesafe
   // Needs to return a map from rule-name to results
   const query = (ruleName: string ) => {

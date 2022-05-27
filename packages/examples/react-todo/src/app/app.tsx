@@ -1,7 +1,5 @@
 import styled from 'styled-components';
 
-import {useEdict} from "@edict/react";
-import {AttrTypes, rule} from "@edict/core";
 import {Route, Routes} from "react-router-dom";
 import {ButtonPage} from "./buttonPage";
 import {GamePage} from "./gamePage";

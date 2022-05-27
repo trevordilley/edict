@@ -1,5 +1,5 @@
 import {useEdict} from "@edict/react";
-import {AttrTypes, rule} from "@edict/core";
+import { rule, attr} from "@edict/core";
 import Game from "reactified-phaser/Game";
 
 
@@ -7,30 +7,21 @@ export function GamePage() {
   const {query, insert} = useEdict(
     {
       factSchema: {
-        x: AttrTypes.num(),
-        y: AttrTypes.num(),
-        size: AttrTypes.num(),
-        color: AttrTypes.num(),
-        speed: AttrTypes.num(),
-        dt: AttrTypes.num(),
-        destX: AttrTypes.num(),
-        destY: AttrTypes.num()
+        x: attr<number>(),
+        y: attr<number>(),
+        size: attr<number>(),
+        color: attr<number>(),
+        speed: attr<number>(),
+        dt: attr<number>(),
+        destX: attr<number>(),
+        destY: attr<number>()
       },
-      rules: ({insert}) => ({
+      rules: ({x, y, speed, destY, destX, dt, size, color},{insert}) => ({
         "moveTowardsMouse": rule({
           what: {
-            $npc: {
-              x: AttrTypes.num(),
-              y: AttrTypes.num(),
-              speed: AttrTypes.num()
-            },
-            time: {
-              dt: AttrTypes.num()
-            },
-            destination: {
-              destX: AttrTypes.num(),
-              destY: AttrTypes.num()
-            }
+            $npc: { x, y, speed },
+            time: { dt },
+            destination: { destX, destY }
           },
           then: ({destination, $npc, time}) => {
             const pos = new Phaser.Math.Vector2($npc.x, $npc.y)
@@ -48,11 +39,11 @@ export function GamePage() {
         "npc": rule({
           what: {
             $npc: {
-              x: AttrTypes.num(),
-              y: AttrTypes.num(),
-              color: AttrTypes.num(),
-              size: AttrTypes.num(),
-              speed: AttrTypes.num()
+              x,
+              y,
+              color,
+              size,
+              speed
             }
           }
         })
@@ -120,3 +111,4 @@ export function GamePage() {
   return (
     <Game config={config}/>);
 }
+
