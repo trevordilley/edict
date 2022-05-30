@@ -21,5 +21,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-      - run: yarn nx build 
+      - run: yarn
+      - run: yarn nx build
       - run: yarn nx test
