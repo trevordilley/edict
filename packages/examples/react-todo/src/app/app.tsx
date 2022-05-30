@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import {Route, Routes} from "react-router-dom";
 import {ButtonPage} from "./buttonPage";
 import {GamePage} from "./gamePage";
+import {PasswordConfirmPage} from "./passwordConfirmPage";
 
 const StyledApp = styled.div`
   // Your style here
@@ -15,6 +16,9 @@ export function App() {
       <Routes>
         <Route path={"/"} element={
           <ButtonPage/>
+        }/>
+        <Route path={"/password"} element={
+          <PasswordConfirmPage/>
         }/>
           <Route path={"/game"} element={
             <div>
