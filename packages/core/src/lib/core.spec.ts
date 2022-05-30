@@ -157,7 +157,6 @@ describe('edict', () => {
     fire()
 
     const results = queries.isDying.query()
-    console.log("results", results)
     const expectedResults = [
       {$npc: {id: "enemy2", "isDying": true}},
     ]

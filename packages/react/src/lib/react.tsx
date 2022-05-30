@@ -7,8 +7,6 @@ export const useEdict = <SCHEMA,>(args: EdictArgs<SCHEMA>) => {
   const {retract: coreRetract, insert: coreInsert, fire: coreFire, addRule } = e.current
   const [dirty, setDirty] = useState(false)
   const fire = () => {
-
-    console.log("fir")
     setDirty(false)
     return coreFire()
   }

@@ -1,5 +1,5 @@
 import {rule, attr, edict} from "@edict/core";
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import {useLayoutEffect} from "react";
 const {insert, retract, addRule, fire, facts} = edict(
   {
@@ -39,7 +39,6 @@ const queries = {
         newDestination: {destX, destY}
       },
       then: ({newDestination, $npc}) => {
-        console.log("Setting destination?")
         insert({[$npc.id]: {destX: newDestination.destX, destY: newDestination.destY}})
       },
       thenFinally: () => {

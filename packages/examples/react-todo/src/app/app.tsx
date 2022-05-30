@@ -13,6 +13,21 @@ export function App() {
 
   return (
     <StyledApp>
+      <div>
+        Examples
+        <ul>
+          <li>
+            <a href={"/game"}>Button</a>
+          </li>
+          <li>
+            <a href={"/game"}>Game</a>
+          </li>
+          <li>
+            <a href={"/password"}>Password</a>
+          </li>
+        </ul>
+
+      </div>
       <Routes>
         <Route path={"/"} element={
           <ButtonPage/>

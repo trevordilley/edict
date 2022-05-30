@@ -75,8 +75,6 @@ export function ButtonPage() {
 
             <div style={{color: fontColor, backgroundColor: color, width: "200px", fontSize: "24px", textAlign: "center"}}
                  onClick={() => insert({button: {count: count + 1}})}>Count: {count}</div>
-      <a href={"/game"}>Game</a>
-      <a href={"/password"}>Password</a>
     </div>
   );
 }
