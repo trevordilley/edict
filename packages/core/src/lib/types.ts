@@ -8,7 +8,7 @@ export interface TypeOptions {
 export const attr = <T>(options?: TypeOptions): T => options as unknown as T
 
 
-type Binding<T> = {[Key in keyof T]:
+export type Binding<T> = {[Key in keyof T]:
   Required<T[Key]> & {id: string }}
 
 export type ATTR<SCHEMA> = {[attr in keyof SCHEMA]: SCHEMA[attr]}
@@ -36,3 +36,16 @@ export type EdictArgs<SCHEMA> =
   }
 
 export type InternalFactRepresentation = [string, string, any]
+
+export type AddRuleArgs<SCHEMA, T> = (schema: SCHEMA, operations: EdictOperations<SCHEMA>) => Rule<T>
+export type AddRuleRet<T> = { query: () => Binding<T>[] }
+export type AddRule<SCHEMA> =<T>(fn: AddRuleArgs<SCHEMA, T>) => AddRuleRet<T>
+
+export interface IEdict<SCHEMA> {
+  insert: (args: InsertEdictFact<SCHEMA>) => void,
+  retract: (id: string, ...attrs: (keyof SCHEMA)[]) => void
+  fire: () => void,
+  query: <T>(rule: Rule<T>) => Binding<T>[],
+  facts: () => InternalFactRepresentation[],
+  addRule: AddRule<SCHEMA>
+}

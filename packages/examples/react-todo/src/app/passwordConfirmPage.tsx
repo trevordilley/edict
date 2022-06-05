@@ -1,12 +1,12 @@
 
-import {useEdict} from "@edict/react";
-import {attr, rule} from "@edict/core";
+import {invokeEdict} from "@edict/react";
+import {attr, edict, rule} from "@edict/core";
 import {FormEvent, useEffect, useMemo} from "react";
 import _ from "lodash";
 
 
 export function PasswordConfirmPage() {
-  const { insert, addRule } = useEdict(
+  const { useEdict } = invokeEdict(edict(
     {
       factSchema: {
         current: attr<string>(),
@@ -17,8 +17,8 @@ export function PasswordConfirmPage() {
         hasLowercase: attr<boolean>(),
         matchesConfirm: attr<boolean>(),
         isValid: attr<boolean>()
-      }})
-
+      }}))
+  const {insert, addRule} = useEdict()
   useEffect(() => {
     insert({password: {
       current: "",

@@ -1,51 +1,33 @@
 import styled from 'styled-components';
 
 import {Route, Routes} from "react-router-dom";
-import {ButtonPage} from "./buttonPage";
-import {GamePage} from "./gamePage";
 import {PasswordConfirmPage} from "./passwordConfirmPage";
+import {TodoEdict} from "./rules/todoEdict";
+import {TodoList} from "./components/TodoList";
+import {NewTodo} from "./components/NewTodo";
 
 const StyledApp = styled.div`
   // Your style here
 `;
 
 export function App() {
-
   return (
-    <StyledApp>
-      <div>
-        Examples
-        <ul>
-          <li>
-            <a href={"/game"}>Button</a>
-          </li>
-          <li>
-            <a href={"/game"}>Game</a>
-          </li>
-          <li>
-            <a href={"/password"}>Password</a>
-          </li>
-        </ul>
-
-      </div>
-      <Routes>
-        <Route path={"/"} element={
-          <ButtonPage/>
-        }/>
-        <Route path={"/password"} element={
-          <PasswordConfirmPage/>
-        }/>
-          <Route path={"/game"} element={
+    <TodoEdict>
+      <StyledApp>
+        <Routes>
+          <Route path={"/"} element={
             <div>
-              <a href={"/"}>
-                Root
-              </a>
-              <GamePage/>
-
+              <NewTodo/>
+              <TodoList />
             </div>
           }/>
-      </Routes>
-    </StyledApp>
+          {/*<Route path={"/password"} element={*/}
+          {/*  <PasswordConfirmPage/>*/}
+          {/*}/>*/}
+        </Routes>
+      </StyledApp>
+
+    </TodoEdict>
   );
 }
 

@@ -1,4 +1,4 @@
-import {EdictArgs, EdictOperations, InsertEdictFact, InternalFactRepresentation, Rule,} from "./types";
+import {Binding, EdictArgs, EdictOperations, IEdict, InsertEdictFact, InternalFactRepresentation, Rule,} from "./types";
 import {groupFactById, insertFactToFact} from "./utils";
 import * as _ from "lodash";
 
@@ -6,7 +6,7 @@ import * as _ from "lodash";
 
 export const rule = <T>(r: Rule<T>) => r
 
-export const edict = <S>(args: EdictArgs<S> ) => {
+export const edict = <S>(args: EdictArgs<S> ): IEdict<S> => {
   const facts: InternalFactRepresentation[] = []
   const findFact = ([id,attr]: [InternalFactRepresentation[0], InternalFactRepresentation[1]]) => facts.findIndex(f =>f[0] == id && f[1] == attr )
 
@@ -49,7 +49,7 @@ export const edict = <S>(args: EdictArgs<S> ) => {
   }
   // TODO: Make typesafe
   // Needs to return a map from rule-name to results
-  const query = <T>(rule: Rule<T> ): T[] => {
+  const query = <T>(rule: Rule<T> ): Binding<T>[] => {
     const {what, when} = rule
     const definedFacts = Object.keys(what).map(id => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -90,7 +90,7 @@ export const edict = <S>(args: EdictArgs<S> ) => {
     }
     const filtered = when ? mergedResults.filter(when) : mergedResults
 
-    return filtered as unknown as T[]
+    return filtered as unknown as Binding<T>[]
   }
 
   const fire = () => {

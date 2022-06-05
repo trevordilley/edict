@@ -1,8 +1,8 @@
 
-import {useEdict} from "@edict/react";
-import {attr, rule} from "@edict/core";
-import {useEffect, useMemo, useRef} from "react";
+import {attr, edict, rule} from "@edict/core";
+import {useEffect, useMemo} from "react";
 import _ from "lodash";
+import {invokeEdict} from "@edict/react";
 
 
 const enum BACKGROUND_COLOR {
@@ -15,13 +15,13 @@ const enum FONT_COLOR {
   BLACK = "#000000"
 }
 export function ButtonPage() {
-  const { insert, addRule } = useEdict(
-    {
-      factSchema: {
-        count: attr<number>(),
-        color: attr<string>(),
-        fontColor: attr<string>(),
-      }})
+  const { useEdict } = invokeEdict(edict({
+    factSchema: {
+      count: attr<number>(),
+      color: attr<string>(),
+      fontColor: attr<string>(),
+    }}))
+  const { insert, addRule } = useEdict()
 
   const queries = useMemo(() => ({
     buttonCount: addRule(({count}, {insert}) =>
