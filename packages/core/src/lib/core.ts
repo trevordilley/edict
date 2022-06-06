@@ -45,7 +45,7 @@ export const edict = <S>(args: EdictArgs<S> ): IEdict<S> => {
     const rule = fn(args.factSchema, {insert, retract})
     rules[rule.name] = rule
     console.log("adding rules", rules)
-    return {query: () => query(rule)}
+    return {query: () => query(rule), rule}
   }
   // TODO: Make typesafe
   // Needs to return a map from rule-name to results

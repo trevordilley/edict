@@ -19,7 +19,6 @@ export const NewTodo: FC = () => {
       setTitle(e.target.value)
     }}/>
     <input type={"submit"} value={"Add Todo!"} />
-    <TodoList/>
   </form>)
 }
 

@@ -38,7 +38,7 @@ export type EdictArgs<SCHEMA> =
 export type InternalFactRepresentation = [string, string, any]
 
 export type AddRuleArgs<SCHEMA, T> = (schema: SCHEMA, operations: EdictOperations<SCHEMA>) => Rule<T>
-export type AddRuleRet<T> = { query: () => Binding<T>[] }
+export type AddRuleRet<T> = { query: () => Binding<T>[], rule: Rule<T> }
 export type AddRule<SCHEMA> =<T>(fn: AddRuleArgs<SCHEMA, T>) => AddRuleRet<T>
 
 export interface IEdict<SCHEMA> {
@@ -47,5 +47,5 @@ export interface IEdict<SCHEMA> {
   fire: () => void,
   query: <T>(rule: Rule<T>) => Binding<T>[],
   facts: () => InternalFactRepresentation[],
-  addRule: AddRule<SCHEMA>
+  addRule: AddRule<SCHEMA>,
 }

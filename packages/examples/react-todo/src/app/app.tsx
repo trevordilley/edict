@@ -1,7 +1,6 @@
 import styled from 'styled-components';
 
 import {Route, Routes} from "react-router-dom";
-import {PasswordConfirmPage} from "./passwordConfirmPage";
 import {TodoEdict} from "./rules/todoEdict";
 import {TodoList} from "./components/TodoList";
 import {NewTodo} from "./components/NewTodo";
@@ -21,9 +20,6 @@ export function App() {
               <TodoList />
             </div>
           }/>
-          {/*<Route path={"/password"} element={*/}
-          {/*  <PasswordConfirmPage/>*/}
-          {/*}/>*/}
         </Routes>
       </StyledApp>
 
