@@ -7,8 +7,8 @@ export interface User{
   }
 }
 
-export interface Todo {
+export interface ITodo {
   id: string,
-  taskTitle: string,
-  taskComplete: boolean
+  title: string,
+  isComplete: boolean
 }
