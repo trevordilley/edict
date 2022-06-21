@@ -21,6 +21,18 @@ const queries = {
         $npc: {circle, speed, destX, destY},
         time: {dt},
       },
+      // IDEA: What if we decorate names such that we imply behavriours?
+      // (to accomadate thee `then: false` thing in o'doyle?
+      // if we wanted `destX` and `destY` to have the `then: false` thing
+      // maybe we do the following??
+      //
+      // Following this line of thought, we also like to trigger on the absence of
+      // data, which the 1995 paper mentions is possible. Perhaps another decorator?
+      // String literal types would allow this to work!
+      // what: {
+      //   $npc: {circle, speed, destX$once, destY, health$not},
+      //   time: {dt},
+      // },
       then: ({ $npc, time}) => {
         const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y)
         const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY)
