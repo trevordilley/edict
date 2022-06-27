@@ -109,6 +109,7 @@ proc addNodes[T, MatchT](session: Session[T, MatchT], nodes: seq[tuple[testField
   for node in nodes:
     result = result.addNode(AlphaNode[T, MatchT](testField: node.testField, testValue: node.testValue))
 
+# ts name: addConditionsToProduction
 proc add*[T, U, MatchT](production: var Production[T, U, MatchT], id: Var or T, attr: T, value: Var or T, then: bool) =
   var condition = Condition[T](shouldTrigger: then)
   for fieldType in [Field.Identifier, Field.Attribute, Field.Value]:
@@ -140,6 +141,7 @@ proc isAncestor(x, y: JoinNode): bool =
       node = node.parent.parent
   false
 
+# ts name: addProductionToSession
 proc add*[T, U, MatchT](session: Session[T, MatchT], production: Production[T, U, MatchT]) =
   var memNodes: seq[MemoryNode[T, MatchT]]
   var joinNodes: seq[JoinNode[T, MatchT]]

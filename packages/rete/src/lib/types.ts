@@ -1,58 +1,58 @@
 
 /*** Facts ***/
-enum FIELD {
+export enum Field {
   IDENTIFIER,
   ATTRIBUTE,
   VALUE
 }
 
-interface Fact<T> {
+export interface Fact<T> {
   id: T,
   attr: T,
   value: T
 }
 
-enum TOKEN_KIND {
+export enum TOKEN_KIND {
   INSERT,
   RETRACT,
   UPDATE
 }
 
-interface Token<T> {
+export interface Token<T> {
   fact: Fact<T>,
   kind: TOKEN_KIND
   // Only for Update Tokens
   oldFact?: Fact<T>
 }
 
-type IdAttr = [number, number]
-type IdAttrs = IdAttr[]
+export type IdAttr = [number, number]
+export type IdAttrs = IdAttr[]
 
 /** Matches **/
 
-type Vars<T> = Map<string, T>
-interface Var {
+export type Vars<T> = Map<string, T>
+export interface Var {
   name: string,
-  field: FIELD
+  field: Field
 }
 
-interface Match<T> {
+export interface Match<T> {
   id: number,
   vars: T,
   enabled: boolean
 }
 
 /** functions **/
-type ThenFn<T,U, MatchT> = (session: Session<T, MatchT>, rule: Production<T,U,MatchT>) => void
-type WrappedThenFn<MatchT> = (vars: MatchT) => void
-type ThenFinallyFn<T,U,MatchT> = (session: Session<T, MatchT>, rule: Production<T,U,MatchT>) => void
-type WrappedThenFinallyFn = () => void
-type ConvertMatchFn<MatchT, U> = (vars: MatchT) => U
-type CondFn<MatchT> = (vars: MatchT) => boolean
-type InitMatchFn<MatchT> = (ruleName: string) => MatchT
+export type ThenFn<T,U, MatchT> = (session: Session<T, MatchT>, rule: Production<T,U,MatchT>) => void
+export type WrappedThenFn<MatchT> = (vars: MatchT) => void
+export type ThenFinallyFn<T,U,MatchT> = (session: Session<T, MatchT>, rule: Production<T,U,MatchT>) => void
+export type WrappedThenFinallyFn = () => void
+export type ConvertMatchFn<MatchT, U> = (vars: MatchT) => U
+export type CondFn<MatchT> = (vars: MatchT) => boolean
+export type InitMatchFn<MatchT> = (ruleName: string) => MatchT
 
 /** Beta Network **/
-interface JoinNode<T, MatchT> {
+export interface JoinNode<T, MatchT> {
   parent: MemoryNode<T, MatchT >,
   child: MemoryNode<T, MatchT>,
   alphaNode: AlphaNode<T, MatchT>,
@@ -65,19 +65,19 @@ interface JoinNode<T, MatchT> {
 
 
 
-enum MEMORY_NODE_TYPE {
+export enum MEMORY_NODE_TYPE {
   PARTIAL,
   LEAF
 }
 
-interface LeafNode<MatchT> {
+export interface LeafNode<MatchT> {
   condFn: CondFn<MatchT>
   thenFn: WrappedThenFn<MatchT>
   thenFinallyFn: WrappedThenFinallyFn,
   trigger: boolean
 }
 
-interface MemoryNode<T, MatchT> {
+export interface MemoryNode<T, MatchT> {
   parent: JoinNode<T, MatchT>,
   child: JoinNode<T,MatchT>,
   leafNode: MemoryNode<T, MatchT>,
@@ -91,25 +91,24 @@ interface MemoryNode<T, MatchT> {
 }
 
 /** Alpha Network **/
-interface AlphaNode<T, MatchT> {
-  testField: FIELD,
+export interface AlphaNode<T, MatchT> {
+  testField: Field,
   testValue: T,
   facts: Map<number, Map<number, Fact<T>>>,
   successors: JoinNode<T, MatchT>[],
   children: AlphaNode<T, MatchT>[]
 }
-
 /** Session **/
 
-interface Condition<T> {
-  nodes: [FIELD, T][],
+export interface Condition<T> {
+  nodes: [Field, T][],
   vars: Var[]
   shouldTrigger: boolean
 }
 
 
 
-interface Production<T, U, MatchT> {
+export interface Production<T, U, MatchT> {
   name: string,
   conditions: Condition<T>[],
   convertMatchFn: ConvertMatchFn<MatchT, U>
@@ -118,7 +117,7 @@ interface Production<T, U, MatchT> {
   thenFinallyFn: ThenFinallyFn<T, U, MatchT>
 }
 
-interface Session<T, MatchT> {
+export interface Session<T, MatchT> {
   alphaNode: AlphaNode<T, MatchT>,
   leafNodes: Map< string, MemoryNode<T, MatchT>>,
   idAttrNodes: Map<IdAttr, Set<AlphaNode<T, MatchT>>>,
@@ -129,3 +128,4 @@ interface Session<T, MatchT> {
   autoFire: boolean,
   initMatch: InitMatchFn<MatchT>
 }
+
