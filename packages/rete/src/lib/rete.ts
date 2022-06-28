@@ -1,7 +1,18 @@
 // Example implementation documentation:
 // paper used by o'doyle rules: http://reports-archive.adm.cs.cmu.edu/anon/1995/CMU-CS-95-113.pdf
 
-import {AlphaNode, Condition, Field, JoinNode, MemoryNode, Production, Session, Var} from "./types";
+import {
+  AlphaNode,
+  Condition,
+  Field,
+  IdAttrs,
+  JoinNode, Match,
+  MEMORY_NODE_TYPE,
+  MemoryNode,
+  Production,
+  Session,
+  Var
+} from "./types";
 
 export function rete(): string {
   return 'rete';
@@ -85,4 +96,38 @@ const addProductionToSession = <T, U, MatchT>(session: Session<T,MatchT>,product
   const last = production.conditions.length - 1
   const bindings = new Set<string>()
   const joinedBindings = new Set<string>()
+
+  for (let i = 0; i < last; i++) {
+    const condition = production.conditions[i]
+    const leafAlphaNode = addNodes(session, condition.nodes)
+    const parentMemNode = memNodes.length > 0 ? memNodes[memNodes.length - 1]: undefined
+    const joinNode: JoinNode<T, MatchT> = {parent: parentMemNode, alphaNode: leafAlphaNode, condition, ruleName: production.name}
+    condition.vars.forEach(v => {
+      if(bindings.has(v.name)) {
+        joinedBindings.add(v.name)
+        if(v.field === Field.IDENTIFIER) {
+          joinNode.idName = v.name
+        }
+      }
+      else {
+        bindings.add(v.name)
+      }
+    })
+    if(parentMemNode) {
+      parentMemNode.child = joinNode
+    }
+    leafAlphaNode.successors.push(joinNode)
+    leafAlphaNode.successors.sort((x,y) => isAncestor(x,y) ? 1 : -1)
+    const memNode: MemoryNode<T, MatchT> = {
+      parent: joinNode,
+      type: i === last ? MEMORY_NODE_TYPE.LEAF : MEMORY_NODE_TYPE.PARTIAL,
+      condition,
+      ruleName: production.name,
+      lastMatchId: -1,
+    matches: new Map<IdAttrs, Match<MatchT>>(),
+    matchIds: new Map<number, IdAttrs>()}
+    if(memNode.type === MEMORY_NODE_TYPE.LEAF) {
+      memNode.nodeType
+    }
+  }
 }

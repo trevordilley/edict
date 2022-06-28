@@ -169,6 +169,7 @@ proc add*[T, U, MatchT](session: Session[T, MatchT], production: Production[T, U
       if isAncestor(x, y): 1 else: -1)
     var memNode = MemoryNode[T, MatchT](parent: joinNode, nodeType: if i == last: Leaf else: Partial, condition: condition, ruleName: production.name, lastMatchId: -1)
     if memNode.nodeType == Leaf:
+      # left off here
       memNode.condFn = production.condFn
       if production.thenFn != nil:
         var sess = session

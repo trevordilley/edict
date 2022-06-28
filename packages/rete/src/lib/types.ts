@@ -53,7 +53,7 @@ export type InitMatchFn<MatchT> = (ruleName: string) => MatchT
 
 /** Beta Network **/
 export interface JoinNode<T, MatchT> {
-  parent: MemoryNode<T, MatchT >,
+  parent?: MemoryNode<T, MatchT >,
   child: MemoryNode<T, MatchT>,
   alphaNode: AlphaNode<T, MatchT>,
   condition: Condition<T>,
@@ -79,8 +79,8 @@ export interface LeafNode<MatchT> {
 
 export interface MemoryNode<T, MatchT> {
   parent: JoinNode<T, MatchT>,
-  child: JoinNode<T,MatchT>,
-  leafNode: MemoryNode<T, MatchT>,
+  child?: JoinNode<T,MatchT>,
+  leafNode?: MemoryNode<T, MatchT>,
   lastMatchId: number,
   matches: Map<IdAttrs, Match<MatchT>>
   matchIds: Map<number, IdAttrs>,
