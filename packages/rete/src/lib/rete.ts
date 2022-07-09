@@ -4,14 +4,17 @@
 import {
   AlphaNode,
   Condition,
-  Field,
+  Fact,
+  Field, IdAttr,
   IdAttrs,
-  JoinNode, Match,
+  JoinNode,
+  Match,
   MEMORY_NODE_TYPE,
   MemoryNode,
   Production,
   Session,
-  Var
+  Var,
+  Token
 } from "./types";
 
 export function rete(): string {
@@ -101,7 +104,8 @@ const addProductionToSession = <T, U, MatchT>(session: Session<T,MatchT>,product
     const condition = production.conditions[i]
     const leafAlphaNode = addNodes(session, condition.nodes)
     const parentMemNode = memNodes.length > 0 ? memNodes[memNodes.length - 1]: undefined
-    const joinNode: JoinNode<T, MatchT> = {parent: parentMemNode, alphaNode: leafAlphaNode, condition, ruleName: production.name}
+    const joinNode: JoinNode<T, MatchT> = {
+      parent: parentMemNode, alphaNode: leafAlphaNode, condition, ruleName: production.name}
     condition.vars.forEach(v => {
       if(bindings.has(v.name)) {
         joinedBindings.add(v.name)
@@ -127,7 +131,89 @@ const addProductionToSession = <T, U, MatchT>(session: Session<T,MatchT>,product
     matches: new Map<IdAttrs, Match<MatchT>>(),
     matchIds: new Map<number, IdAttrs>()}
     if(memNode.type === MEMORY_NODE_TYPE.LEAF) {
-      memNode.nodeType
+      memNode.nodeType = {
+        condFn : production.condFn
+      }
+      const pThenFn = production.thenFn
+      if(pThenFn) {
+        const sess = session
+        sess.insideRule = true
+        memNode.nodeType.thenFn = (vars ) => pThenFn(sess, production, production.convertMatchFn(vars))
+      }
+      const pThenFinallyFn = production.thenFinallyFn
+      if(pThenFinallyFn) {
+        const sess = session
+        sess.insideRule = true
+        memNode.nodeType.thenFinallyFn = () => pThenFinallyFn(sess, production)
+      }
+
+      if(session.leafNodes.has(production.name)) {
+        throw new Error(`${production.name} already exists in session`)
+      }
+      session.leafNodes.set(production.name, memNode)
     }
+    memNodes.push(memNode)
+    joinNodes.push(joinNode)
+    joinNode.child = memNode
+  }
+
+  const leafMemNode = memNodes[memNodes.length - 1]
+  for(let i = 0; i < memNodes.length; i++) {
+    memNodes[i].leafNode = leafMemNode
+  }
+  for(let i = 0; i < joinNodes.length; i++) {
+    const node = joinNodes[i]
+    const vars = node.condition.vars
+    for(let j = 0; j < vars.length; j++) {
+      const v = vars[j]
+      if(v.field === Field.VALUE && joinedBindings.has(v.name)) {
+        node.disableFastUpdates = true
+        break
+      }
+    }
+  }
+}
+const getVarFromFact = <MatchT, T>(vars: MatchT, key: string, fact: T): boolean => {
+  // @ts-ignore
+  if(vars[key] && vars[key] != fact) {
+    return false
+  }
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  vars[key] = fact
+  return true
+}
+
+const getVarsFromFact = <MatchT, T>(vars: MatchT, condition: Condition<T>, fact: Fact<T>): boolean => {
+  for(let i = 0; i < condition.vars.length; i++) {
+    const v = condition.vars[i]
+    if(v.field === Field.IDENTIFIER) {
+      if(!getVarFromFact(vars, v.name, fact[0])) {
+        return false
+      }
+    }
+    else if (v.field === Field.ATTRIBUTE) {
+      throw new Error(`Attributes can not contain vars: ${v}`)
+    }
+    else if (v.field === Field.VALUE) {
+      if(!getVarFromFact(vars, v.name, fact[2])) {
+        return false
+      }
+    }
+  }
+  return true
+}
+
+const getIdAttr = <T>(fact: Fact<T>):IdAttr => {
+  throw new Error("getIdAttr TODO")
+}
+
+const leftActivation = <T, MatchT>(session: Session<T, MatchT>, node: JoinNode<T, MatchT>, idAttrs: IdAttrs, vars: MatchT, token: Token<T>, alphaFact: Fact<T>) => {
+  const newVars = vars
+  if(getVarsFromFact(newVars, node.condition, alphaFact)) {
+    const idAttr = getIdAttr(alphaFact)
+    const newIdAttrs = idAttrs
+    newIdAttrs.push(idAttr)
+    const newToken = Token
   }
 }

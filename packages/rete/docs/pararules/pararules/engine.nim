@@ -1,5 +1,4 @@
 import tables, algorithm, sets, sequtils
-
 type
   # facts
   Field* = enum # done
