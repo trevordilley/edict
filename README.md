@@ -138,7 +138,7 @@ mySession.fire()
 
 const {$user} = usersCelebratingBirthdays.query()
 
-$user.forEach(u => console.log(`${u.id} is celebrating their birthday!`))
+$user.forEach(u => console.log(`${u.name} is celebrating their birthday!`))
 ```
 
 The subtle power of this is that we're really leaning on JSON being a native Javascript 
