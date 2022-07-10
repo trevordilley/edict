@@ -13,11 +13,10 @@ Let's walk through a simple usage of Edict. To illustrate the leverage rule-base
 systems provide during implementation we will build the following app (without a UI! Please see
 the React example in the `examples/` directory to see how this ties to UI!).
 
-In this example we'll describe two features:
-1. Tracking if the user is AFK (Away From Keyboard)
-2. Managing a list of ToDos
+In this example we'll build an application that figures out which users are 
+having a birthday!
 
-#$# The _AttributeSchema_
+### The _AttributeSchema_
 
 The `attributeSchema` describes the shape of your facts, specifically the
 types of data that can be associated with an id and value. Later when we insert
