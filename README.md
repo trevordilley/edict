@@ -1,6 +1,6 @@
-
-
 # Edict
+**current version: `0.0.0-coding-before-children-start-screaming`**
+
 Edict is a simple state management library exposing an ergonomic API separating data from logic. 
 Edict takes a rule-based approach when determining how to reactively update state. 
 
