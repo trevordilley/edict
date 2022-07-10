@@ -56,7 +56,7 @@ Now that we have our session, let's insert some facts.
 const {insert} = mySession
 
 insert({
-  // "bob" is the "id", it coule be an integer, uuid, whatever makes sense for you application! 
+  // "bob" is the "id", it coule be an integer, uuid, whatever makes sense for your application! 
   "bob": {name: "Bob Johnson", email: "bob@hotmail.com", birthDay: new Date("2008-01-19")},
   "tom": {name: "Tom Kennedy", email: "tomk@aol.com", birthDay: new Date("1967-03-02")},
   
