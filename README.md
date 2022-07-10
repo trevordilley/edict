@@ -108,7 +108,7 @@ const birthDaysMatchingTodayAreCelebrating! = addRule(({birthDay, todaysDate}) =
   // The "then" block will receive two arguments. First is an object
   // with the matches (as described above) and the second is operations
   // that can be done within the session (for convenience in case the rule is not 
-  // a scope where the session is available)
+  // in a scope where the session is available)
   then: ({$user, today}, {insert}) => {
     insert({[$user.id]: { isCelebratingBirthDay: true }})
   }
