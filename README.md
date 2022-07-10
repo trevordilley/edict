@@ -26,7 +26,11 @@ facts.
 ```typescript
 // TODO: RENAME `factSchema` to `attributeSchema`! 
 const factSchema = {
-  // Attributes tied to users
+  // `attr()` is a type narrowing function 
+  // that also lets us avoid needing
+  // to provide a value while using a JSON object
+  // to describe our schema!
+  // Open to suggestions concerning better ways to do this!
   name: attr<string>(),
   email: attr<string>(),
   birthDay: attr<Date>(),
