@@ -2,7 +2,6 @@
 **current version: `0.0.0-coding-before-children-start-screaming`**
 
 Edict is a simple ~~state~~ **logic** management library exposing an API making organizing the most critical part of your application easy and intuitive. 
-Edict takes a rule-based approach when determining how to reactively update state. 
 
 The API and underlying motivations were inspired by the [O'doyle rules](https://github.com/oakes/odoyle-rules) library. Edict aims to 
 expose an API which follows the reactive spirit of the O'doyle Rules library. 
