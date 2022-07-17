@@ -1,8 +1,7 @@
 # Edict
 **current version: `0.0.0-coding-before-children-start-screaming`**
 
-Edict is a simple state management library exposing an ergonomic API separating data from logic. 
-Edict takes a rule-based approach when determining how to reactively update state. 
+Edict is a simple ~~state~~ **logic** management library exposing an API making organizing the most critical part of your application easy and intuitive. 
 
 The API and underlying motivations were inspired by the [O'doyle rules](https://github.com/oakes/odoyle-rules) library. Edict aims to 
 expose an API which follows the reactive spirit of the O'doyle Rules library. 
@@ -26,7 +25,11 @@ facts.
 ```typescript
 // TODO: RENAME `factSchema` to `attributeSchema`! 
 const factSchema = {
-  // Attributes tied to users
+  // `attr()` is a type narrowing function 
+  // that also lets us avoid needing
+  // to provide a value while using a JSON object
+  // to describe our schema!
+  // Open to suggestions concerning better ways to do this!
   name: attr<string>(),
   email: attr<string>(),
   birthDay: attr<Date>(),
@@ -56,7 +59,7 @@ Now that we have our session, let's insert some facts.
 const {insert} = mySession
 
 insert({
-  // "bob" is the "id", it coule be an integer, uuid, whatever makes sense for you application! 
+  // "bob" is the "id", it could be an integer, uuid, whatever makes sense for your application! 
   "bob": {name: "Bob Johnson", email: "bob@hotmail.com", birthDay: new Date("2008-01-19")},
   "tom": {name: "Tom Kennedy", email: "tomk@aol.com", birthDay: new Date("1967-03-02")},
   
@@ -108,7 +111,7 @@ const birthDaysMatchingTodayAreCelebrating! = addRule(({birthDay, todaysDate}) =
   // The "then" block will receive two arguments. First is an object
   // with the matches (as described above) and the second is operations
   // that can be done within the session (for convenience in case the rule is not 
-  // a scope where the session is available)
+  // in a scope where the session is available)
   then: ({$user, today}, {insert}) => {
     insert({[$user.id]: { isCelebratingBirthDay: true }})
   }
@@ -138,7 +141,7 @@ mySession.fire()
 
 const {$user} = usersCelebratingBirthdays.query()
 
-$user.forEach(u => console.log(`${u.id} is celebrating their birthday!`))
+$user.forEach(u => console.log(`${u.name} is celebrating their birthday!`))
 ```
 
 The subtle power of this is that we're really leaning on JSON being a native Javascript 
