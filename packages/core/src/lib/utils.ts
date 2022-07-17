@@ -1,5 +1,6 @@
-import { InsertEdictFact, InternalFactRepresentation} from "@edict/core";
+import { InsertEdictFact} from "@edict/core";
 import * as _ from "lodash"
+import {InternalFactRepresentation} from "@edict/types";
 
 // export const groupRuleById = <S>(rules ) => {
 //   const grouped = _.groupBy(rules, (r: WHAT_SCHEMA<T>) => r[0])
@@ -9,7 +10,7 @@ import * as _ from "lodash"
 //   },{})
 // }
 
-export const groupFactById = (facts: InternalFactRepresentation[]) => {
+export const groupFactById = <S>(facts: InternalFactRepresentation<S>[]) => {
   const grouped = _.groupBy(facts, (r  ) => r[0])
   return Object.keys(grouped).reduce((acc: any, g) => {
     acc[g] = grouped[g].map(x => x.slice(1))
@@ -17,7 +18,7 @@ export const groupFactById = (facts: InternalFactRepresentation[]) => {
   },{})
 }
 
-export const insertFactToFact = <S>(insertion: InsertEdictFact<S>): InternalFactRepresentation => {
+export const insertFactToFact = <S>(insertion: InsertEdictFact<S>): InternalFactRepresentation<S> => {
   // TODO: This is just weird, it doesn't like the type and I don't get why. I'm sure I'll find out when I really
   // don't want to find out!
   // @ts-ignore

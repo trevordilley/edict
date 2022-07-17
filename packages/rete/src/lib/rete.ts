@@ -1,12 +1,15 @@
 // Example implementation documentation:
 // paper used by o'doyle rules: http://reports-archive.adm.cs.cmu.edu/anon/1995/CMU-CS-95-113.pdf
 
+// Porting from docs/pararules/engine.nim
+// Aiming to keep naming and syntax as close as possible to that source
+// material initially to minimize defects where possiible until I have a
+// real good handle on what's going  on!
+
 import {
   AlphaNode,
   Condition,
-  Fact,
-  Field, IdAttr,
-  IdAttrs,
+  Field,
   JoinNode,
   Match,
   MEMORY_NODE_TYPE,
@@ -14,12 +17,12 @@ import {
   Production,
   Session,
   Var,
-  Token
+  Token, Fact
 } from "./types";
+import { IdAttrs} from "@edict/types";
+import {getIdAttr} from "@edict/common";
 
-export function rete(): string {
-  return 'rete';
-}
+// NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
 
 const addNode = <T, MatchT>(node: AlphaNode<T, MatchT>, newNode: AlphaNode<T, MatchT> ): AlphaNode<T, MatchT> => {
   for(let i = 0; i < node.children.length; i++) {
@@ -48,6 +51,9 @@ const addNodes = <T, MatchT>(session: Session<T, MatchT>, nodes: [ Field, T][] )
 function isVar (obj: any): obj is Var {
   return obj.name !== undefined && obj.field !== undefined
 }
+
+// To figure out MatchT we need to understand how Vars are treated (so we can understand how MatchT is mapped)
+// We should also understand how conditions work in a Rete network
 
 export const addConditionsToProduction = <T,U,MatchT>(production: Production<T,U,MatchT>, id: Var | T, attr: T, value: Var | T, then: boolean) => {
   const condition: Condition<T> = {shouldTrigger: then, nodes: [], vars: []}
@@ -128,8 +134,8 @@ const addProductionToSession = <T, U, MatchT>(session: Session<T,MatchT>,product
       condition,
       ruleName: production.name,
       lastMatchId: -1,
-    matches: new Map<IdAttrs, Match<MatchT>>(),
-    matchIds: new Map<number, IdAttrs>()}
+    matches: new Map<IdAttrs<T>, Match<MatchT>>(),
+    matchIds: new Map<number, IdAttrs<T>>()}
     if(memNode.type === MEMORY_NODE_TYPE.LEAF) {
       memNode.nodeType = {
         condFn : production.condFn
@@ -173,7 +179,15 @@ const addProductionToSession = <T, U, MatchT>(session: Session<T,MatchT>,product
     }
   }
 }
+
+// MatchT represents a mapping from condition key to a value
+// So given this condidtion:
+//
+// $npc: {circle, speed, destX, destY},
+//
+// We'd need a map
 const getVarFromFact = <MatchT, T>(vars: MatchT, key: string, fact: T): boolean => {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   if(vars[key] && vars[key] != fact) {
     return false
@@ -183,6 +197,8 @@ const getVarFromFact = <MatchT, T>(vars: MatchT, key: string, fact: T): boolean 
   vars[key] = fact
   return true
 }
+
+
 
 const getVarsFromFact = <MatchT, T>(vars: MatchT, condition: Condition<T>, fact: Fact<T>): boolean => {
   for(let i = 0; i < condition.vars.length; i++) {
@@ -204,16 +220,34 @@ const getVarsFromFact = <MatchT, T>(vars: MatchT, condition: Condition<T>, fact:
   return true
 }
 
-const getIdAttr = <T>(fact: Fact<T>):IdAttr => {
-  throw new Error("getIdAttr TODO")
+const leftActivationWithoutAlpha = <T, MatchT>(session: Session<T, MatchT>, node: JoinNode<T, MatchT>, idAttrs: IdAttrs<T>, vars: MatchT, token: Token<T>) => {
+  if(node.idName != "") {
+    let id = vars[node.idName]
+  }
 }
 
-const leftActivation = <T, MatchT>(session: Session<T, MatchT>, node: JoinNode<T, MatchT>, idAttrs: IdAttrs, vars: MatchT, token: Token<T>, alphaFact: Fact<T>) => {
+const leftActivationOnMemoryNode = <T, MatchT>(session: Session<T, MatchT>, node: MemoryNode<T, MatchT>, idAttrs: IdAttrs<T>, vars: MatchT, token: Token<T>, isNew: boolean) =>{
+
+}
+
+const leftActivationFromVars = <T, MatchT>(session: Session<T, MatchT>, node: JoinNode<T, MatchT>, idAttrs: IdAttrs<T>, vars: MatchT, token: Token<T>, alphaFact: Fact<T>) => {
   const newVars = vars
   if(getVarsFromFact(newVars, node.condition, alphaFact)) {
-    const idAttr = getIdAttr(alphaFact)
+    const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = idAttrs
     newIdAttrs.push(idAttr)
-    const newToken = Token
+    const newToken = {fact: alphaFact, kind: token.kind}
+    const isNew = !node.oldIdAttrs?.has(idAttr)
+    const child = node.child
+    if(!child) {
+      console.error("Session", JSON.stringify(session))
+      console.error(`Node ${node.idName}`, JSON.stringify(node))
+      throw new Error("Expected node to have child!")
+    }
+    leftActivationOnMemoryNode(session, child, newIdAttrs, newVars, newToken, isNew)
   }
+}
+
+const leftActivateOnJoinNode = <T, MatchT>(session: Session<T, MatchT>, node: JoinNode<T, MatchT>, idAttrs: IdAttrs<T>, vars: MatchT, token: Token<T>, alphaFact: Fact<T>) => {
+
 }

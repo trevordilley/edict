@@ -1,16 +1,15 @@
 
 /*** Facts ***/
+import {IdAttr, IdAttrs, InternalFactRepresentation} from "@edict/types";
+
 export enum Field {
   IDENTIFIER,
   ATTRIBUTE,
   VALUE
 }
 
-export type Fact<T> = [
-  T, // id
-  T, // attr
-  T // value
-]
+// Shorten that name a bit
+export type Fact<T> = InternalFactRepresentation<T>
 
 export enum TOKEN_KIND {
   INSERT,
@@ -25,8 +24,6 @@ export interface Token<T> {
   oldFact?: Fact<T>
 }
 
-export type IdAttr = [number, number]
-export type IdAttrs = IdAttr[]
 
 /** Matches **/
 
@@ -58,7 +55,7 @@ export interface JoinNode<T, MatchT> {
   alphaNode: AlphaNode<T, MatchT>,
   condition: Condition<T>,
   idName?: string,
-  oldIdAttrs?: Set<IdAttr>,
+  oldIdAttrs?: Set<IdAttr<T>>,
   disableFastUpdates?: boolean,
   ruleName: string
 }
@@ -82,8 +79,8 @@ export interface MemoryNode<T, MatchT> {
   child?: JoinNode<T,MatchT>,
   leafNode?: MemoryNode<T, MatchT>,
   lastMatchId: number,
-  matches: Map<IdAttrs, Match<MatchT>>
-  matchIds: Map<number, IdAttrs>,
+  matches: Map<IdAttrs<T>, Match<MatchT>>
+  matchIds: Map<number, IdAttrs<T>>,
   condition: Condition<T>,
   ruleName: string,
   type: MEMORY_NODE_TYPE,
@@ -120,9 +117,9 @@ export interface Production<T, U, MatchT> {
 export interface Session<T, MatchT> {
   alphaNode: AlphaNode<T, MatchT>,
   leafNodes: Map< string, MemoryNode<T, MatchT>>,
-  idAttrNodes: Map<IdAttr, Set<AlphaNode<T, MatchT>>>,
+  idAttrNodes: Map<IdAttr<T>, Set<AlphaNode<T, MatchT>>>,
   insideRule: boolean,
-  thenQueue: Set<[node: MemoryNode<T, MatchT>, idAttrs: IdAttrs]>
+  thenQueue: Set<[node: MemoryNode<T, MatchT>, idAttrs: IdAttrs<T>]>
   thenFinallyQueue: Set<MemoryNode<T,MatchT>>
   triggeredNodeIds: Set<MemoryNode<T, MatchT>>
   autoFire: boolean,

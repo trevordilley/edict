@@ -1,14 +1,15 @@
-import {Binding, EdictArgs, EdictOperations, IEdict, InsertEdictFact, InternalFactRepresentation, Rule,} from "./types";
+import {EdictArgs, EdictOperations, IEdict, InsertEdictFact, Rule,} from "./types";
 import {groupFactById, insertFactToFact} from "./utils";
 import * as _ from "lodash";
+import {Binding, InternalFactRepresentation} from "@edict/types";
 
 // TODO: Ideally constrain that any to the value types in the schema someday
 
 export const rule = <T>(r: Rule<T>) => r
 
 export const edict = <S>(args: EdictArgs<S> ): IEdict<S> => {
-  const facts: InternalFactRepresentation[] = []
-  const findFact = ([id,attr]: [InternalFactRepresentation[0], InternalFactRepresentation[1]]) => facts.findIndex(f =>f[0] == id && f[1] == attr )
+  const facts: InternalFactRepresentation<S>[] = []
+  const findFact = ([id,attr]: [InternalFactRepresentation<S>[0], InternalFactRepresentation<S>[1]])=> facts.findIndex(f =>f[0] == id && f[1] == attr )
 
   const insert = (insertFacts: InsertEdictFact<S>) => {
     // be dumb about this
@@ -25,20 +26,20 @@ export const edict = <S>(args: EdictArgs<S> ): IEdict<S> => {
   }
   const retract = (id: string, ...attrs: (keyof S)[]) => {
     attrs.map(attr => {
-      const idx = findFact([id, `${attr}`])
+      const idx = findFact([id, attr])
       if(idx < 0) return
       facts.splice(idx, 1)
     })
   }
 
-  const matchAttr = (attr: string, facts: InternalFactRepresentation[]) => {
+  const matchAttr = (attr: keyof S, facts: InternalFactRepresentation<S>[]) => {
     const filtered = facts.filter(f => f[1] === attr )
-    const grouped = _.groupBy(filtered, (f: InternalFactRepresentation) => f[0])
+    const grouped = _.groupBy(filtered, (f: InternalFactRepresentation<S>) => f[0])
     return Object.values(grouped).flat()
   }
 
 
-  const matchIdAttr = (id: string, attr: string, facts: InternalFactRepresentation[]) => facts.filter(f => f[0] === id && f[1] === attr)
+  const matchIdAttr = (id: string, attr: keyof S, facts: InternalFactRepresentation<S>[]) => facts.filter(f => f[0] === id && f[1] === attr)
 
   const rules: {[key: string]: Rule<any>} = {}
   const addRule = <T>(fn: ( schema: S, operations: EdictOperations<S>) => Rule<T>) => {
@@ -54,7 +55,8 @@ export const edict = <S>(args: EdictArgs<S> ): IEdict<S> => {
     const definedFacts = Object.keys(what).map(id => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      const attrs = Object.keys(what[id])
+      // Todo: Use Zod?
+      const attrs = Object.keys(what[id]) as [keyof S]
       const matchedFacts = attrs.map(attr =>
            (id.startsWith("$")) ? matchAttr(attr, facts) : matchIdAttr(id, attr, facts)
         ).flat()

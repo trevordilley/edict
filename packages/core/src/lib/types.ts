@@ -1,3 +1,4 @@
+import {Binding, InternalFactRepresentation} from "@edict/types";
 
 export interface TypeOptions {
   then?: boolean
@@ -8,10 +9,9 @@ export interface TypeOptions {
 export const attr = <T>(options?: TypeOptions): T => options as unknown as T
 
 
-export type Binding<T> = {[Key in keyof T]:
-  Required<T[Key]> & {id: string }}
 
 export type ATTR<SCHEMA> = {[attr in keyof SCHEMA]: SCHEMA[attr]}
+
 export interface Rule<T> {
   name: string,
   what: T,
@@ -35,7 +35,6 @@ export type EdictArgs<SCHEMA> =
     factSchema: SCHEMA
   }
 
-export type InternalFactRepresentation = [string, string, any]
 
 export type AddRuleArgs<SCHEMA, T> = (schema: SCHEMA, operations: EdictOperations<SCHEMA>) => Rule<T>
 export type AddRuleRet<T> = { query: () => Binding<T>[], rule: Rule<T> }
@@ -46,6 +45,6 @@ export interface IEdict<SCHEMA> {
   retract: (id: string, ...attrs: (keyof SCHEMA)[]) => void
   fire: () => void,
   query: <T>(rule: Rule<T>) => Binding<T>[],
-  facts: () => InternalFactRepresentation[],
+  facts: () => InternalFactRepresentation<SCHEMA>[],
   addRule: AddRule<SCHEMA>,
 }

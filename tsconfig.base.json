@@ -16,9 +16,11 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@edict/common": ["packages/common/src/index.ts"],
       "@edict/core": ["packages/core/src/index.ts"],
       "@edict/react": ["packages/react/src/index.ts"],
-      "@edict/rete": ["packages/rete/src/index.ts"]
+      "@edict/rete": ["packages/rete/src/index.ts"],
+      "@edict/types": ["packages/types/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
