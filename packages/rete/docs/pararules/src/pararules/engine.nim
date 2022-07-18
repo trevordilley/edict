@@ -1,24 +1,25 @@
 import tables, algorithm, sets, sequtils
+
 type
   # facts
-  Field* = enum # done
+  Field* = enum
     Identifier, Attribute, Value
-  Fact[T] = tuple[id: T, attr: T, value: T] # done
-  TokenKind = enum # done
+  Fact[T] = tuple[id: T, attr: T, value: T]
+  TokenKind = enum
     Insert, Retract, Update
-  Token[T] = object # done
+  Token[T] = object
     fact: Fact[T]
     case kind: TokenKind
     of Insert, Retract:
       nil
     of Update:
       oldFact: Fact[T]
-  IdAttr = tuple[id: int, attr: int] # doone
-  IdAttrs = seq[IdAttr] # done
+  IdAttr = tuple[id: int, attr: int]
+  IdAttrs = seq[IdAttr]
 
   # matches
-  Vars*[T] = Table[string, T] # done
-  Var* = object # done
+  Vars*[T] = Table[string, T]
+  Var* = object
     name*: string
     field: Field
   Match[MatchT] = object
@@ -26,7 +27,7 @@ type
     vars: MatchT
     enabled: bool
 
-  # functions # done
+  # functions
   ThenFn[T, U, MatchT] = proc (session: var Session[T, MatchT], rule: Production[T, U, MatchT], vars: U)
   WrappedThenFn[MatchT] = proc (vars: MatchT)
   ThenFinallyFn[T, U, MatchT] = proc (session: var Session[T, MatchT], rule: Production[T, U, MatchT])
@@ -36,7 +37,7 @@ type
   InitMatchFn[MatchT] = proc (ruleName: string): MatchT
 
   # alpha network
-  AlphaNode[T, MatchT] = ref object # done
+  AlphaNode[T, MatchT] = ref object
     testField: Field
     testValue: T
     facts: Table[int, Table[int, Fact[T]]]
@@ -44,9 +45,9 @@ type
     children: seq[AlphaNode[T, MatchT]]
 
   # beta network
-  MemoryNodeType = enum # done
+  MemoryNodeType = enum
     Partial, Leaf
-  MemoryNode[T, MatchT] = ref object # done
+  MemoryNode[T, MatchT] = ref object
     parent: JoinNode[T, MatchT]
     child: JoinNode[T, MatchT]
     leafNode: MemoryNode[T, MatchT]
@@ -63,7 +64,7 @@ type
         trigger: bool
       else:
         nil
-  JoinNode[T, MatchT] = ref object # done
+  JoinNode[T, MatchT] = ref object
     parent: MemoryNode[T, MatchT]
     child: MemoryNode[T, MatchT]
     alphaNode: AlphaNode[T, MatchT]
@@ -74,18 +75,18 @@ type
     ruleName: string
 
   # session
-  Condition[T] = object # done
+  Condition[T] = object
     nodes: seq[tuple[testField: Field, testValue: T]]
     vars: seq[Var]
     shouldTrigger: bool
-  Production*[T, U, MatchT] = object # done
+  Production*[T, U, MatchT] = object
     name: string
     conditions: seq[Condition[T]]
     convertMatchFn: ConvertMatchFn[MatchT, U]
     condFn: CondFn[MatchT]
     thenFn: ThenFn[T, U, MatchT]
     thenFinallyFn: ThenFinallyFn[T, U, MatchT]
-  Session*[T, MatchT] = object # done
+  Session*[T, MatchT] = object
     alphaNode: AlphaNode[T, MatchT]
     leafNodes: ref Table[string, MemoryNode[T, MatchT]]
     idAttrNodes: ref Table[IdAttr, HashSet[ptr AlphaNode[T, MatchT]]]
@@ -108,7 +109,6 @@ proc addNodes[T, MatchT](session: Session[T, MatchT], nodes: seq[tuple[testField
   for node in nodes:
     result = result.addNode(AlphaNode[T, MatchT](testField: node.testField, testValue: node.testValue))
 
-# ts name: addConditionsToProduction
 proc add*[T, U, MatchT](production: var Production[T, U, MatchT], id: Var or T, attr: T, value: Var or T, then: bool) =
   var condition = Condition[T](shouldTrigger: then)
   for fieldType in [Field.Identifier, Field.Attribute, Field.Value]:
@@ -140,7 +140,6 @@ proc isAncestor(x, y: JoinNode): bool =
       node = node.parent.parent
   false
 
-# ts name: addProductionToSession
 proc add*[T, U, MatchT](session: Session[T, MatchT], production: Production[T, U, MatchT]) =
   var memNodes: seq[MemoryNode[T, MatchT]]
   var joinNodes: seq[JoinNode[T, MatchT]]
@@ -168,7 +167,6 @@ proc add*[T, U, MatchT](session: Session[T, MatchT], production: Production[T, U
       if isAncestor(x, y): 1 else: -1)
     var memNode = MemoryNode[T, MatchT](parent: joinNode, nodeType: if i == last: Leaf else: Partial, condition: condition, ruleName: production.name, lastMatchId: -1)
     if memNode.nodeType == Leaf:
-      # left off here
       memNode.condFn = production.condFn
       if production.thenFn != nil:
         var sess = session
@@ -195,8 +193,10 @@ proc add*[T, U, MatchT](session: Session[T, MatchT], production: Production[T, U
         break
 
 proc getVarFromFact[T, MatchT](vars: var MatchT, key: string, fact: T): bool =
+  
   if vars.hasKey(key) and vars[key] != fact:
     return false
+  echo("getVarFromFact -- ", key,": ",fact)
   vars[key] = fact
   true
 
@@ -221,7 +221,6 @@ proc getIdAttr[T](fact: Fact[T]): IdAttr =
 
 proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: var MemoryNode[T, MatchT], idAttrs: IdAttrs, vars: MatchT, token: Token[T], isNew: bool)
 
-# leftActivationFromVars
 proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[T, MatchT], idAttrs: IdAttrs, vars: MatchT, token: Token[T], alphaFact: Fact[T]) =
   var newVars = vars
   if getVarsFromFact(newVars, node.condition, alphaFact):
@@ -232,7 +231,6 @@ proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[T
     let isNew = not node.oldIdAttrs.contains(idAttr)
     session.leftActivation(node.child, newIdAttrs, newVars, newToken, isNew)
 
-# leftActivationWithoutAlpha
 proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[T, MatchT], idAttrs: IdAttrs, vars: MatchT, token: Token[T]) =
   # SHORTCUT: if we know the id, only loop over alpha facts with that id
   if node.idName != "":
@@ -245,7 +243,6 @@ proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[T
       for alphaFact in factsForId.values:
         session.leftActivation(node, idAttrs, vars, token, alphaFact)
 
-# leftActivationOnMemoryNode
 proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: var MemoryNode[T, MatchT], idAttrs: IdAttrs, vars: MatchT, token: Token[T], isNew: bool) =
   let idAttr = idAttrs[idAttrs.len-1]
   # if the insert/update fact is new and this condition doesn't have then = false, let the leaf node trigger
@@ -286,6 +283,7 @@ proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: var Memory
 proc rightActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[T, MatchT], idAttr: IdAttr, token: Token[T]) =
   if node.parent == nil: # root node
     var vars = session.initMatch(node.ruleName)
+    echo(node.ruleName, "\t\t", vars)
     if getVarsFromFact(vars, node.condition, token.fact):
       session.leftActivation(node.child, @[idAttr], vars, token, true)
   else:
@@ -295,6 +293,7 @@ proc rightActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[
       if node.idName != "" and vars[node.idName].slot0 != token.fact.id.slot0:
         continue
       var newVars = vars # making a mutable copy here is far faster than making `vars` mutable above
+      echo("newVars", node.idName,"\t\t",newVars)
       if getVarsFromFact(newVars, node.condition, token.fact):
         var newIdAttrs = idAttrs
         newIdAttrs.add(idAttr)
