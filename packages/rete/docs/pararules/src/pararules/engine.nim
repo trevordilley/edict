@@ -110,6 +110,8 @@ proc addNodes[T, MatchT](session: Session[T, MatchT], nodes: seq[tuple[testField
     result = result.addNode(AlphaNode[T, MatchT](testField: node.testField, testValue: node.testValue))
 
 proc add*[T, U, MatchT](production: var Production[T, U, MatchT], id: Var or T, attr: T, value: Var or T, then: bool) =
+  echo("adding condition to production: ", production.name)
+  echo("condition -- ", "id: ", id, ", attr: ", attr, ", value: ", value)
   var condition = Condition[T](shouldTrigger: then)
   for fieldType in [Field.Identifier, Field.Attribute, Field.Value]:
     case fieldType:
@@ -193,10 +195,9 @@ proc add*[T, U, MatchT](session: Session[T, MatchT], production: Production[T, U
         break
 
 proc getVarFromFact[T, MatchT](vars: var MatchT, key: string, fact: T): bool =
-  
+
   if vars.hasKey(key) and vars[key] != fact:
     return false
-  echo("getVarFromFact -- ", key,": ",fact)
   vars[key] = fact
   true
 
@@ -283,7 +284,6 @@ proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: var Memory
 proc rightActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[T, MatchT], idAttr: IdAttr, token: Token[T]) =
   if node.parent == nil: # root node
     var vars = session.initMatch(node.ruleName)
-    echo(node.ruleName, "\t\t", vars)
     if getVarsFromFact(vars, node.condition, token.fact):
       session.leftActivation(node.child, @[idAttr], vars, token, true)
   else:
@@ -293,7 +293,6 @@ proc rightActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[
       if node.idName != "" and vars[node.idName].slot0 != token.fact.id.slot0:
         continue
       var newVars = vars # making a mutable copy here is far faster than making `vars` mutable above
-      echo("newVars", node.idName,"\t\t",newVars)
       if getVarsFromFact(newVars, node.condition, token.fact):
         var newIdAttrs = idAttrs
         newIdAttrs.add(idAttr)

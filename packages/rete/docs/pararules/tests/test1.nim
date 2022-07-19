@@ -31,7 +31,7 @@ test "x":
   let rule1 =
     rule numCondsAndFacts(Fact):
       what:
-        (b, Color, "blue")
+        (Bob, Color, "blue")
         (y, LeftOf, z)
         (a, Color, "maize")
         (y, RightOf, b)
