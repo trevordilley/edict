@@ -6,8 +6,8 @@ import {IdAttr, IdAttrs, InternalFactRepresentation} from "@edict/types";
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
 export type ValueOf<T> = T[keyof T];
-export type FactElement<SCHEMA> = string | keyof SCHEMA |  ValueOf<SCHEMA>
-export type MatchT<SCHEMA> = Map<string, FactElement<SCHEMA>>
+export type FactFragment<SCHEMA> = string | keyof SCHEMA |  ValueOf<SCHEMA>
+export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>
 
 export enum Field {
   IDENTIFIER,
@@ -42,7 +42,7 @@ export interface Var {
 
 export interface Match<T> {
   id: number,
-  vars: T,
+  vars: MatchT<T>,
   enabled: boolean
 }
 
@@ -51,34 +51,24 @@ export type ThenFn<T,U> = (session: Session<T>, rule: Production<T,U>, vars: U) 
 export type WrappedThenFn<SCHEMA> = (vars: MatchT<SCHEMA>) => void
 export type ThenFinallyFn<T,U> = (session: Session<T>, rule: Production<T,U>) => void
 export type WrappedThenFinallyFn = () => void
-export type ConvertMatchFn<U> = (vars: MatchT<U>) => U
+export type ConvertMatchFn<T,U> = (vars: MatchT<T>) => U
 export type CondFn<T> = (vars: MatchT<T>) => boolean
 export type InitMatchFn<T> = (ruleName: string) => MatchT<T>
 
-/** Beta Network **/
-export interface JoinNode<T> {
-  parent?: MemoryNode<T >,
-  child?: MemoryNode<T>,
-  alphaNode: AlphaNode<T>,
-  condition: Condition<T>,
-  idName?: string,
-  oldIdAttrs?: Set<IdAttr<T>>,
-  disableFastUpdates?: boolean,
-  ruleName: string
-}
 
+/** Alpha Network **/
+export interface AlphaNode<T> {
+  testField: Field,
+  testValue: T,
+  facts: Map<number, Map<number, Fact<T>>>,
+  successors: JoinNode<T>[],
+  children: AlphaNode<T>[]
+}
 
 
 export enum MEMORY_NODE_TYPE {
   PARTIAL,
   LEAF
-}
-
-export interface LeafNode<T> {
-  condFn: CondFn<T>
-  thenFn?: WrappedThenFn<T>
-  thenFinallyFn?: WrappedThenFinallyFn,
-  trigger?: boolean
 }
 
 export interface MemoryNode<T> {
@@ -94,14 +84,25 @@ export interface MemoryNode<T> {
   nodeType?: LeafNode<T>
 }
 
-/** Alpha Network **/
-export interface AlphaNode<T> {
-  testField: Field,
-  testValue: T,
-  facts: Map<number, Map<number, Fact<T>>>,
-  successors: JoinNode<T>[],
-  children: AlphaNode<T>[]
+export interface LeafNode<T> {
+  condFn: CondFn<T>
+  thenFn?: WrappedThenFn<T>
+  thenFinallyFn?: WrappedThenFinallyFn,
+  trigger?: boolean
 }
+
+export interface JoinNode<T> {
+  parent?: MemoryNode<T >,
+  child?: MemoryNode<T>,
+  alphaNode: AlphaNode<T>,
+  condition: Condition<T>,
+  idName?: string,
+  oldIdAttrs?: Set<IdAttr<T>>,
+  disableFastUpdates?: boolean,
+  ruleName: string
+}
+
+
 /** Session **/
 
 export interface Condition<T> {
@@ -115,7 +116,7 @@ export interface Condition<T> {
 export interface Production<T, U> {
   name: string,
   conditions: Condition<T>[],
-  convertMatchFn: ConvertMatchFn<U>,
+  convertMatchFn: ConvertMatchFn<T,U>,
   condFn: CondFn<T>,
   thenFn?: ThenFn<T, U>
   thenFinallyFn?: ThenFinallyFn<T, U>

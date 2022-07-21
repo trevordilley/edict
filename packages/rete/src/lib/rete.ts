@@ -17,7 +17,7 @@ import {
   Production,
   Session,
   Var,
-  Token, Fact, MatchT, FactElement
+  Token, Fact, MatchT, FactFragment
 } from "./types";
 import { IdAttrs} from "@edict/types";
 import {getIdAttr} from "@edict/common";
@@ -99,7 +99,7 @@ const isAncestor = <T, MatchT>(x: JoinNode<T >, y: JoinNode<T>): boolean => {
   return false
 }
 
-const addProductionToSession = <T, U, MatchT>(session: Session<T>,production: Production<T, U>) => {
+const addProductionToSession = <T, U>(session: Session<T>,production: Production<T, U>) => {
   const memNodes: MemoryNode<T>[] = []
   const joinNodes: JoinNode<T>[] = []
   const last = production.conditions.length - 1
@@ -134,7 +134,7 @@ const addProductionToSession = <T, U, MatchT>(session: Session<T>,production: Pr
       condition,
       ruleName: production.name,
       lastMatchId: -1,
-    matches: new Map<IdAttrs<T>, Match<MatchT>>(),
+    matches: new Map<IdAttrs<T>, Match<T>>(),
     matchIds: new Map<number, IdAttrs<T>>()}
     if(memNode.type === MEMORY_NODE_TYPE.LEAF) {
       memNode.nodeType = {
@@ -186,11 +186,10 @@ const addProductionToSession = <T, U, MatchT>(session: Session<T>,production: Pr
 // $npc: {circle, speed, destX, destY},
 //
 // We'd need a map
-const getVarFromFact = <T>(vars: MatchT<T>, key: string, fact: FactElement<T>): boolean => {
-  if(vars.get(key) && vars.get(key) != fact) {
+const getVarFromFact = <T>(vars: MatchT<T>, key: string, fact: FactFragment<T>): boolean => {
+  if(vars.has(key) && vars.get(key) != fact) {
     return false
   }
-  // NASTY SIDE-EFFECT? BLEH, DOES THIS WORK IN JAVASCRPT?
   vars.set(key, fact)
   return true
 }
@@ -218,8 +217,8 @@ const getVarsFromFact = <T>(vars: MatchT<T>, condition: Condition<T>, fact: Fact
 }
 
 const leftActivationWithoutAlpha = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>) => {
-  if(node.idName) {
-    let id = vars.get(node.idName)
+  if(node.idName != "") {
+    let id = vars[node.idName]
   }
 }
 
