@@ -17,14 +17,14 @@ import {
   Production,
   Session,
   Var,
-  Token, Fact
+  Token, Fact, MatchT, FactElement
 } from "./types";
 import { IdAttrs} from "@edict/types";
 import {getIdAttr} from "@edict/common";
 
 // NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
 
-const addNode = <T, MatchT>(node: AlphaNode<T, MatchT>, newNode: AlphaNode<T, MatchT> ): AlphaNode<T, MatchT> => {
+const addNode = <T>(node: AlphaNode<T>, newNode: AlphaNode<T> ): AlphaNode<T> => {
   for(let i = 0; i < node.children.length; i++) {
     if(node.children[i].testField === newNode.testField && node.children[i].testValue === newNode.testValue) {
       return node.children[i]
@@ -34,7 +34,7 @@ const addNode = <T, MatchT>(node: AlphaNode<T, MatchT>, newNode: AlphaNode<T, Ma
   return newNode
 }
 
-const addNodes = <T, MatchT>(session: Session<T, MatchT>, nodes: [ Field, T][] ): AlphaNode<T, MatchT> => {
+const addNodes = <T>(session: Session<T>, nodes: [ Field, T][] ): AlphaNode<T> => {
   let result = session.alphaNode
   nodes.forEach(([testField, testValue]) => {
     result = addNode(result, {
@@ -55,7 +55,7 @@ function isVar (obj: any): obj is Var {
 // To figure out MatchT we need to understand how Vars are treated (so we can understand how MatchT is mapped)
 // We should also understand how conditions work in a Rete network
 
-export const addConditionsToProduction = <T,U,MatchT>(production: Production<T,U,MatchT>, id: Var | T, attr: T, value: Var | T, then: boolean) => {
+export const addConditionsToProduction = <T,U,MatchT>(production: Production<T,U>, id: Var | T, attr: T, value: Var | T, then: boolean) => {
   const condition: Condition<T> = {shouldTrigger: then, nodes: [], vars: []}
   const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE]
 
@@ -86,7 +86,7 @@ export const addConditionsToProduction = <T,U,MatchT>(production: Production<T,U
   production.conditions.push(condition)
 }
 
-const isAncestor = <T, MatchT>(x: JoinNode<T, MatchT >, y: JoinNode<T, MatchT>): boolean => {
+const isAncestor = <T, MatchT>(x: JoinNode<T >, y: JoinNode<T>): boolean => {
   let node = y
   while(node && node.parent) {
     if(node.parent.parent === x) {
@@ -99,9 +99,9 @@ const isAncestor = <T, MatchT>(x: JoinNode<T, MatchT >, y: JoinNode<T, MatchT>):
   return false
 }
 
-const addProductionToSession = <T, U, MatchT>(session: Session<T,MatchT>,production: Production<T, U, MatchT>) => {
-  const memNodes: MemoryNode<T, MatchT>[] = []
-  const joinNodes: JoinNode<T, MatchT>[] = []
+const addProductionToSession = <T, U, MatchT>(session: Session<T>,production: Production<T, U>) => {
+  const memNodes: MemoryNode<T>[] = []
+  const joinNodes: JoinNode<T>[] = []
   const last = production.conditions.length - 1
   const bindings = new Set<string>()
   const joinedBindings = new Set<string>()
@@ -110,7 +110,7 @@ const addProductionToSession = <T, U, MatchT>(session: Session<T,MatchT>,product
     const condition = production.conditions[i]
     const leafAlphaNode = addNodes(session, condition.nodes)
     const parentMemNode = memNodes.length > 0 ? memNodes[memNodes.length - 1]: undefined
-    const joinNode: JoinNode<T, MatchT> = {
+    const joinNode: JoinNode<T> = {
       parent: parentMemNode, alphaNode: leafAlphaNode, condition, ruleName: production.name}
     condition.vars.forEach(v => {
       if(bindings.has(v.name)) {
@@ -128,7 +128,7 @@ const addProductionToSession = <T, U, MatchT>(session: Session<T,MatchT>,product
     }
     leafAlphaNode.successors.push(joinNode)
     leafAlphaNode.successors.sort((x,y) => isAncestor(x,y) ? 1 : -1)
-    const memNode: MemoryNode<T, MatchT> = {
+    const memNode: MemoryNode<T> = {
       parent: joinNode,
       type: i === last ? MEMORY_NODE_TYPE.LEAF : MEMORY_NODE_TYPE.PARTIAL,
       condition,
@@ -186,21 +186,18 @@ const addProductionToSession = <T, U, MatchT>(session: Session<T,MatchT>,product
 // $npc: {circle, speed, destX, destY},
 //
 // We'd need a map
-const getVarFromFact = <MatchT, T>(vars: MatchT, key: string, fact: T): boolean => {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  if(vars[key] && vars[key] != fact) {
+const getVarFromFact = <T>(vars: MatchT<T>, key: string, fact: FactElement<T>): boolean => {
+  if(vars.get(key) && vars.get(key) != fact) {
     return false
   }
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  vars[key] = fact
+  // NASTY SIDE-EFFECT? BLEH, DOES THIS WORK IN JAVASCRPT?
+  vars.set(key, fact)
   return true
 }
 
 
 
-const getVarsFromFact = <MatchT, T>(vars: MatchT, condition: Condition<T>, fact: Fact<T>): boolean => {
+const getVarsFromFact = <T>(vars: MatchT<T>, condition: Condition<T>, fact: Fact<T>): boolean => {
   for(let i = 0; i < condition.vars.length; i++) {
     const v = condition.vars[i]
     if(v.field === Field.IDENTIFIER) {
@@ -220,17 +217,17 @@ const getVarsFromFact = <MatchT, T>(vars: MatchT, condition: Condition<T>, fact:
   return true
 }
 
-const leftActivationWithoutAlpha = <T, MatchT>(session: Session<T, MatchT>, node: JoinNode<T, MatchT>, idAttrs: IdAttrs<T>, vars: MatchT, token: Token<T>) => {
-  if(node.idName != "") {
-    let id = vars[node.idName]
+const leftActivationWithoutAlpha = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>) => {
+  if(node.idName) {
+    let id = vars.get(node.idName)
   }
 }
 
-const leftActivationOnMemoryNode = <T, MatchT>(session: Session<T, MatchT>, node: MemoryNode<T, MatchT>, idAttrs: IdAttrs<T>, vars: MatchT, token: Token<T>, isNew: boolean) =>{
+const leftActivationOnMemoryNode = <T, MatchT>(session: Session<T>, node: MemoryNode<T>, idAttrs: IdAttrs<T>, vars: MatchT, token: Token<T>, isNew: boolean) =>{
 
 }
 
-const leftActivationFromVars = <T, MatchT>(session: Session<T, MatchT>, node: JoinNode<T, MatchT>, idAttrs: IdAttrs<T>, vars: MatchT, token: Token<T>, alphaFact: Fact<T>) => {
+const leftActivationFromVars = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>, alphaFact: Fact<T>) => {
   const newVars = vars
   if(getVarsFromFact(newVars, node.condition, alphaFact)) {
     const idAttr = getIdAttr<T>(alphaFact)
@@ -248,6 +245,6 @@ const leftActivationFromVars = <T, MatchT>(session: Session<T, MatchT>, node: Jo
   }
 }
 
-const leftActivateOnJoinNode = <T, MatchT>(session: Session<T, MatchT>, node: JoinNode<T, MatchT>, idAttrs: IdAttrs<T>, vars: MatchT, token: Token<T>, alphaFact: Fact<T>) => {
+const leftActivateOnJoinNode = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>, alphaFact: Fact<T>) => {
 
 }

@@ -2,6 +2,13 @@
 /*** Facts ***/
 import {IdAttr, IdAttrs, InternalFactRepresentation} from "@edict/types";
 
+// This is a map of string to one of the elements of a fact tuple
+// So for a fact ["bob", "age", 13] this could be a map from
+// string to string | number
+export type ValueOf<T> = T[keyof T];
+export type FactElement<SCHEMA> = string | keyof SCHEMA |  ValueOf<SCHEMA>
+export type MatchT<SCHEMA> = Map<string, FactElement<SCHEMA>>
+
 export enum Field {
   IDENTIFIER,
   ATTRIBUTE,
@@ -40,19 +47,19 @@ export interface Match<T> {
 }
 
 /** functions **/
-export type ThenFn<T,U, MatchT> = (session: Session<T, MatchT>, rule: Production<T,U,MatchT>, vars: U) => void
-export type WrappedThenFn<MatchT> = (vars: MatchT) => void
-export type ThenFinallyFn<T,U,MatchT> = (session: Session<T, MatchT>, rule: Production<T,U,MatchT>) => void
+export type ThenFn<T,U> = (session: Session<T>, rule: Production<T,U>, vars: U) => void
+export type WrappedThenFn<SCHEMA> = (vars: MatchT<SCHEMA>) => void
+export type ThenFinallyFn<T,U> = (session: Session<T>, rule: Production<T,U>) => void
 export type WrappedThenFinallyFn = () => void
-export type ConvertMatchFn<MatchT, U> = (vars: MatchT) => U
-export type CondFn<MatchT> = (vars: MatchT) => boolean
-export type InitMatchFn<MatchT> = (ruleName: string) => MatchT
+export type ConvertMatchFn<U> = (vars: MatchT<U>) => U
+export type CondFn<T> = (vars: MatchT<T>) => boolean
+export type InitMatchFn<T> = (ruleName: string) => MatchT<T>
 
 /** Beta Network **/
-export interface JoinNode<T, MatchT> {
-  parent?: MemoryNode<T, MatchT >,
-  child?: MemoryNode<T, MatchT>,
-  alphaNode: AlphaNode<T, MatchT>,
+export interface JoinNode<T> {
+  parent?: MemoryNode<T >,
+  child?: MemoryNode<T>,
+  alphaNode: AlphaNode<T>,
   condition: Condition<T>,
   idName?: string,
   oldIdAttrs?: Set<IdAttr<T>>,
@@ -67,33 +74,33 @@ export enum MEMORY_NODE_TYPE {
   LEAF
 }
 
-export interface LeafNode<MatchT> {
-  condFn: CondFn<MatchT>
-  thenFn?: WrappedThenFn<MatchT>
+export interface LeafNode<T> {
+  condFn: CondFn<T>
+  thenFn?: WrappedThenFn<T>
   thenFinallyFn?: WrappedThenFinallyFn,
   trigger?: boolean
 }
 
-export interface MemoryNode<T, MatchT> {
-  parent: JoinNode<T, MatchT>,
-  child?: JoinNode<T,MatchT>,
-  leafNode?: MemoryNode<T, MatchT>,
+export interface MemoryNode<T> {
+  parent: JoinNode<T>,
+  child?: JoinNode<T>,
+  leafNode?: MemoryNode<T>,
   lastMatchId: number,
-  matches: Map<IdAttrs<T>, Match<MatchT>>
+  matches: Map<IdAttrs<T>, Match<T>>
   matchIds: Map<number, IdAttrs<T>>,
   condition: Condition<T>,
   ruleName: string,
   type: MEMORY_NODE_TYPE,
-  nodeType?: LeafNode<MatchT>
+  nodeType?: LeafNode<T>
 }
 
 /** Alpha Network **/
-export interface AlphaNode<T, MatchT> {
+export interface AlphaNode<T> {
   testField: Field,
   testValue: T,
   facts: Map<number, Map<number, Fact<T>>>,
-  successors: JoinNode<T, MatchT>[],
-  children: AlphaNode<T, MatchT>[]
+  successors: JoinNode<T>[],
+  children: AlphaNode<T>[]
 }
 /** Session **/
 
@@ -105,24 +112,24 @@ export interface Condition<T> {
 
 
 
-export interface Production<T, U, MatchT> {
+export interface Production<T, U> {
   name: string,
   conditions: Condition<T>[],
-  convertMatchFn: ConvertMatchFn<MatchT, U>
-  condFn: CondFn<MatchT>,
-  thenFn?: ThenFn<T, U, MatchT>
-  thenFinallyFn?: ThenFinallyFn<T, U, MatchT>
+  convertMatchFn: ConvertMatchFn<U>,
+  condFn: CondFn<T>,
+  thenFn?: ThenFn<T, U>
+  thenFinallyFn?: ThenFinallyFn<T, U>
 }
 
-export interface Session<T, MatchT> {
-  alphaNode: AlphaNode<T, MatchT>,
-  leafNodes: Map< string, MemoryNode<T, MatchT>>,
-  idAttrNodes: Map<IdAttr<T>, Set<AlphaNode<T, MatchT>>>,
+export interface Session<T> {
+  alphaNode: AlphaNode<T>,
+  leafNodes: Map< string, MemoryNode<T>>,
+  idAttrNodes: Map<IdAttr<T>, Set<AlphaNode<T>>>,
   insideRule: boolean,
-  thenQueue: Set<[node: MemoryNode<T, MatchT>, idAttrs: IdAttrs<T>]>
-  thenFinallyQueue: Set<MemoryNode<T,MatchT>>
-  triggeredNodeIds: Set<MemoryNode<T, MatchT>>
+  thenQueue: Set<[node: MemoryNode<T>, idAttrs: IdAttrs<T>]>
+  thenFinallyQueue: Set<MemoryNode<T>>
+  triggeredNodeIds: Set<MemoryNode<T>>
   autoFire: boolean,
-  initMatch: InitMatchFn<MatchT>
+  initMatch: InitMatchFn<T>
 }
 

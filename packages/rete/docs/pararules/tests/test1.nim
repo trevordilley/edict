@@ -28,6 +28,7 @@ proc `==`(a: int, b: Id): bool =
 # test "number of conditions != number of facts":
 test "x":
   var session = initSession(Fact)
+  echo(session)
   let rule1 =
     rule numCondsAndFacts(Fact):
       what:

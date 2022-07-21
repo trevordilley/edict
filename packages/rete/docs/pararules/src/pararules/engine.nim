@@ -110,8 +110,8 @@ proc addNodes[T, MatchT](session: Session[T, MatchT], nodes: seq[tuple[testField
     result = result.addNode(AlphaNode[T, MatchT](testField: node.testField, testValue: node.testValue))
 
 proc add*[T, U, MatchT](production: var Production[T, U, MatchT], id: Var or T, attr: T, value: Var or T, then: bool) =
-  echo("adding condition to production: ", production.name)
-  echo("condition -- ", "id: ", id, ", attr: ", attr, ", value: ", value)
+  # echo("adding condition to production: ", production.name)
+  # echo("condition -- ", "id: ", id, ", attr: ", attr, ", value: ", value)
   var condition = Condition[T](shouldTrigger: then)
   for fieldType in [Field.Identifier, Field.Attribute, Field.Value]:
     case fieldType:
@@ -194,8 +194,9 @@ proc add*[T, U, MatchT](session: Session[T, MatchT], production: Production[T, U
         node.disableFastUpdates = true
         break
 
+# fact T is actually refernig to a single element of the fact tuple, not the
+# entire fact tuple.
 proc getVarFromFact[T, MatchT](vars: var MatchT, key: string, fact: T): bool =
-
   if vars.hasKey(key) and vars[key] != fact:
     return false
   vars[key] = fact
@@ -492,6 +493,12 @@ proc retractFact*[T, MatchT](session: var Session[T, MatchT], id: int, attr: int
     let fact = node.facts[id][attr]
     session.rightActivation(node[], Token[T](fact: fact, kind: Retract))
 
+# Okay, we're going to make the assumption that MatchT only comes from
+# here. The static rulesets seem to pregenerate the MatchT in a
+# macro, but we're not going to worry about that for now.
+#
+# It's cool though that we may have a reference on how to generate rules
+# in the future.
 proc defaultInitMatch[MatchT](ruleName: string): MatchT =
   MatchT()
 
