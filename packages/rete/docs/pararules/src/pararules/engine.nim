@@ -223,6 +223,7 @@ proc getIdAttr[T](fact: Fact[T]): IdAttr =
 
 proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: var MemoryNode[T, MatchT], idAttrs: IdAttrs, vars: MatchT, token: Token[T], isNew: bool)
 
+# leftActivationFromVars
 proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[T, MatchT], idAttrs: IdAttrs, vars: MatchT, token: Token[T], alphaFact: Fact[T]) =
   var newVars = vars
   if getVarsFromFact(newVars, node.condition, alphaFact):
@@ -233,6 +234,7 @@ proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[T
     let isNew = not node.oldIdAttrs.contains(idAttr)
     session.leftActivation(node.child, newIdAttrs, newVars, newToken, isNew)
 
+# leftActivationWithoutAlpha
 proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[T, MatchT], idAttrs: IdAttrs, vars: MatchT, token: Token[T]) =
   # SHORTCUT: if we know the id, only loop over alpha facts with that id
   if node.idName != "":
