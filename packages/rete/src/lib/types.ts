@@ -42,8 +42,8 @@ export interface Var {
 
 export interface Match<T> {
   id: number,
-  vars: MatchT<T>,
-  enabled: boolean
+  vars?: MatchT<T>,
+  enabled?: boolean
 }
 
 /** functions **/
@@ -60,7 +60,9 @@ export type InitMatchFn<T> = (ruleName: string) => MatchT<T>
 export interface AlphaNode<T> {
   testField: Field,
   testValue: T,
-  facts: Map<number, Map<number, Fact<T>>>,
+
+  // TODO: Is this right? This looks kinda bonkers
+  facts: Map<FactFragment<T>, Map<FactFragment<T>, Fact<T>>>,
   successors: JoinNode<T>[],
   children: AlphaNode<T>[]
 }
@@ -97,7 +99,7 @@ export interface JoinNode<T> {
   alphaNode: AlphaNode<T>,
   condition: Condition<T>,
   idName?: string,
-  oldIdAttrs?: Set<IdAttr<T>>,
+  oldIdAttrs: Set<IdAttr<T>>,
   disableFastUpdates?: boolean,
   ruleName: string
 }

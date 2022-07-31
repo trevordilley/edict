@@ -9,17 +9,21 @@
 import {
   AlphaNode,
   Condition,
+  Fact,
+  FactFragment,
   Field,
   JoinNode,
   Match,
+  MatchT,
   MEMORY_NODE_TYPE,
   MemoryNode,
   Production,
   Session,
-  Var,
-  Token, Fact, MatchT, FactFragment
+  Token,
+  TOKEN_KIND,
+  Var
 } from "./types";
-import { IdAttrs} from "@edict/types";
+import {IdAttrs} from "@edict/types";
 import {getIdAttr} from "@edict/common";
 
 // NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
@@ -111,7 +115,7 @@ const addProductionToSession = <T, U>(session: Session<T>,production: Production
     const leafAlphaNode = addNodes(session, condition.nodes)
     const parentMemNode = memNodes.length > 0 ? memNodes[memNodes.length - 1]: undefined
     const joinNode: JoinNode<T> = {
-      parent: parentMemNode, alphaNode: leafAlphaNode, condition, ruleName: production.name}
+      parent: parentMemNode, alphaNode: leafAlphaNode, condition, ruleName: production.name, oldIdAttrs: new Set()}
     condition.vars.forEach(v => {
       if(bindings.has(v.name)) {
         joinedBindings.add(v.name)
@@ -216,16 +220,6 @@ const getVarsFromFact = <T>(vars: MatchT<T>, condition: Condition<T>, fact: Fact
   return true
 }
 
-const leftActivationWithoutAlpha = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>) => {
-  if(node.idName != "") {
-    let id = vars[node.idName]
-  }
-}
-
-const leftActivationOnMemoryNode = <T, MatchT>(session: Session<T>, node: MemoryNode<T>, idAttrs: IdAttrs<T>, vars: MatchT, token: Token<T>, isNew: boolean) =>{
-
-}
-
 const leftActivationFromVars = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>, alphaFact: Fact<T>) => {
   const newVars = vars
   if(getVarsFromFact(newVars, node.condition, alphaFact)) {
@@ -244,6 +238,78 @@ const leftActivationFromVars = <T>(session: Session<T>, node: JoinNode<T>, idAtt
   }
 }
 
-const leftActivateOnJoinNode = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>, alphaFact: Fact<T>) => {
 
+const leftActivationWithoutAlpha = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>) => {
+  if(node.idName && node.idName != "") {
+    const id = vars.get(node.idName)
+    if(!id) throw new Error(`Could not find var for node ${node.idName}`)
+    if(node.alphaNode.facts.has(id)) {
+      const alphaFacts = [...node.alphaNode.facts.get(id)?.values() ?? []]
+      if(!alphaFacts) throw new Error(`Expected to have alpha facts for ${node.idName}`)
+      alphaFacts.forEach(alphaFact => {
+        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+      })
+    }
+  }
+  else {
+    const factsForId = [...node.alphaNode.facts.values()]
+    factsForId.forEach(facts => {
+      const alphas =[...facts.values()]
+      alphas.forEach(alphaFact => {
+        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+      })
+    })
+  }
 }
+
+const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>, isNew: boolean) =>{
+  const idAttr = idAttrs[idAttrs.length - 1]
+
+
+  // if the insert/update fact is new and this condition doesn't have then = false, let the leaf node trigger
+  if(isNew && (token.kind === TOKEN_KIND.INSERT || token.kind === TOKEN_KIND.UPDATE) && node.condition.shouldTrigger && node.nodeType) {
+    node.nodeType.trigger = true
+  }
+
+  if(token.kind === TOKEN_KIND.INSERT || token.kind === TOKEN_KIND.UPDATE) {
+      let match: Match<T>;
+      if (node.matches.has(idAttrs)) {
+        match = node.matches.get(idAttrs)!
+      } else {
+        node.lastMatchId += 1
+        match = {id: node.lastMatchId}
+      }
+      match.vars = vars
+    match.enabled = node.type !== MEMORY_NODE_TYPE.LEAF || !node.nodeType?.condFn || node.nodeType?.condFn(vars)
+    node.matchIds.set(match.id, idAttrs)
+    node.matches.set(idAttrs, match)
+    if(node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
+      if(node.nodeType?.thenFn) {
+        session.thenQueue.add([node, idAttrs])
+      }
+      if(node.nodeType.thenFinallyFn) {
+        session.thenFinallyQueue.add(node)
+      }
+    }
+    node.parent.oldIdAttrs.add(idAttr)
+  }
+  else if( token.kind === TOKEN_KIND.RETRACT) {
+    const idToDelete = node.matches.get(idAttrs)
+    if(idToDelete){
+      node.matchIds.delete(idToDelete.id)
+    }
+    node.matches.delete(idAttrs)
+    node.parent.oldIdAttrs.delete(idAttr)
+    if(node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType) {
+      if(node.nodeType.thenFinallyFn) {
+        session.thenFinallyQueue.add(node)
+      }
+    }
+  }
+
+  if(node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
+    leftActivationWithoutAlpha(session, node.child, idAttrs, vars, token)
+  }
+}
+
+
