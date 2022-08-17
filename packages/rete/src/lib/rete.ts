@@ -20,10 +20,10 @@ import {
   Production,
   Session,
   Token,
-  TOKEN_KIND,
+  TokenKind,
   Var
 } from "./types";
-import {IdAttrs} from "@edict/types";
+import {IdAttr, IdAttrs} from "@edict/types";
 import {getIdAttr} from "@edict/common";
 
 // NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
@@ -267,11 +267,11 @@ const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>,
 
 
   // if the insert/update fact is new and this condition doesn't have then = false, let the leaf node trigger
-  if(isNew && (token.kind === TOKEN_KIND.INSERT || token.kind === TOKEN_KIND.UPDATE) && node.condition.shouldTrigger && node.nodeType) {
+  if(isNew && (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) && node.condition.shouldTrigger && node.nodeType) {
     node.nodeType.trigger = true
   }
 
-  if(token.kind === TOKEN_KIND.INSERT || token.kind === TOKEN_KIND.UPDATE) {
+  if(token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) {
       let match: Match<T>;
       if (node.matches.has(idAttrs)) {
         match = node.matches.get(idAttrs)!
@@ -293,7 +293,7 @@ const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>,
     }
     node.parent.oldIdAttrs.add(idAttr)
   }
-  else if( token.kind === TOKEN_KIND.RETRACT) {
+  else if( token.kind === TokenKind.RETRACT) {
     const idToDelete = node.matches.get(idAttrs)
     if(idToDelete){
       node.matchIds.delete(idToDelete.id)
@@ -312,4 +312,73 @@ const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>,
   }
 }
 
+// session: var Session[T, MatchT], node: JoinNode[T, MatchT], idAttr: IdAttr, token: Token[T]) =
+const rightActivationWithJoinNode = <T>(session: Session<T>, node: JoinNode<T>, idAttr: IdAttr<T>, token: Token<T>) => {
+  if(!node.parent) {
+    const vars = session.initMatch(node.ruleName)
+    if(getVarsFromFact(vars, node.condition, token.fact)) {
+      if(!node.child) {
+        throw new Error(`Unexpected undefined child for node ${node.idName}`)
+      }
+      leftActivationOnMemoryNode(session, node.child, [idAttr], vars, token, true)
+    }
+  } else {
 
+    node.parent.matches.forEach((match, idAttrs) => {
+      const vars = match.vars
+      const idName = node.idName
+      if(idName && idName !== "" &&
+        // REALLY NOT SURE ABOUT THIS LINE!!!
+        vars?.get(idName) != token.fact[0]) {
+          console.debug("match??", vars?.get(idName), token.fact[0])
+          return
+      }
+      if(!vars) {
+        throw new Error("Expected vars to not be undefinied???")
+      }
+      // Deviating from pararules here, he makes a mutable
+      // copy, I'm not doing that. I think he's doing a Nim
+      // perf thing that may not be possible in Javascript
+      if (getVarsFromFact(vars, node.condition, token.fact)) {
+        const newIdAttrs = idAttrs
+        newIdAttrs.push(idAttr)
+        const child = node.child
+        if(!child) throw new Error(`Unexpected null child for node: ${node.idName}`)
+        leftActivationOnMemoryNode(session, child, newIdAttrs, vars, token, true)
+      }
+    })
+  }
+}
+// (session: var Session[T, MatchT], node: var AlphaNode[T, MatchT], token: Token[T]) =
+
+
+const rightActivationWithAlphaNode = <T>(session: Session<T>, node: AlphaNode<T>, token: Token<T>) => {
+  const idAttr =  getIdAttr(token.fact)
+  const [id, attr] = idAttr
+  if(token.kind === TokenKind.INSERT) {
+    if(!node.facts.has(id)) {
+      node.facts.set(id, new Map<FactFragment<T>, Fact<T>>())
+    }
+    node.facts.get(id)!.set(attr, token.fact)
+    if(!session.idAttrNodes.has(idAttr)) {
+      session.idAttrNodes.set(idAttr, new Set())
+    }
+    session.idAttrNodes.get(idAttr)!.add(node)
+  } else if(token.kind === TokenKind.RETRACT) {
+    node.facts.get(id)?.delete(attr)
+    session.idAttrNodes.get(idAttr)!.delete(node)
+    if(session.idAttrNodes.get(idAttr)!.size == 0) {
+     session.idAttrNodes.delete(idAttr)
+    }
+  } else if (token.kind === TokenKind.UPDATE) {
+    node.facts.get(id)!.set(attr, token.fact)
+  }
+  node.successors.forEach(child => {
+    if(token.kind === TokenKind.UPDATE && child.disableFastUpdates) {
+      rightActivationWithJoinNode(session, child, idAttr, { fact: token.oldFact!, kind: TokenKind.RETRACT})
+      rightActivationWithJoinNode(session, child, idAttr, { fact: token.fact, kind: TokenKind.INSERT})
+    } else {
+      rightActivationWithJoinNode(session, child, idAttr, token)
+    }
+  })
+}

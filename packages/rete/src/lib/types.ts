@@ -18,7 +18,7 @@ export enum Field {
 // Shorten that name a bit
 export type Fact<T> = InternalFactRepresentation<T>
 
-export enum TOKEN_KIND {
+export enum TokenKind {
   INSERT,
   RETRACT,
   UPDATE
@@ -26,7 +26,7 @@ export enum TOKEN_KIND {
 
 export interface Token<T> {
   fact: Fact<T>,
-  kind: TOKEN_KIND
+  kind: TokenKind
   // Only for Update Tokens
   oldFact?: Fact<T>
 }
