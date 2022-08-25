@@ -136,3 +136,4 @@ export interface Session<T> {
   initMatch: InitMatchFn<T>
 }
 
+export type ExecutedNodes<T> = Map<MemoryNode<T>, Set<MemoryNode<T>>>[]

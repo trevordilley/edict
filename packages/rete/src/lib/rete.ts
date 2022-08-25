@@ -8,7 +8,7 @@
 
 import {
   AlphaNode,
-  Condition,
+  Condition, ExecutedNodes,
   Fact,
   FactFragment,
   Field,
@@ -381,4 +381,144 @@ const rightActivationWithAlphaNode = <T>(session: Session<T>, node: AlphaNode<T>
       rightActivationWithJoinNode(session, child, idAttr, token)
     }
   })
+}
+
+const raiseRecursionLimitException = (limit: number, additionalText?: string) => {
+  const msg = `Recursion limit hit. The current limit is ${limit} (set by the recursionLimit param of fireRules).`
+  throw new Error(`${msg} ${additionalText}\n Try using the transient_ variants in your schema to prevent triggering rules in an infinite loop.`)
+}
+
+const raiseRecursionLimit = <T>(limit: number, executedNodes: ExecutedNodes<T>) => {
+ let nodes = {}
+  for(let i = executedNodes.length - 1; i >= 0; i--) {
+    const currNodes = {}
+    const nodeToTriggeredNodes = executedNodes[i]
+    nodeToTriggeredNodes.forEach((triggeredNodes,node) => {
+      const obj = {}
+      triggeredNodes.forEach(triggeredNode => {
+        if(triggeredNode.ruleName in nodes) {
+         obj[triggeredNode.ruleName] = nodes[triggeredNode.ruleName]
+        }
+      })
+      currNodes[node.ruleName] = obj
+    })
+    nodes = currNodes
+  }
+
+  const findCycles = (cycles: Set<string[]>, k: string, v: object, cyc: string[]) => {
+    const newCyc = cyc
+    newCyc.push(k)
+    const index = cyc.indexOf(k)
+    if(index >= 0) {
+      cycles.add(newCyc.splice(index, newCyc.length))
+    } else {
+      Object.keys(v).forEach(key => {
+        findCycles(cycles, key, v[key], newCyc)
+      })
+    }
+  }
+
+  const cycles = new Set<string[]>()
+  Object.keys(nodes).forEach(key => {
+    findCycles(cycles, key, nodes[key], [])
+  })
+  let text = ""
+  cycles.forEach(cycle => {
+    text = `${text}\nCycle detected! `
+    if(cycle.length == 2) {
+      text = `${text}${cycle[0]} is triggering itself`
+    } else {
+      text = `${text}${cycle.join(" -> ")}`
+    }
+    raiseRecursionLimitException(limit, text)
+  })
+
+
+}
+
+const DEFAULT_RECURSION_LIMIT = 16
+const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECURSION_LIMIT) => {
+  if(session.insideRule) {
+    return
+  }
+  // Only for debugging purposes, should we remove for prod usage?
+  const executedNodes: ExecutedNodes<T> = []
+
+  let recurCount = 0
+  // `raiseRecursionLimit(recursionLimit, executedNodes) will explode
+  // noinspection InfiniteLoopJS
+  while(true) {
+    if(recursionLimit >= 0) {
+      if(recurCount == recursionLimit) {
+        raiseRecursionLimit(recursionLimit, executedNodes)
+      }
+      recurCount += 1
+    }
+
+    const thenQueue = session.thenQueue
+    const thenFinallyQueue = session.thenFinallyQueue
+    if(thenQueue.size == 0 && thenFinallyQueue.size == 0) {
+      return
+    }
+
+    // reset state
+    session.thenQueue.clear()
+    session.thenFinallyQueue.clear()
+    thenQueue.forEach( ([node, idAttrs]) => {
+      if(node.nodeType) {
+        node.nodeType!.trigger = false
+      }
+    })
+    thenFinallyQueue.forEach(node => {
+      if(node.nodeType) {
+        node.nodeType!.trigger = false
+      }
+    })
+
+    const nodeToTriggeredNodeIds = new Map<MemoryNode<T>, Set<MemoryNode<T>>>()
+    const add = (t: Map<MemoryNode<T>, Set<MemoryNode<T>>>, nodeId: MemoryNode<T>, s:Set<MemoryNode<T>>) => {
+      if(nodeId !in t) {
+        t[nodeId] = new Set<MemoryNode<T>>()
+      }
+      t[nodeId]!.add(s)
+    }
+
+    //  keep a copy of the matches before executing the :then functions.
+    //  if we pull the matches from inside the for loop below,
+    //  it'll produce non-deterministic results because `matches`
+    //  could be modified by the for loop itself. see test: "non-deterministic behavior"
+
+    const nodeToMatches: Map<MemoryNode<T>, Map<IdAttrs<T>, Match<T>>> = new Map()
+
+    thenQueue.forEach( ([node, _]) => {
+     if(!nodeToMatches.has(node)) {
+       nodeToMatches.set(node, node.matches)
+     }
+    })
+
+    // Execute `then` blocks
+    thenQueue.forEach(([node, idAttrs]) => {
+      const matches = nodeToMatches.get(node)
+      if(matches.has(idAttrs)) {
+        const match = matches.get(idAttrs)
+        if(match.enabled) {
+          session.triggeredNodeIds.clear()
+          if(!match.vars) {
+            throw new Error(`expected match ${match.id} to have vars??`)
+          }
+          node.nodeType?.thenFn?.(match.vars)
+          add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
+        }
+      }
+    })
+
+    // Execute `thenFinally` blocks
+    thenFinallyQueue.forEach(node => {
+      session.triggeredNodeIds.clear()
+      node.nodeType?.thenFinallyFn?.()
+      add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
+    })
+
+    executedNodes.push(nodeToTriggeredNodeIds)
+  }
 }
