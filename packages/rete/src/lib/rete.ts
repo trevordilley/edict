@@ -7,19 +7,19 @@
 // real good handle on what's going  on!
 
 import {
-  AlphaNode,
-  Condition,
+  AlphaNode, CondFn,
+  Condition, ConvertMatchFn,
   ExecutedNodes,
   Fact,
   FactFragment,
-  Field,
+  Field, InitMatchFn,
   JoinNode,
   Match,
   MatchT,
   MEMORY_NODE_TYPE,
   MemoryNode,
   Production,
-  Session,
+  Session, ThenFinallyFn, ThenFn,
   Token,
   TokenKind,
   Var
@@ -575,3 +575,87 @@ const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<
  }
 }
 
+export const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
+  const nodes = new Set<AlphaNode<T>>()
+  getAlphaNodesForFact(session, session.alphaNode, fact, true, nodes)
+  upsertFact(session, fact, nodes)
+  if(session.autoFire) {
+    fireRules(session)
+  }
+}
+
+export const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
+  const idAttr = getIdAttr(fact)
+  // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
+  const idAttrNodes = new Set(session.idAttrNodes.get(idAttr))
+  idAttrNodes.forEach(node => {
+
+    if(fact !== node.facts.get(idAttr[0]).get(idAttr[1])) {
+      throw new Error(`Expected fact ${fact} to be in node.facts at id: ${idAttr[0]}, attr: ${idAttr[1]}`)
+    }
+
+    rightActivationWithAlphaNode(session, node, {fact, kind: TokenKind.RETRACT})
+  })
+}
+
+const refractFactByIdAndAttr = <T>(session:Session<T>, id: string, attr: keyof T) => {
+  const idAttr = [id, attr]
+
+  // TODO: this function is really simliar to the retractFact function, can we make things
+  // DRYer?
+  // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
+  const idAttrNodes = new Set(session.idAttrNodes.get(idAttr))
+  idAttrNodes.forEach(node => {
+    const fact = node.facts.get(idAttr[0]).get(idAttr[1])
+    rightActivationWithAlphaNode(session, node, {fact, kind: TokenKind.RETRACT})
+  })
+}
+
+const defaultInitMatch = <T>() => {
+  return new Map<string, FactFragment<T>>()
+}
+
+const initSession = <T>(autoFire: boolean = true) => {
+  const alphaNode: AlphaNode<T> = {
+    facts: new Map<FactFragment<T>, Map<FactFragment<T>, Fact<T>>>(),
+    successors: [],
+    children: []
+  }
+
+  const leafNodes = new Map<string, MemoryNode<T>>()
+
+  const idAttrNodes = new Map<IdAttr<T>, Set<AlphaNode<T>>>()
+
+  const thenQueue = new Set<[MemoryNode<T>, IdAttrs<T>]>()
+
+  const thenFinallyQueue = new Set<MemoryNode<T>>()
+
+  const triggeredNodeIds = new Set<MemoryNode<T>>()
+
+  const initMatch = defaultInitMatch()
+
+  return {
+    alphaNode,
+    leafNodes,
+    idAttrNodes,
+    thenQueue,
+    thenFinallyQueue,
+    triggeredNodeIds,
+    initMatch
+  }
+}
+
+export const initProduction = <T, U>(name: string, convertMatchFn: ConvertMatchFn<MatchT<T>, U>, condFn: CondFn<T>, thenFn: ThenFn<T, U>, thenFinallyFn: ThenFinallyFn<T, U>): Production<T, U> => {
+  return {
+    name,
+    convertMatchFn,
+    condFn,
+    thenFn,
+    thenFinallyFn,
+    conditions: []
+  }
+}
+
+const matchParams = <I,T>(vars: MatchT<T>, params: [I, [string, T]]): boolean => {
+
+}

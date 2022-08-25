@@ -58,8 +58,8 @@ export type InitMatchFn<T> = (ruleName: string) => MatchT<T>
 
 /** Alpha Network **/
 export interface AlphaNode<T> {
-  testField: Field,
-  testValue: T,
+  testField?: Field,
+  testValue?: T,
 
   // TODO: Is this right? This looks kinda bonkers
   facts: Map<FactFragment<T>, Map<FactFragment<T>, Fact<T>>>,
