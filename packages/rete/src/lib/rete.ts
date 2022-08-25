@@ -8,7 +8,8 @@
 
 import {
   AlphaNode,
-  Condition, ExecutedNodes,
+  Condition,
+  ExecutedNodes,
   Fact,
   FactFragment,
   Field,
@@ -522,3 +523,55 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
     executedNodes.push(nodeToTriggeredNodeIds)
   }
 }
+
+const getAlphaNodesForFact = <T>(session: Session<T>, node: AlphaNode<T>, fact: Fact<T>, root: boolean, nodes: Set<AlphaNode<T>>) => {
+  if(root) {
+    node.children.forEach(child =>  {
+      getAlphaNodesForFact(session, child, fact, false, nodes)
+    })
+  }
+  else {
+    const val = node.testField === Field.IDENTIFIER ? fact[0] : node.testField === Field.ATTRIBUTE ? fact[1] : node.testField === Field.VALUE ? fact[2] : throw new Error("Wat?")
+    if(val != node.testValue) {
+      return
+    }
+    nodes.add(node)
+    node.children.forEach(child => {
+      getAlphaNodesForFact(session, child, fact, false, nodes)
+    })
+  }
+}
+
+const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<T>>) => {
+ const idAttr = getIdAttr<T>(fact)
+ if(!session.idAttrNodes.has(idAttr)) {
+   nodes.forEach(n => {
+     rightActivationWithAlphaNode(session, n, {fact, kind: TokenKind.INSERT})
+   })
+ }
+ else {
+   const existingNodes = session.idAttrNodes.get(idAttr)
+
+   // retract any facts from nodes that the new fact wasn't inserted in
+   // we use toSeq here to make a copy of the existingNodes, because
+   // rightActivation will modify it
+   existingNodes.forEach(n => {
+     if(!nodes.has(n)) {
+       const oldFact = n.facts.get(fact[0]).get(fact[1])
+       rightActivationWithAlphaNode(session, n, {fact: oldFact, kind: TokenKind.RETRACT})
+     }
+   })
+
+    // update or insert facts, depending on whether the node already exists
+   nodes.forEach(n => {
+     if(existingNodes.has(n)) {
+       let oldFact = n.facts.get(fact[0]).get(fact[1])
+       rightActivationWithAlphaNode(session, n, {fact, kind: TokenKind.UPDATE, oldFact})
+     }
+     else {
+       rightActivationWithAlphaNode(session, n, {fact, kind: TokenKind.INSERT})
+     }
+   })
+ }
+}
+
