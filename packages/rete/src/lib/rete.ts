@@ -398,9 +398,11 @@ const raiseRecursionLimit = <T>(limit: number, executedNodes: ExecutedNodes<T>) 
       const obj = {}
       triggeredNodes.forEach(triggeredNode => {
         if(triggeredNode.ruleName in nodes) {
-         obj[triggeredNode.ruleName] = nodes[triggeredNode.ruleName]
+         // @ts-ignore
+          obj[triggeredNode.ruleName] = nodes[triggeredNode.ruleName]
         }
       })
+      // @ts-ignore
       currNodes[node.ruleName] = obj
     })
     nodes = currNodes
@@ -414,6 +416,7 @@ const raiseRecursionLimit = <T>(limit: number, executedNodes: ExecutedNodes<T>) 
       cycles.add(newCyc.splice(index, newCyc.length))
     } else {
       Object.keys(v).forEach(key => {
+        // @ts-ignore
         findCycles(cycles, key, v[key], newCyc)
       })
     }
@@ -421,6 +424,7 @@ const raiseRecursionLimit = <T>(limit: number, executedNodes: ExecutedNodes<T>) 
 
   const cycles = new Set<string[]>()
   Object.keys(nodes).forEach(key => {
+    // @ts-ignore
     findCycles(cycles, key, nodes[key], [])
   })
   let text = ""
@@ -500,9 +504,9 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
     // Execute `then` blocks
     thenQueue.forEach(([node, idAttrs]) => {
       const matches = nodeToMatches.get(node)
-      if(matches.has(idAttrs)) {
+      if(matches && matches.has(idAttrs)) {
         const match = matches.get(idAttrs)
-        if(match.enabled) {
+        if(match && match.enabled) {
           session.triggeredNodeIds.clear()
           if(!match.vars) {
             throw new Error(`expected match ${match.id} to have vars??`)
@@ -606,7 +610,7 @@ const retractFactByIdAndAttr = <T>(session:Session<T>, id: string, attr: keyof T
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set(session.idAttrNodes.get(idAttr))
   idAttrNodes.forEach(node => {
-    const fact = node.facts.get(idAttr[0]).get(idAttr[1])
+    const fact = node.facts.get(idAttr[0])?.get(idAttr[1])
     rightActivationWithAlphaNode(session, node, {fact, kind: TokenKind.RETRACT})
   })
 }
