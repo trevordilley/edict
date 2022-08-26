@@ -60,7 +60,7 @@ function isVar (obj: any): obj is Var {
 // To figure out MatchT we need to understand how Vars are treated (so we can understand how MatchT is mapped)
 // We should also understand how conditions work in a Rete network
 
-export const addConditionsToProduction = <T,U,MatchT>(production: Production<T,U>, id: Var | T, attr: T, value: Var | T, then: boolean) => {
+const addConditionsToProduction = <T,U,MatchT>(production: Production<T,U>, id: Var | T, attr: T, value: Var | T, then: boolean) => {
   const condition: Condition<T> = {shouldTrigger: then, nodes: [], vars: []}
   const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE]
 
@@ -575,7 +575,7 @@ const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<
  }
 }
 
-export const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
+const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const nodes = new Set<AlphaNode<T>>()
   getAlphaNodesForFact(session, session.alphaNode, fact, true, nodes)
   upsertFact(session, fact, nodes)
@@ -584,7 +584,7 @@ export const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
   }
 }
 
-export const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
+const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const idAttr = getIdAttr(fact)
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set(session.idAttrNodes.get(idAttr))
@@ -598,7 +598,7 @@ export const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   })
 }
 
-const refractFactByIdAndAttr = <T>(session:Session<T>, id: string, attr: keyof T) => {
+const retractFactByIdAndAttr = <T>(session:Session<T>, id: string, attr: keyof T) => {
   const idAttr = [id, attr]
 
   // TODO: this function is really simliar to the retractFact function, can we make things
@@ -645,7 +645,7 @@ const initSession = <T>(autoFire: boolean = true) => {
   }
 }
 
-export const initProduction = <T, U>(name: string, convertMatchFn: ConvertMatchFn<MatchT<T>, U>, condFn: CondFn<T>, thenFn: ThenFn<T, U>, thenFinallyFn: ThenFinallyFn<T, U>): Production<T, U> => {
+const initProduction = <T, U>(name: string, convertMatchFn: ConvertMatchFn<MatchT<T>, U>, condFn: CondFn<T>, thenFn: ThenFn<T, U>, thenFinallyFn: ThenFinallyFn<T, U>): Production<T, U> => {
   return {
     name,
     convertMatchFn,
@@ -656,6 +656,62 @@ export const initProduction = <T, U>(name: string, convertMatchFn: ConvertMatchF
   }
 }
 
-const matchParams = <I,T>(vars: MatchT<T>, params: [I, [string, T]]): boolean => {
 
+// lolwut? I think all the different find functions aren't used? Cause they don't seem to have the type params or anything,
+// and literally have typos in them?
+// const matchParams = <I,T>(vars: MatchT<T>, params: [I, [string, T]]): boolean => {
+//   params.forEach(([varName, val]) => {
+//     if(vars.get(varName) != val) {
+//       return false
+//     }
+//   })
+//   return true
+// export const find = <I,T>(session: Session<T>, prod: Production<T>, params: [I, [string, T]]): string => {
+//
+// }
+
+const queryAll = <T,U>(session: Session<T>, prod: Production<T, U>): U[] => {
+  const result = []
+  session.leafNodes.get(prod.name).matches.forEach(match => {
+    if(match.enabled && match.vars) {
+      result.push(prod.convertMatchFn(match.vars))
+    }
+  })
+  return result
+}
+
+const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
+  const result = []
+  session.idAttrNodes.forEach((nodes, idAttr) => {
+    const nodesArr = new Array(...nodes)
+    if(nodesArr.length <= 0) throw new Error("No nodes in session?")
+    const firstNode = nodesArr[0]
+    const fact = firstNode.facts.get(idAttr[0]).get(idAttr[1])
+    result.push([idAttr[0], idAttr[1], fact[2]])
+  })
+  return result
+}
+
+const get = <T,U>(session: Session<T>, prod: Production<T, U>, i: number): U => {
+  const idAttrs = session.leafNodes.get(prod.name).matchIds.get(i)
+  return prod.convertMatchFn(session.leafNodes.get(prod.name).matches.get(idAttrs).vars)
+}
+
+const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
+  session.idAttrNodes.has([id, attr])
+
+
+export const rete = {
+  get,
+  queryAll,
+  queryFullSession,
+  initProduction,
+  initSession,
+  fireRules,
+  retractFact,
+  retractFactByIdAndAttr,
+  insertFact,
+  contains,
+  addProductionToSession,
+  addConditionsToProduction,
 }

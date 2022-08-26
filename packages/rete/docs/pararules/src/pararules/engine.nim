@@ -369,6 +369,7 @@ when not defined(release):
         text &= strutils.join(cycle, " -> ")
     raiseRecursionLimit(limit, text)
 
+# exported
 proc fireRules*[T, MatchT](session: var Session[T, MatchT], recursionLimit: int = 16) =
   if session.insideRule:
     return
@@ -467,6 +468,7 @@ proc upsertFact[T, MatchT](session: var Session[T, MatchT], fact: Fact[T], nodes
       else:
         session.rightActivation(n[], Token[T](fact: fact, kind: Insert))
 
+# exported
 proc insertFact*[T, MatchT](session: var Session[T, MatchT], fact: Fact[T]) =
   var nodes = initHashSet[ptr AlphaNode[T, MatchT]](initialSize = 4)
   getAlphaNodesForFact(session, session.alphaNode, fact, true, nodes)
@@ -474,6 +476,7 @@ proc insertFact*[T, MatchT](session: var Session[T, MatchT], fact: Fact[T]) =
   if session.autoFire:
     session.fireRules()
 
+# exported
 proc retractFact*[T, MatchT](session: var Session[T, MatchT], fact: Fact[T]) =
   let idAttr = fact.getIdAttr
   # we use toSeq here to make a copy of idAttrNodes[idAttr], since
@@ -482,11 +485,14 @@ proc retractFact*[T, MatchT](session: var Session[T, MatchT], fact: Fact[T]) =
     assert fact == node.facts[idAttr.id][idAttr.attr]
     session.rightActivation(node[], Token[T](fact: fact, kind: Retract))
 
+# exported
 proc retractFact*[T, MatchT](session: var Session[T, MatchT], id: T, attr: T) =
   let id = id.slot0
   let attr = attr.slot1.ord
   retractFact(session, id, attr)
 
+
+# exported
 proc retractFact*[T, MatchT](session: var Session[T, MatchT], id: int, attr: int) =
   let idAttr = (id, attr)
   # we use toSeq here to make a copy of idAttrNodes[idAttr], since
@@ -504,6 +510,7 @@ proc retractFact*[T, MatchT](session: var Session[T, MatchT], id: int, attr: int
 proc defaultInitMatch[MatchT](ruleName: string): MatchT =
   MatchT()
 
+# exported
 proc initSession*[T, MatchT](autoFire: bool = true, initMatch: InitMatchFn[MatchT] = defaultInitMatch): Session[T, MatchT] =
   result.alphaNode = new(AlphaNode[T, MatchT])
   result.leafNodes = newTable[string, MemoryNode[T, MatchT]]()
@@ -518,6 +525,7 @@ proc initSession*[T, MatchT](autoFire: bool = true, initMatch: InitMatchFn[Match
   result.autoFire = autoFire
   result.initMatch = initMatch
 
+# exported
 proc initProduction*[T, U, MatchT](name: string, convertMatchFn: ConvertMatchFn[MatchT, U], condFn: CondFn[MatchT], thenFn: ThenFn[T, U, MatchT], thenFinallyFn: ThenFinallyFn[T, U, MatchT]): Production[T, U, MatchT] =
   result.name = name
   result.convertMatchFn = convertMatchFn
@@ -553,6 +561,7 @@ proc findAll*(session: Session, prod: Production): seq[int] =
     if match.enabled:
       result.add(match.id)
 
+# exported
 proc queryAll*[T, MatchT](session: Session[T, MatchT]): seq[tuple[id: int, attr: int, value: T]] =
   for idAttr, nodes in session.idAttrNodes.pairs:
     assert nodes.len > 0
@@ -561,11 +570,13 @@ proc queryAll*[T, MatchT](session: Session[T, MatchT]): seq[tuple[id: int, attr:
       fact = firstNode[].facts[idAttr.id][idAttr.attr]
     result.add((idAttr.id, idAttr.attr, fact.value))
 
+# exported
 proc queryAll*[T, U, MatchT](session: Session[T, MatchT], prod: Production[T, U, MatchT]): seq[U] =
   for match in session.leafNodes[prod.name].matches.values:
     if match.enabled:
       result.add(prod.convertMatchFn(match.vars))
 
+# exported
 proc get*[T, U, MatchT](session: Session[T, MatchT], prod: Production[T, U, MatchT], i: int): U =
   let idAttrs = session.leafNodes[prod.name].matchIds[i]
   prod.convertMatchFn(session.leafNodes[prod.name].matches[idAttrs].vars)
@@ -576,5 +587,6 @@ proc unwrap*(fact: object, kind: type): kind =
       return val
   raise newException(Exception, "The given object has no field of type " & $kind)
 
+# exported
 proc contains*[T, MatchT](session: Session[T, MatchT], id: int, attr: int): bool =
   session.idAttrNodes.contains((id, attr))
