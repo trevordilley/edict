@@ -398,10 +398,12 @@ const raiseRecursionLimit = <T>(limit: number, executedNodes: ExecutedNodes<T>) 
       const obj = {}
       triggeredNodes.forEach(triggeredNode => {
         if(triggeredNode.ruleName in nodes) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
          // @ts-ignore
           obj[triggeredNode.ruleName] = nodes[triggeredNode.ruleName]
         }
       })
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       currNodes[node.ruleName] = obj
     })
@@ -416,6 +418,7 @@ const raiseRecursionLimit = <T>(limit: number, executedNodes: ExecutedNodes<T>) 
       cycles.add(newCyc.splice(index, newCyc.length))
     } else {
       Object.keys(v).forEach(key => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         findCycles(cycles, key, v[key], newCyc)
       })
@@ -424,6 +427,7 @@ const raiseRecursionLimit = <T>(limit: number, executedNodes: ExecutedNodes<T>) 
 
   const cycles = new Set<string[]>()
   Object.keys(nodes).forEach(key => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     findCycles(cycles, key, nodes[key], [])
   })
@@ -452,6 +456,7 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
   let recurCount = 0
   // `raiseRecursionLimit(recursionLimit, executedNodes) will explode
   // noinspection InfiniteLoopJS
+  // eslint-disable-next-line no-constant-condition
   while(true) {
     if(recursionLimit >= 0) {
       if(recurCount == recursionLimit) {
@@ -482,10 +487,11 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
 
     const nodeToTriggeredNodeIds = new Map<MemoryNode<T>, Set<MemoryNode<T>>>()
     const add = (t: Map<MemoryNode<T>, Set<MemoryNode<T>>>, nodeId: MemoryNode<T>, s:Set<MemoryNode<T>>) => {
-      if(nodeId !in t) {
-        t[nodeId] = new Set<MemoryNode<T>>()
+      if(!t.has(nodeId)) {
+        t.set(nodeId,  new Set<MemoryNode<T>>())
       }
-      t[nodeId]!.add(s)
+      const existing = t.get(nodeId) ?? new Set<MemoryNode<T>>()
+      t.set(nodeId, new Set([...s, ...existing]))
     }
 
     //  keep a copy of the matches before executing the :then functions.
@@ -535,7 +541,7 @@ const getAlphaNodesForFact = <T>(session: Session<T>, node: AlphaNode<T>, fact: 
     })
   }
   else {
-    const val = node.testField === Field.IDENTIFIER ? fact[0] : node.testField === Field.ATTRIBUTE ? fact[1] : node.testField === Field.VALUE ? fact[2] : throw new Error("Wat?")
+    const val = node.testField === Field.IDENTIFIER ? fact[0] : node.testField === Field.ATTRIBUTE ? fact[1] : node.testField === Field.VALUE ? fact[2] : undefined
     if(val != node.testValue) {
       return
     }
@@ -555,13 +561,20 @@ const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<
  }
  else {
    const existingNodes = session.idAttrNodes.get(idAttr)
-
+    if(!existingNodes) {
+      console.warn("Session has no existing nodes?")
+      return
+    }
    // retract any facts from nodes that the new fact wasn't inserted in
    // we use toSeq here to make a copy of the existingNodes, because
    // rightActivation will modify it
    existingNodes.forEach(n => {
      if(!nodes.has(n)) {
-       const oldFact = n.facts.get(fact[0]).get(fact[1])
+       const oldFact = n.facts.get(fact[0])?.get(fact[1])
+       if(!oldFact) {
+         console.warn("Old fact doesn't exist?")
+         return
+       }
        rightActivationWithAlphaNode(session, n, {fact: oldFact, kind: TokenKind.RETRACT})
      }
    })
@@ -569,7 +582,7 @@ const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<
     // update or insert facts, depending on whether the node already exists
    nodes.forEach(n => {
      if(existingNodes.has(n)) {
-       let oldFact = n.facts.get(fact[0]).get(fact[1])
+       const oldFact = n.facts.get(fact[0])?.get(fact[1])
        rightActivationWithAlphaNode(session, n, {fact, kind: TokenKind.UPDATE, oldFact})
      }
      else {
@@ -594,7 +607,7 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const idAttrNodes = new Set(session.idAttrNodes.get(idAttr))
   idAttrNodes.forEach(node => {
 
-    if(fact !== node.facts.get(idAttr[0]).get(idAttr[1])) {
+    if(fact !== node.facts.get(idAttr[0])?.get(idAttr[1])) {
       throw new Error(`Expected fact ${fact} to be in node.facts at id: ${idAttr[0]}, attr: ${idAttr[1]}`)
     }
 
@@ -603,15 +616,18 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
 }
 
 const retractFactByIdAndAttr = <T>(session:Session<T>, id: string, attr: keyof T) => {
-  const idAttr = [id, attr]
 
   // TODO: this function is really simliar to the retractFact function, can we make things
   // DRYer?
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
-  const idAttrNodes = new Set(session.idAttrNodes.get(idAttr))
+  const idAttrNodes = new Set(session.idAttrNodes.get([id, attr]))
   idAttrNodes.forEach(node => {
-    const fact = node.facts.get(idAttr[0])?.get(idAttr[1])
-    rightActivationWithAlphaNode(session, node, {fact, kind: TokenKind.RETRACT})
+    const fact = node.facts.get(id)?.get(attr)
+    if(fact) {
+      rightActivationWithAlphaNode(session, node, {fact, kind: TokenKind.RETRACT})
+    } else {
+      console.warn("Missing fact during retraction?")
+    }
   })
 }
 
@@ -619,7 +635,7 @@ const defaultInitMatch = <T>() => {
   return new Map<string, FactFragment<T>>()
 }
 
-const initSession = <T>(autoFire: boolean = true) => {
+const initSession = <T>(autoFire = true) => {
   const alphaNode: AlphaNode<T> = {
     facts: new Map<FactFragment<T>, Map<FactFragment<T>, Fact<T>>>(),
     successors: [],
@@ -645,11 +661,12 @@ const initSession = <T>(autoFire: boolean = true) => {
     thenQueue,
     thenFinallyQueue,
     triggeredNodeIds,
-    initMatch
+    initMatch,
+    autoFire
   }
 }
 
-const initProduction = <T, U>(name: string, convertMatchFn: ConvertMatchFn<MatchT<T>, U>, condFn: CondFn<T>, thenFn: ThenFn<T, U>, thenFinallyFn: ThenFinallyFn<T, U>): Production<T, U> => {
+const initProduction = <T, U>(name: string, convertMatchFn: ConvertMatchFn<T, U>, condFn: CondFn<T>, thenFn: ThenFn<T, U>, thenFinallyFn: ThenFinallyFn<T, U>): Production<T, U> => {
   return {
     name,
     convertMatchFn,
@@ -675,8 +692,8 @@ const initProduction = <T, U>(name: string, convertMatchFn: ConvertMatchFn<Match
 // }
 
 const queryAll = <T,U>(session: Session<T>, prod: Production<T, U>): U[] => {
-  const result = []
-  session.leafNodes.get(prod.name).matches.forEach(match => {
+  const result: U[] = []
+  session.leafNodes.get(prod.name)?.matches.forEach(match => {
     if(match.enabled && match.vars) {
       result.push(prod.convertMatchFn(match.vars))
     }
@@ -685,20 +702,30 @@ const queryAll = <T,U>(session: Session<T>, prod: Production<T, U>): U[] => {
 }
 
 const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
-  const result = []
+  const result:Fact<T>[] = []
   session.idAttrNodes.forEach((nodes, idAttr) => {
     const nodesArr = new Array(...nodes)
     if(nodesArr.length <= 0) throw new Error("No nodes in session?")
     const firstNode = nodesArr[0]
-    const fact = firstNode.facts.get(idAttr[0]).get(idAttr[1])
-    result.push([idAttr[0], idAttr[1], fact[2]])
+    const fact = firstNode.facts.get(idAttr[0])?.get(idAttr[1])
+    if(fact) {
+      result.push([idAttr[0], idAttr[1], fact[2]])
+    } else {
+      console.warn("Missing fact??")
+    }
   })
   return result
 }
 
-const get = <T,U>(session: Session<T>, prod: Production<T, U>, i: number): U => {
-  const idAttrs = session.leafNodes.get(prod.name).matchIds.get(i)
-  return prod.convertMatchFn(session.leafNodes.get(prod.name).matches.get(idAttrs).vars)
+const get = <T,U>(session: Session<T>, prod: Production<T, U>, i: number): U | undefined => {
+  const idAttrs = session.leafNodes.get(prod.name)?.matchIds.get(i)
+  if(!idAttrs) return
+  const vars = session.leafNodes.get(prod.name)?.matches.get(idAttrs)?.vars
+  if(!vars) {
+    console.warn("No vars??")
+    return
+  }
+  return prod.convertMatchFn(vars)
 }
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
