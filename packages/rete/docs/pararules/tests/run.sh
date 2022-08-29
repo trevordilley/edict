@@ -1,3 +1,3 @@
 #!/bin/bash
 
-nim c -r test1
+nim c -r test0 "x"

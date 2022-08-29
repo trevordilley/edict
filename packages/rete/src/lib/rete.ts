@@ -60,7 +60,7 @@ function isVar (obj: any): obj is Var {
 // To figure out MatchT we need to understand how Vars are treated (so we can understand how MatchT is mapped)
 // We should also understand how conditions work in a Rete network
 
-const addConditionsToProduction = <T,U,MatchT>(production: Production<T,U>, id: Var | T, attr: T, value: Var | T, then: boolean) => {
+const addConditionsToProduction = <T,U>(production: Production<T,U>, id: Var | T, attr: T, value: Var | T, then: boolean) => {
   const condition: Condition<T> = {shouldTrigger: then, nodes: [], vars: []}
   const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE]
 
@@ -669,7 +669,7 @@ const initSession = <T>(autoFire = true) => {
 const initProduction = <T, U>(name: string, convertMatchFn: ConvertMatchFn<T, U>, condFn: CondFn<T>, thenFn: ThenFn<T, U>, thenFinallyFn: ThenFinallyFn<T, U>): Production<T, U> => {
   return {
     name,
-    convertMatchFn,
+    convertMatchFn, // given a set of var names, return the enum, which I don't think we have
     condFn,
     thenFn,
     thenFinallyFn,

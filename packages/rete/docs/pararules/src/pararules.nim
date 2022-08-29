@@ -166,6 +166,8 @@ proc parseWhat(name: string, dataType: NimNode, matchType: NimNode, attrs: Table
         let `matchFn` = proc (`v`: `matchType`): `tupleType` =
           `queryBody`
 
+  expandMacros:
+    echo "\n\n", repr(matchFnLet), "\n\n"
   let condFnLet =
     block:
       let v = genSym(nskParam, "v")
@@ -187,6 +189,7 @@ proc parseWhat(name: string, dataType: NimNode, matchType: NimNode, attrs: Table
     let usedVars = getUsedVars(vars, thenNode)
     var varNames: seq[string]
     for (varName, _) in usedVars.pairs:
+      echo varName
       varNames.add(varName)
     let varNode = destructureMatch(varNames, match)
     let thenFnSym = genSym(nskLet, "thenFn")
@@ -207,16 +210,23 @@ proc parseWhat(name: string, dataType: NimNode, matchType: NimNode, attrs: Table
     thenFinallyFn = thenFinallyFnSym
   else:
     thenFinallyFn = quote do: nil
-
+  # echo "Test"
+  #expandMacros:
+    #dump(matchFnLet)
   result.add matchFnLet
   result.add condFnLet
+
+
+
   result.add quote do:
+    # echo "initProduction[", `dataType`, ", ", `tupleType`, ", ", `matchType`, "](",`name`,", ", `matchFn`,",", `condFn`,",", `thenFn`,",", `thenFinallyFn`
     var `prod` = initProduction[`dataType`, `tupleType`, `matchType`](`name`, `matchFn`, `condFn`, `thenFn`, `thenFinallyFn`)
 
   for condNum in 0 ..< node.len:
     let child = node[condNum]
     result.add addCond(datatype, vars, prod, child)
   result.add prod
+
 
 const blockTypes = ["what", "cond", "then", "thenFinally"].toHashSet
 
