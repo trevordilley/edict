@@ -39,7 +39,7 @@ const addNode = <T>(node: AlphaNode<T>, newNode: AlphaNode<T> ): AlphaNode<T> =>
   return newNode
 }
 
-const addNodes = <T>(session: Session<T>, nodes: [ Field, T][] ): AlphaNode<T> => {
+const addNodes = <T>(session: Session<T>, nodes: [ Field, keyof T][] ): AlphaNode<T> => {
   let result = session.alphaNode
   nodes.forEach(([testField, testValue]) => {
     result = addNode(result, {
@@ -60,7 +60,7 @@ function isVar (obj: any): obj is Var {
 // To figure out MatchT we need to understand how Vars are treated (so we can understand how MatchT is mapped)
 // We should also understand how conditions work in a Rete network
 
-const addConditionsToProduction = <T,U>(production: Production<T,U>, id: Var | T, attr: T, value: Var | T, then: boolean) => {
+const addConditionsToProduction = <T>(production: Production<T>, id: Var | keyof T, attr: keyof T, value: Var | any, then: boolean) => {
   const condition: Condition<T> = {shouldTrigger: then, nodes: [], vars: []}
   const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE]
 
@@ -91,7 +91,7 @@ const addConditionsToProduction = <T,U>(production: Production<T,U>, id: Var | T
   production.conditions.push(condition)
 }
 
-const isAncestor = <T, MatchT>(x: JoinNode<T >, y: JoinNode<T>): boolean => {
+const isAncestor = <T>(x: JoinNode<T >, y: JoinNode<T>): boolean => {
   let node = y
   while(node && node.parent) {
     if(node.parent.parent === x) {
@@ -104,14 +104,14 @@ const isAncestor = <T, MatchT>(x: JoinNode<T >, y: JoinNode<T>): boolean => {
   return false
 }
 
-const addProductionToSession = <T, U>(session: Session<T>,production: Production<T, U>) => {
+const addProductionToSession = <T>(session: Session<T>,production: Production<T>) => {
   const memNodes: MemoryNode<T>[] = []
   const joinNodes: JoinNode<T>[] = []
   const last = production.conditions.length - 1
   const bindings = new Set<string>()
   const joinedBindings = new Set<string>()
 
-  for (let i = 0; i < last; i++) {
+  for (let i = 0; i <= last; i++) {
     const condition = production.conditions[i]
     const leafAlphaNode = addNodes(session, condition.nodes)
     const parentMemNode = memNodes.length > 0 ? memNodes[memNodes.length - 1]: undefined
@@ -142,6 +142,9 @@ const addProductionToSession = <T, U>(session: Session<T>,production: Production
     matches: new Map<IdAttrs<T>, Match<T>>(),
     matchIds: new Map<number, IdAttrs<T>>()}
     if(memNode.type === MEMORY_NODE_TYPE.LEAF) {
+      if(!production.condFn) {
+        throw new Error(`Expected production ${production.name} to have a condFn, but it was undefined!`)
+      }
       memNode.nodeType = {
         condFn : production.condFn
       }
@@ -316,7 +319,7 @@ const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>,
 // session: var Session[T, MatchT], node: JoinNode[T, MatchT], idAttr: IdAttr, token: Token[T]) =
 const rightActivationWithJoinNode = <T>(session: Session<T>, node: JoinNode<T>, idAttr: IdAttr<T>, token: Token<T>) => {
   if(!node.parent) {
-    const vars = session.initMatch(node.ruleName)
+    const vars = session.initMatch()
     if(getVarsFromFact(vars, node.condition, token.fact)) {
       if(!node.child) {
         throw new Error(`Unexpected undefined child for node ${node.idName}`)
@@ -635,7 +638,7 @@ const defaultInitMatch = <T>() => {
   return new Map<string, FactFragment<T>>()
 }
 
-const initSession = <T>(autoFire = true) => {
+const initSession = <T>(autoFire = true): Session<T> => {
   const alphaNode: AlphaNode<T> = {
     facts: new Map<FactFragment<T>, Map<FactFragment<T>, Fact<T>>>(),
     successors: [],
@@ -652,7 +655,7 @@ const initSession = <T>(autoFire = true) => {
 
   const triggeredNodeIds = new Set<MemoryNode<T>>()
 
-  const initMatch = defaultInitMatch()
+  const initMatch = () => defaultInitMatch()
 
   return {
     alphaNode,
@@ -662,11 +665,12 @@ const initSession = <T>(autoFire = true) => {
     thenFinallyQueue,
     triggeredNodeIds,
     initMatch,
+    insideRule: false,
     autoFire
   }
 }
 
-const initProduction = <T, U>(name: string, convertMatchFn: ConvertMatchFn<T, U>, condFn: CondFn<T>, thenFn: ThenFn<T, U>, thenFinallyFn: ThenFinallyFn<T, U>): Production<T, U> => {
+const initProduction = <SCHEMA>(name: string, convertMatchFn: ConvertMatchFn<SCHEMA>, condFn?: CondFn<SCHEMA>, thenFn?: ThenFn<SCHEMA>, thenFinallyFn?: ThenFinallyFn<SCHEMA>): Production<SCHEMA> => {
   return {
     name,
     convertMatchFn, // given a set of var names, return the enum, which I don't think we have
@@ -691,8 +695,8 @@ const initProduction = <T, U>(name: string, convertMatchFn: ConvertMatchFn<T, U>
 //
 // }
 
-const queryAll = <T,U>(session: Session<T>, prod: Production<T, U>): U[] => {
-  const result: U[] = []
+const queryAll = <T>(session: Session<T>, prod: Production<T>): (keyof T)[] => {
+  const result: (keyof T)[] = []
   session.leafNodes.get(prod.name)?.matches.forEach(match => {
     if(match.enabled && match.vars) {
       result.push(prod.convertMatchFn(match.vars))
@@ -717,7 +721,7 @@ const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
   return result
 }
 
-const get = <T,U>(session: Session<T>, prod: Production<T, U>, i: number): U | undefined => {
+const get = <T>(session: Session<T>, prod: Production<T>, i: number): (keyof T) | undefined => {
   const idAttrs = session.leafNodes.get(prod.name)?.matchIds.get(i)
   if(!idAttrs) return
   const vars = session.leafNodes.get(prod.name)?.matches.get(idAttrs)?.vars

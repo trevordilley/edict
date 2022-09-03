@@ -1,4 +1,5 @@
-import { rete } from './rete';
+import {rete} from './rete';
+import {Field} from "@edict/rete";
 
 interface SmallSchema {
   name: string,
@@ -59,10 +60,24 @@ describe('rete', () => {
     // check y == Yair
     // check z == Zach
 
-    rete.initProduction<SmallSchema, any>("test",
+    const production = rete.initProduction<SmallSchema>("test",
+      (vars) => {
+        console.log("covert fired?", vars)
+      return vars as any},
+      (vars) => {
+        console.log("conf fired", vars)
+        return true
+      },
+      (vars) => {
+        console.log("then fired", vars)
+      return vars as any
+      } )
 
+    rete.addConditionsToProduction(production, {name: "test1", field: Field.IDENTIFIER}, "name", "Bob Johnson", false)
+    rete.addProductionToSession(session, production)
+    rete.insertFact(session, ["Bob", "name", "Bob Johnson"])
+    rete.fireRules(session)
 
-  )
     expect(session.thenQueue.size).toBe(0)
   });
 });

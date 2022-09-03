@@ -47,19 +47,19 @@ export interface Match<T> {
 }
 
 /** functions **/
-export type ThenFn<T,U> = (session: Session<T>, rule: Production<T,U>, vars: U) => void
+export type ThenFn<T> = (session: Session<T>, rule: Production<T>, vars: keyof T) => void
 export type WrappedThenFn<SCHEMA> = (vars: MatchT<SCHEMA>) => void
-export type ThenFinallyFn<T,U> = (session: Session<T>, rule: Production<T,U>) => void
+export type ThenFinallyFn<T> = (session: Session<T>, rule: Production<T>) => void
 export type WrappedThenFinallyFn = () => void
-export type ConvertMatchFn<T,U> = (vars: MatchT<T>) => U
+export type ConvertMatchFn<T> = (vars: MatchT<T>) => keyof T
 export type CondFn<T> = (vars: MatchT<T>) => boolean
-export type InitMatchFn<T> = (ruleName: string) => MatchT<T>
+export type InitMatchFn<T> = () => MatchT<T>
 
 
 /** Alpha Network **/
 export interface AlphaNode<T> {
   testField?: Field,
-  testValue?: T,
+  testValue?: keyof T,
 
   // TODO: Is this right? This looks kinda bonkers
   facts: Map<FactFragment<T>, Map<FactFragment<T>, Fact<T>>>,
@@ -108,20 +108,20 @@ export interface JoinNode<T> {
 /** Session **/
 
 export interface Condition<T> {
-  nodes: [Field, T][],
+  nodes: [Field, keyof T][],
   vars: Var[]
   shouldTrigger: boolean
 }
 
 
 
-export interface Production<T, U> {
+export interface Production<T> {
   name: string,
   conditions: Condition<T>[],
-  convertMatchFn: ConvertMatchFn<T,U>,
-  condFn: CondFn<T>,
-  thenFn?: ThenFn<T, U>
-  thenFinallyFn?: ThenFinallyFn<T, U>
+  convertMatchFn: ConvertMatchFn<T>,
+  condFn?: CondFn<T>,
+  thenFn?: ThenFn<T>
+  thenFinallyFn?: ThenFinallyFn<T>
 }
 
 export interface Session<T> {

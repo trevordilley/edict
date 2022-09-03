@@ -33,6 +33,8 @@ export type EdictArgs<SCHEMA> =
     // so we'll just be sure to do a runtime check on boot if there are rules that
     // have `what` blocks with attrs that aren't in the schema!
     factSchema: SCHEMA
+
+    autoFire?: boolean
   }
 
 
