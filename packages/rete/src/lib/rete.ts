@@ -26,7 +26,7 @@ import {
 } from "./types";
 import {IdAttr, IdAttrs} from "@edict/types";
 import {getIdAttr} from "@edict/common";
-
+import {Dictionary, Set} from "typescript-collections";
 // NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
 
 const addNode = <T>(node: AlphaNode<T>, newNode: AlphaNode<T> ): AlphaNode<T> => {
@@ -47,7 +47,7 @@ const addNodes = <T>(session: Session<T>, nodes: [ Field, keyof T][] ): AlphaNod
       testValue: testValue,
       successors: [],
       children:[],
-      facts: new Map()
+      facts: new Dictionary()
     })
   })
   return result
@@ -118,7 +118,7 @@ const addProductionToSession = <T>(session: Session<T>,production: Production<T>
     const joinNode: JoinNode<T> = {
       parent: parentMemNode, alphaNode: leafAlphaNode, condition, ruleName: production.name, oldIdAttrs: new Set()}
     condition.vars.forEach(v => {
-      if(bindings.has(v.name)) {
+      if(bindings.contains(v.name)) {
         joinedBindings.add(v.name)
         if(v.field === Field.IDENTIFIER) {
           joinNode.idName = v.name
@@ -139,8 +139,8 @@ const addProductionToSession = <T>(session: Session<T>,production: Production<T>
       condition,
       ruleName: production.name,
       lastMatchId: -1,
-    matches: new Map<IdAttrs<T>, Match<T>>(),
-    matchIds: new Map<number, IdAttrs<T>>()}
+    matches: new Dictionary<IdAttrs<T>, Match<T>>(),
+    matchIds: new Dictionary<number, IdAttrs<T>>()}
     if(memNode.type === MEMORY_NODE_TYPE.LEAF) {
       if(!production.condFn) {
         throw new Error(`Expected production ${production.name} to have a condFn, but it was undefined!`)
@@ -150,21 +150,19 @@ const addProductionToSession = <T>(session: Session<T>,production: Production<T>
       }
       const pThenFn = production.thenFn
       if(pThenFn) {
-        const sess = session
-        sess.insideRule = true
+        const sess = {...session, insideRule: true}
         memNode.nodeType.thenFn = (vars ) => pThenFn(sess, production, production.convertMatchFn(vars))
       }
       const pThenFinallyFn = production.thenFinallyFn
       if(pThenFinallyFn) {
-        const sess = session
-        sess.insideRule = true
+        const sess = {...session, insideRule: true}
         memNode.nodeType.thenFinallyFn = () => pThenFinallyFn(sess, production)
       }
 
-      if(session.leafNodes.has(production.name)) {
+      if(session.leafNodes.containsKey(production.name)) {
         throw new Error(`${production.name} already exists in session`)
       }
-      session.leafNodes.set(production.name, memNode)
+      session.leafNodes.setValue(production.name, memNode)
     }
     memNodes.push(memNode)
     joinNodes.push(joinNode)
@@ -180,7 +178,7 @@ const addProductionToSession = <T>(session: Session<T>,production: Production<T>
     const vars = node.condition.vars
     for(let j = 0; j < vars.length; j++) {
       const v = vars[j]
-      if(v.field === Field.VALUE && joinedBindings.has(v.name)) {
+      if(v.field === Field.VALUE && joinedBindings.contains(v.name)) {
         node.disableFastUpdates = true
         break
       }
@@ -195,10 +193,10 @@ const addProductionToSession = <T>(session: Session<T>,production: Production<T>
 //
 // We'd need a map
 const getVarFromFact = <T>(vars: MatchT<T>, key: string, fact: FactFragment<T>): boolean => {
-  if(vars.has(key) && vars.get(key) != fact) {
+  if(vars.containsKey(key) && vars.getValue(key) != fact) {
     return false
   }
-  vars.set(key, fact)
+  vars.setValue(key, fact)
   return true
 }
 
@@ -225,13 +223,15 @@ const getVarsFromFact = <T>(vars: MatchT<T>, condition: Condition<T>, fact: Fact
 }
 
 const leftActivationFromVars = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>, alphaFact: Fact<T>) => {
-  const newVars = vars
+
+  const newVars: MatchT<T> = new Dictionary()
+  vars.forEach((k, v) => newVars.setValue(k,v))
   if(getVarsFromFact(newVars, node.condition, alphaFact)) {
     const idAttr = getIdAttr<T>(alphaFact)
-    const newIdAttrs = idAttrs
+    const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
     const newToken = {fact: alphaFact, kind: token.kind}
-    const isNew = !node.oldIdAttrs?.has(idAttr)
+    const isNew = !node.oldIdAttrs?.contains(idAttr)
     const child = node.child
     if(!child) {
       console.error("Session", JSON.stringify(session))
@@ -245,10 +245,10 @@ const leftActivationFromVars = <T>(session: Session<T>, node: JoinNode<T>, idAtt
 
 const leftActivationWithoutAlpha = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>) => {
   if(node.idName && node.idName != "") {
-    const id = vars.get(node.idName)
+    const id = vars.getValue(node.idName)
     if(!id) throw new Error(`Could not find var for node ${node.idName}`)
-    if(node.alphaNode.facts.has(id)) {
-      const alphaFacts = [...node.alphaNode.facts.get(id)?.values() ?? []]
+    if(node.alphaNode.facts.containsKey(id)) {
+      const alphaFacts = [...node.alphaNode.facts.getValue(id)?.values() ?? []]
       if(!alphaFacts) throw new Error(`Expected to have alpha facts for ${node.idName}`)
       alphaFacts.forEach(alphaFact => {
         leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
@@ -277,16 +277,16 @@ const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>,
 
   if(token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) {
       let match: Match<T>;
-      if (node.matches.has(idAttrs)) {
-        match = node.matches.get(idAttrs)!
+      if (node.matches.containsKey(idAttrs)) {
+        match = node.matches.getValue(idAttrs)!
       } else {
         node.lastMatchId += 1
         match = {id: node.lastMatchId}
       }
       match.vars = vars
     match.enabled = node.type !== MEMORY_NODE_TYPE.LEAF || !node.nodeType?.condFn || node.nodeType?.condFn(vars)
-    node.matchIds.set(match.id, idAttrs)
-    node.matches.set(idAttrs, match)
+    node.matchIds.setValue(match.id, idAttrs)
+    node.matches.setValue(idAttrs, match)
     if(node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
       if(node.nodeType?.thenFn) {
         session.thenQueue.add([node, idAttrs])
@@ -298,12 +298,12 @@ const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>,
     node.parent.oldIdAttrs.add(idAttr)
   }
   else if( token.kind === TokenKind.RETRACT) {
-    const idToDelete = node.matches.get(idAttrs)
+    const idToDelete = node.matches.getValue(idAttrs)
     if(idToDelete){
-      node.matchIds.delete(idToDelete.id)
+      node.matchIds.remove(idToDelete.id)
     }
-    node.matches.delete(idAttrs)
-    node.parent.oldIdAttrs.delete(idAttr)
+    node.matches.remove(idAttrs)
+    node.parent.oldIdAttrs.remove(idAttr)
     if(node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType) {
       if(node.nodeType.thenFinallyFn) {
         session.thenFinallyQueue.add(node)
@@ -328,13 +328,13 @@ const rightActivationWithJoinNode = <T>(session: Session<T>, node: JoinNode<T>, 
     }
   } else {
 
-    node.parent.matches.forEach((match, idAttrs) => {
+    node.parent.matches.forEach((idAttrs, match) => {
       const vars = match.vars
       const idName = node.idName
       if(idName && idName !== "" &&
         // REALLY NOT SURE ABOUT THIS LINE!!!
-        vars?.get(idName) != token.fact[0]) {
-          console.debug("match??", vars?.get(idName), token.fact[0])
+        vars?.getValue(idName) != token.fact[0]) {
+          console.debug("match??", vars?.getValue(idName), token.fact[0])
           return
       }
       if(!vars) {
@@ -344,7 +344,7 @@ const rightActivationWithJoinNode = <T>(session: Session<T>, node: JoinNode<T>, 
       // copy, I'm not doing that. I think he's doing a Nim
       // perf thing that may not be possible in Javascript
       if (getVarsFromFact(vars, node.condition, token.fact)) {
-        const newIdAttrs = idAttrs
+        const newIdAttrs = [...idAttrs]
         newIdAttrs.push(idAttr)
         const child = node.child
         if(!child) throw new Error(`Unexpected null child for node: ${node.idName}`)
@@ -360,22 +360,22 @@ const rightActivationWithAlphaNode = <T>(session: Session<T>, node: AlphaNode<T>
   const idAttr =  getIdAttr(token.fact)
   const [id, attr] = idAttr
   if(token.kind === TokenKind.INSERT) {
-    if(!node.facts.has(id)) {
-      node.facts.set(id, new Map<FactFragment<T>, Fact<T>>())
+    if(!node.facts.containsKey(id)) {
+      node.facts.setValue(id, new Dictionary<FactFragment<T>, Fact<T>>())
     }
-    node.facts.get(id)!.set(attr, token.fact)
-    if(!session.idAttrNodes.has(idAttr)) {
-      session.idAttrNodes.set(idAttr, new Set())
+    node.facts.getValue(id)!.setValue(attr, token.fact)
+    if(!session.idAttrNodes.containsKey(idAttr)) {
+      session.idAttrNodes.setValue(idAttr, new Set())
     }
-    session.idAttrNodes.get(idAttr)!.add(node)
+    session.idAttrNodes.getValue(idAttr)!.add(node)
   } else if(token.kind === TokenKind.RETRACT) {
-    node.facts.get(id)?.delete(attr)
-    session.idAttrNodes.get(idAttr)!.delete(node)
-    if(session.idAttrNodes.get(idAttr)!.size == 0) {
-     session.idAttrNodes.delete(idAttr)
+    node.facts.getValue(id)?.remove(attr)
+    session.idAttrNodes.getValue(idAttr)!.remove(node)
+    if(session.idAttrNodes.getValue(idAttr)!.size() == 0) {
+     session.idAttrNodes.remove(idAttr)
     }
   } else if (token.kind === TokenKind.UPDATE) {
-    node.facts.get(id)!.set(attr, token.fact)
+    node.facts.getValue(id)!.setValue(attr, token.fact)
   }
   node.successors.forEach(child => {
     if(token.kind === TokenKind.UPDATE && child.disableFastUpdates) {
@@ -397,7 +397,7 @@ const raiseRecursionLimit = <T>(limit: number, executedNodes: ExecutedNodes<T>) 
   for(let i = executedNodes.length - 1; i >= 0; i--) {
     const currNodes = {}
     const nodeToTriggeredNodes = executedNodes[i]
-    nodeToTriggeredNodes.forEach((triggeredNodes,node) => {
+    nodeToTriggeredNodes.forEach((node,triggeredNodes) => {
       const obj = {}
       triggeredNodes.forEach(triggeredNode => {
         if(triggeredNode.ruleName in nodes) {
@@ -470,7 +470,7 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
 
     const thenQueue = session.thenQueue
     const thenFinallyQueue = session.thenFinallyQueue
-    if(thenQueue.size == 0 && thenFinallyQueue.size == 0) {
+    if(thenQueue.size() == 0 && thenFinallyQueue.size() == 0) {
       return
     }
 
@@ -488,13 +488,16 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
       }
     })
 
-    const nodeToTriggeredNodeIds = new Map<MemoryNode<T>, Set<MemoryNode<T>>>()
-    const add = (t: Map<MemoryNode<T>, Set<MemoryNode<T>>>, nodeId: MemoryNode<T>, s:Set<MemoryNode<T>>) => {
-      if(!t.has(nodeId)) {
-        t.set(nodeId,  new Set<MemoryNode<T>>())
+    const nodeToTriggeredNodeIds = new Dictionary<MemoryNode<T>, Set<MemoryNode<T>>>()
+    const add = (t: Dictionary<MemoryNode<T>, Set<MemoryNode<T>>>, nodeId: MemoryNode<T>, s:Set<MemoryNode<T>>) => {
+      if(!t.containsKey(nodeId)) {
+        t.setValue(nodeId,  new Set<MemoryNode<T>>())
       }
-      const existing = t.get(nodeId) ?? new Set<MemoryNode<T>>()
-      t.set(nodeId, new Set([...s, ...existing]))
+      const existing = t.getValue(nodeId) ?? new Set<MemoryNode<T>>()
+      const ns = new Set<MemoryNode<T>>()
+      s.forEach(e => ns.add(e))
+      existing.forEach(e => ns.add(e))
+      t.setValue(nodeId, ns)
     }
 
     //  keep a copy of the matches before executing the :then functions.
@@ -502,19 +505,19 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
     //  it'll produce non-deterministic results because `matches`
     //  could be modified by the for loop itself. see test: "non-deterministic behavior"
 
-    const nodeToMatches: Map<MemoryNode<T>, Map<IdAttrs<T>, Match<T>>> = new Map()
+    const nodeToMatches: Dictionary<MemoryNode<T>, Dictionary<IdAttrs<T>, Match<T>>> = new Dictionary()
 
     thenQueue.forEach( ([node, _]) => {
-     if(!nodeToMatches.has(node)) {
-       nodeToMatches.set(node, node.matches)
+     if(!nodeToMatches.containsKey(node)) {
+       nodeToMatches.setValue(node, node.matches)
      }
     })
 
     // Execute `then` blocks
     thenQueue.forEach(([node, idAttrs]) => {
-      const matches = nodeToMatches.get(node)
-      if(matches && matches.has(idAttrs)) {
-        const match = matches.get(idAttrs)
+      const matches = nodeToMatches.getValue(node)
+      if(matches && matches.containsKey(idAttrs)) {
+        const match = matches.getValue(idAttrs)
         if(match && match.enabled) {
           session.triggeredNodeIds.clear()
           if(!match.vars) {
@@ -557,13 +560,13 @@ const getAlphaNodesForFact = <T>(session: Session<T>, node: AlphaNode<T>, fact: 
 
 const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<T>>) => {
  const idAttr = getIdAttr<T>(fact)
- if(!session.idAttrNodes.has(idAttr)) {
+ if(!session.idAttrNodes.containsKey(idAttr)) {
    nodes.forEach(n => {
      rightActivationWithAlphaNode(session, n, {fact, kind: TokenKind.INSERT})
    })
  }
  else {
-   const existingNodes = session.idAttrNodes.get(idAttr)
+   const existingNodes = session.idAttrNodes.getValue(idAttr)
     if(!existingNodes) {
       console.warn("Session has no existing nodes?")
       return
@@ -572,8 +575,8 @@ const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<
    // we use toSeq here to make a copy of the existingNodes, because
    // rightActivation will modify it
    existingNodes.forEach(n => {
-     if(!nodes.has(n)) {
-       const oldFact = n.facts.get(fact[0])?.get(fact[1])
+     if(!nodes.contains(n)) {
+       const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1])
        if(!oldFact) {
          console.warn("Old fact doesn't exist?")
          return
@@ -584,8 +587,8 @@ const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<
 
     // update or insert facts, depending on whether the node already exists
    nodes.forEach(n => {
-     if(existingNodes.has(n)) {
-       const oldFact = n.facts.get(fact[0])?.get(fact[1])
+     if(existingNodes.contains(n)) {
+       const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1])
        rightActivationWithAlphaNode(session, n, {fact, kind: TokenKind.UPDATE, oldFact})
      }
      else {
@@ -607,7 +610,7 @@ const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
 const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const idAttr = getIdAttr(fact)
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
-  const idAttrNodes = new Set(session.idAttrNodes.get(idAttr))
+  const idAttrNodes = new Set(session.idAttrNodes.getValue(idAttr))
   idAttrNodes.forEach(node => {
 
     if(fact !== node.facts.get(idAttr[0])?.get(idAttr[1])) {
@@ -623,7 +626,7 @@ const retractFactByIdAndAttr = <T>(session:Session<T>, id: string, attr: keyof T
   // TODO: this function is really simliar to the retractFact function, can we make things
   // DRYer?
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
-  const idAttrNodes = new Set(session.idAttrNodes.get([id, attr]))
+  const idAttrNodes = new Set(session.idAttrNodes.getValue([id, attr]))
   idAttrNodes.forEach(node => {
     const fact = node.facts.get(id)?.get(attr)
     if(fact) {
@@ -635,19 +638,19 @@ const retractFactByIdAndAttr = <T>(session:Session<T>, id: string, attr: keyof T
 }
 
 const defaultInitMatch = <T>() => {
-  return new Map<string, FactFragment<T>>()
+  return new Dictionary<string, FactFragment<T>>()
 }
 
 const initSession = <T>(autoFire = true): Session<T> => {
   const alphaNode: AlphaNode<T> = {
-    facts: new Map<FactFragment<T>, Map<FactFragment<T>, Fact<T>>>(),
+    facts: new Dictionary<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>(),
     successors: [],
     children: []
   }
 
-  const leafNodes = new Map<string, MemoryNode<T>>()
+  const leafNodes = new Dictionary<string, MemoryNode<T>>()
 
-  const idAttrNodes = new Map<IdAttr<T>, Set<AlphaNode<T>>>()
+  const idAttrNodes = new Dictionary<IdAttr<T>, Set<AlphaNode<T>>>()
 
   const thenQueue = new Set<[MemoryNode<T>, IdAttrs<T>]>()
 

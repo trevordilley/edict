@@ -1,13 +1,14 @@
 
 /*** Facts ***/
 import {IdAttr, IdAttrs, InternalFactRepresentation} from "@edict/types";
+import {Dictionary, Set} from "typescript-collections";
 
 // This is a map of string to one of the elements of a fact tuple
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
 export type ValueOf<T> = T[keyof T];
 export type FactFragment<SCHEMA> = string | keyof SCHEMA |  ValueOf<SCHEMA>
-export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>
+export type MatchT<SCHEMA> = Dictionary<string, FactFragment<SCHEMA>>
 
 export enum Field {
   IDENTIFIER,
@@ -34,7 +35,7 @@ export interface Token<T> {
 
 /** Matches **/
 
-export type Vars<T> = Map<string, T>
+export type Vars<T> = Dictionary<string, T>
 export interface Var {
   name: string,
   field: Field
@@ -62,7 +63,7 @@ export interface AlphaNode<T> {
   testValue?: keyof T,
 
   // TODO: Is this right? This looks kinda bonkers
-  facts: Map<FactFragment<T>, Map<FactFragment<T>, Fact<T>>>,
+  facts: Dictionary<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>,
   successors: JoinNode<T>[],
   children: AlphaNode<T>[]
 }
@@ -78,8 +79,8 @@ export interface MemoryNode<T> {
   child?: JoinNode<T>,
   leafNode?: MemoryNode<T>,
   lastMatchId: number,
-  matches: Map<IdAttrs<T>, Match<T>>
-  matchIds: Map<number, IdAttrs<T>>,
+  matches: Dictionary<IdAttrs<T>, Match<T>>
+  matchIds: Dictionary<number, IdAttrs<T>>,
   condition: Condition<T>,
   ruleName: string,
   type: MEMORY_NODE_TYPE,
@@ -126,8 +127,8 @@ export interface Production<T> {
 
 export interface Session<T> {
   alphaNode: AlphaNode<T>,
-  leafNodes: Map< string, MemoryNode<T>>,
-  idAttrNodes: Map<IdAttr<T>, Set<AlphaNode<T>>>,
+  leafNodes: Dictionary< string, MemoryNode<T>>,
+  idAttrNodes: Dictionary<IdAttr<T>, Set<AlphaNode<T>>>,
   insideRule: boolean,
   thenQueue: Set<[node: MemoryNode<T>, idAttrs: IdAttrs<T>]>
   thenFinallyQueue: Set<MemoryNode<T>>
@@ -136,4 +137,4 @@ export interface Session<T> {
   initMatch: InitMatchFn<T>
 }
 
-export type ExecutedNodes<T> = Map<MemoryNode<T>, Set<MemoryNode<T>>>[]
+export type ExecutedNodes<T> = Dictionary<MemoryNode<T>, Set<MemoryNode<T>>>[]

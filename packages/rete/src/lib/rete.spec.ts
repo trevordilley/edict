@@ -1,5 +1,6 @@
 import {rete} from './rete';
 import {Field} from "@edict/rete";
+import {Dictionary, Set as TsSet} from "typescript-collections";
 
 interface SmallSchema {
   name: string,
@@ -8,6 +9,35 @@ interface SmallSchema {
 }
 
 describe('rete', () => {
+
+  it("Sets are value based", () => {
+    const arr = [1, "2", 3]
+    const arr2 = [1, "2", 3]
+    const nativeSet = new Set()
+    nativeSet.add(arr)
+    expect(nativeSet.has(arr2)).toBe(false)
+
+    const collSet = new TsSet()
+    collSet.add(arr)
+    expect(collSet.contains(arr2)).toBe(true)
+  })
+  it("dictionary keys are value based", () => {
+    const key1 = ["a", "b"]
+    const key2 = ["a", "b"]
+    const d = new Dictionary()
+    const val = 100
+    d.setValue(key1, val)
+    const result = d.getValue(key2)
+
+    expect(result).toBe(val)
+
+    const m = new Map()
+    m.set(key1, val)
+    const mResult = m.get(key2)
+
+    expect(mResult).toBe(undefined)
+  })
+
   it('should work', () => {
     const session = rete.initSession<SmallSchema>()
 
