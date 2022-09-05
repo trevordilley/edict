@@ -108,6 +108,6 @@ describe('rete', () => {
     rete.insertFact(session, ["Bob", "name", "Bob Johnson"])
     rete.fireRules(session)
 
-    expect(session.thenQueue.size).toBe(0)
+    expect(session.thenQueue.size()).toBe(0)
   });
 });

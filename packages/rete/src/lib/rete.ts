@@ -610,10 +610,11 @@ const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
 const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const idAttr = getIdAttr(fact)
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
-  const idAttrNodes = new Set(session.idAttrNodes.getValue(idAttr))
+  const idAttrNodes = new Set<AlphaNode<T>>()
+  session.idAttrNodes.getValue(idAttr)?.forEach(i => idAttrNodes.add(i))
   idAttrNodes.forEach(node => {
 
-    if(fact !== node.facts.get(idAttr[0])?.get(idAttr[1])) {
+    if(fact !== node.facts.getValue(idAttr[0])?.getValue(idAttr[1])) {
       throw new Error(`Expected fact ${fact} to be in node.facts at id: ${idAttr[0]}, attr: ${idAttr[1]}`)
     }
 
@@ -626,9 +627,10 @@ const retractFactByIdAndAttr = <T>(session:Session<T>, id: string, attr: keyof T
   // TODO: this function is really simliar to the retractFact function, can we make things
   // DRYer?
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
-  const idAttrNodes = new Set(session.idAttrNodes.getValue([id, attr]))
+  const idAttrNodes = new Set<AlphaNode<T>>()
+  session.idAttrNodes.getValue([id, attr])?.forEach(i => idAttrNodes.add(i))
   idAttrNodes.forEach(node => {
-    const fact = node.facts.get(id)?.get(attr)
+    const fact = node.facts.getValue(id)?.getValue(attr)
     if(fact) {
       rightActivationWithAlphaNode(session, node, {fact, kind: TokenKind.RETRACT})
     } else {
@@ -700,7 +702,7 @@ const initProduction = <SCHEMA>(name: string, convertMatchFn: ConvertMatchFn<SCH
 
 const queryAll = <T>(session: Session<T>, prod: Production<T>): (keyof T)[] => {
   const result: (keyof T)[] = []
-  session.leafNodes.get(prod.name)?.matches.forEach(match => {
+  session.leafNodes.getValue(prod.name)?.matches.forEach((_, match) => {
     if(match.enabled && match.vars) {
       result.push(prod.convertMatchFn(match.vars))
     }
@@ -710,11 +712,11 @@ const queryAll = <T>(session: Session<T>, prod: Production<T>): (keyof T)[] => {
 
 const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
   const result:Fact<T>[] = []
-  session.idAttrNodes.forEach((nodes, idAttr) => {
-    const nodesArr = new Array(...nodes)
+  session.idAttrNodes.forEach((idAttr, nodes) => {
+    const nodesArr = nodes.toArray()
     if(nodesArr.length <= 0) throw new Error("No nodes in session?")
     const firstNode = nodesArr[0]
-    const fact = firstNode.facts.get(idAttr[0])?.get(idAttr[1])
+    const fact = firstNode.facts.getValue(idAttr[0])?.getValue(idAttr[1])
     if(fact) {
       result.push([idAttr[0], idAttr[1], fact[2]])
     } else {
@@ -725,9 +727,9 @@ const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
 }
 
 const get = <T>(session: Session<T>, prod: Production<T>, i: number): (keyof T) | undefined => {
-  const idAttrs = session.leafNodes.get(prod.name)?.matchIds.get(i)
+  const idAttrs = session.leafNodes.getValue(prod.name)?.matchIds.getValue(i)
   if(!idAttrs) return
-  const vars = session.leafNodes.get(prod.name)?.matches.get(idAttrs)?.vars
+  const vars = session.leafNodes.getValue(prod.name)?.matches.getValue(idAttrs)?.vars
   if(!vars) {
     console.warn("No vars??")
     return
@@ -736,7 +738,7 @@ const get = <T>(session: Session<T>, prod: Production<T>, i: number): (keyof T) 
 }
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
-  session.idAttrNodes.has([id, attr])
+  session.idAttrNodes.containsKey([id, attr])
 
 
 export const rete = {
