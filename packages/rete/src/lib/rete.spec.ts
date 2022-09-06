@@ -145,7 +145,8 @@ describe('rete', () => {
     rete.insertFact(session, ["Bob", "name", "Bob Johnson"])
     rete.insertFact(session, ["Jane", "name", "Jane Wilmore"])
     rete.insertFact(session, ["Janes Email", "email", "jane.wilmore@gmail.com"])
-
+    const x = rete.queryAll(session, production)
+    x.forEach(e => console.log(e))
     expect(session.thenQueue.size()).toBe(4)
     rete.fireRules(session)
     expect(session.thenQueue.size()).toBe(0)
