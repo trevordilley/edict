@@ -10,6 +10,45 @@ interface SmallSchema {
 
 describe('rete', () => {
 
+  it("Sets set values correctly", () => {
+    const x = {
+      testField: 1,
+      testValue: 'name',
+      successors: [],
+      children: [
+      {
+        testField: 2,
+        testValue: 'Bob Johnson',
+        successors: [],
+        children: [],
+        facts: new Dictionary()
+      }
+    ]
+    }
+
+    const y = {
+      testField: 2,
+      testValue: 'Bob Johnson',
+      successors: [
+        {
+          parent: undefined,
+          alphaNode: undefined,
+          condition: {},
+          ruleName: 'test',
+          oldIdAttrs: new Set(),
+          child: []
+        }
+      ],
+      children: [],
+    }
+
+    const s = new Set()
+    s.add(x)
+    s.add(y)
+    expect(s.size).toBe(2)
+
+
+  })
   it("Sets are value based", () => {
     const arr = [1, "2", 3]
     const arr2 = [1, "2", 3]
@@ -39,7 +78,7 @@ describe('rete', () => {
   })
 
   it('should work', () => {
-    const session = rete.initSession<SmallSchema>()
+    const session = rete.initSession<SmallSchema>(false)
 
     /**
      * Here's the data structure for our rules!
@@ -92,22 +131,23 @@ describe('rete', () => {
 
     const production = rete.initProduction<SmallSchema>("test",
       (vars) => {
-        console.log("covert fired?", vars)
       return vars as any},
       (vars) => {
-        console.log("conf fired", vars)
         return true
       },
       (vars) => {
-        console.log("then fired", vars)
       return vars as any
       } )
 
-    rete.addConditionsToProduction(production, {name: "test1", field: Field.IDENTIFIER}, "name", "Bob Johnson", false)
+    rete.addConditionsToProduction(production, {name: "id", field: Field.IDENTIFIER}, "name", {name: "val", field: Field.VALUE}, true)
+    rete.addConditionsToProduction(production, {name: "id2", field: Field.IDENTIFIER}, "name", {name: "val2", field: Field.VALUE}, true)
     rete.addProductionToSession(session, production)
     rete.insertFact(session, ["Bob", "name", "Bob Johnson"])
-    rete.fireRules(session)
+    rete.insertFact(session, ["Jane", "name", "Jane Wilmore"])
+    rete.insertFact(session, ["Janes Email", "email", "jane.wilmore@gmail.com"])
 
+    expect(session.thenQueue.size()).toBe(4)
+    rete.fireRules(session)
     expect(session.thenQueue.size()).toBe(0)
   });
 });
