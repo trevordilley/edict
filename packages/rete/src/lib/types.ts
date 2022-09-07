@@ -1,13 +1,12 @@
 
 /*** Facts ***/
-import {IdAttr, IdAttrs, InternalFactRepresentation} from "@edict/types";
 import {Dictionary, Set} from "typescript-collections";
 
 // This is a map of string to one of the elements of a fact tuple
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
 export type ValueOf<T> = T[keyof T];
-export type FactFragment<SCHEMA> = string | keyof SCHEMA |  ValueOf<SCHEMA>
+export type FactFragment<SCHEMA> = FactId | keyof SCHEMA |  ValueOf<SCHEMA>
 export type MatchT<SCHEMA> = Dictionary<string, FactFragment<SCHEMA>>
 
 export enum Field {
@@ -16,9 +15,13 @@ export enum Field {
   VALUE
 }
 
+export type FactId = number | string | Var
 // Shorten that name a bit
+export type InternalFactRepresentation<SCHEMA> = [FactId, keyof SCHEMA, any]
 export type Fact<T> = InternalFactRepresentation<T>
 
+export type IdAttr<S> = [FactId, keyof S]
+export type IdAttrs<S> = IdAttr<S>[]
 export enum TokenKind {
   INSERT,
   RETRACT,
@@ -60,7 +63,7 @@ export type InitMatchFn<T> = () => MatchT<T>
 /** Alpha Network **/
 export interface AlphaNode<T> {
   testField?: Field,
-  testValue?: keyof T,
+  testValue?: keyof T | FactId,
 
   // TODO: Is this right? This looks kinda bonkers
   facts: Dictionary<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>,
@@ -109,7 +112,7 @@ export interface JoinNode<T> {
 /** Session **/
 
 export interface Condition<T> {
-  nodes: [Field, keyof T][],
+  nodes: [Field, keyof T | FactId][],
   vars: Var[]
   shouldTrigger: boolean
 }

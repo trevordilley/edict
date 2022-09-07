@@ -11,8 +11,8 @@ import {
   Condition, ConvertMatchFn,
   ExecutedNodes,
   Fact,
-  FactFragment,
-  Field,
+  FactFragment, FactId,
+  Field, IdAttr, IdAttrs,
   JoinNode,
   Match,
   MatchT,
@@ -24,10 +24,8 @@ import {
   TokenKind,
   Var
 } from "./types";
-import {IdAttr, IdAttrs} from "@edict/types";
 import {getIdAttr, newDict, newSet} from "@edict/common";
 import {Dictionary, Set} from "typescript-collections";
-import * as objectHash from "object-hash";
 // NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
 
 const addNode = <T>(node: AlphaNode<T>, newNode: AlphaNode<T> ): AlphaNode<T> => {
@@ -40,7 +38,7 @@ const addNode = <T>(node: AlphaNode<T>, newNode: AlphaNode<T> ): AlphaNode<T> =>
   return newNode
 }
 
-const addNodes = <T>(session: Session<T>, nodes: [ Field, keyof T][] ): AlphaNode<T> => {
+const addNodes = <T>(session: Session<T>, nodes: [ Field, keyof T | FactId][] ): AlphaNode<T> => {
   let result = session.alphaNode
   nodes.forEach(([testField, testValue]) => {
     result = addNode(result, {
@@ -61,7 +59,7 @@ function isVar (obj: any): obj is Var {
 // To figure out MatchT we need to understand how Vars are treated (so we can understand how MatchT is mapped)
 // We should also understand how conditions work in a Rete network
 
-const addConditionsToProduction = <T>(production: Production<T>, id: Var | keyof T, attr: keyof T, value: Var | any, then: boolean) => {
+const addConditionsToProduction = <T>(production: Production<T>, id: number | string | Var, attr: keyof T, value: Var | any, then: boolean) => {
   const condition: Condition<T> = {shouldTrigger: then, nodes: [], vars: []}
   const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE]
 

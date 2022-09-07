@@ -1,6 +1,6 @@
-import {IdAttr, InternalFactRepresentation} from "@edict/types";
 import * as objectHash from "object-hash";
 import {Set, Dictionary} from "typescript-collections";
+import {IdAttr, InternalFactRepresentation} from "@edict/rete";
 
 export const getIdAttr = <SCHEMA>(fact: InternalFactRepresentation<SCHEMA>):IdAttr<SCHEMA> => {
   // TODO: Good way to assert that fact[1] is actually keyof T at compile time?
