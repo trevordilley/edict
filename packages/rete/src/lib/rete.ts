@@ -59,7 +59,7 @@ function isVar (obj: any): obj is Var {
 // To figure out MatchT we need to understand how Vars are treated (so we can understand how MatchT is mapped)
 // We should also understand how conditions work in a Rete network
 
-const addConditionsToProduction = <T>(production: Production<T>, id: number | string | Var, attr: keyof T, value: Var | any, then: boolean) => {
+const addConditionsToProduction = <T, U>(production: Production<T, U>, id: number | string | Var, attr: keyof T, value: Var | any, then: boolean) => {
   const condition: Condition<T> = {shouldTrigger: then, nodes: [], vars: []}
   const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE]
 
@@ -92,7 +92,7 @@ const addConditionsToProduction = <T>(production: Production<T>, id: number | st
 
 const isAncestor = <T>(x: JoinNode<T >, y: JoinNode<T>): boolean => {
   let node = y
-  while(node && node.parent) {
+  while(node !== undefined && node.parent) {
     if(node.parent.parent === x) {
       return true
     }
@@ -103,7 +103,7 @@ const isAncestor = <T>(x: JoinNode<T >, y: JoinNode<T>): boolean => {
   return false
 }
 
-const addProductionToSession = <T>(session: Session<T>,production: Production<T>) => {
+const addProductionToSession = <T, U>(session: Session<T>,production: Production<T, U>) => {
   const memNodes: MemoryNode<T>[] = []
   const joinNodes: JoinNode<T>[] = []
   const last = production.conditions.length - 1
@@ -141,16 +141,13 @@ const addProductionToSession = <T>(session: Session<T>,production: Production<T>
     matches: newDict<IdAttrs<T>, Match<T>>(),
     matchIds: newDict<number, IdAttrs<T>>()}
     if(memNode.type === MEMORY_NODE_TYPE.LEAF) {
-      if(!production.condFn) {
-        throw new Error(`Expected production ${production.name} to have a condFn, but it was undefined!`)
-      }
       memNode.nodeType = {
         condFn : production.condFn
       }
       const pThenFn = production.thenFn
       if(pThenFn) {
         const sess = {...session, insideRule: true}
-        memNode.nodeType.thenFn = (vars ) => pThenFn(sess, production, production.convertMatchFn(vars))
+        memNode.nodeType.thenFn = (vars ) => pThenFn({session: sess, rule: production, vars: production.convertMatchFn(vars)})
       }
       const pThenFinallyFn = production.thenFinallyFn
       if(pThenFinallyFn) {
@@ -245,8 +242,7 @@ const leftActivationFromVars = <T>(session: Session<T>, node: JoinNode<T>, idAtt
 const leftActivationWithoutAlpha = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>) => {
   if(node.idName && node.idName != "") {
     const id = vars.getValue(node.idName)
-    if(!id) throw new Error(`Could not find var for node ${node.idName}`)
-    if(node.alphaNode.facts.containsKey(id)) {
+    if(id !== undefined && node.alphaNode.facts.containsKey(id)) {
       const alphaFacts = [...node.alphaNode.facts.getValue(id)?.values() ?? []]
       if(!alphaFacts) throw new Error(`Expected to have alpha facts for ${node.idName}`)
       alphaFacts.forEach(alphaFact => {
@@ -283,7 +279,7 @@ const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>,
         match = {id: node.lastMatchId}
       }
       match.vars = vars
-    match.enabled = node.type !== MEMORY_NODE_TYPE.LEAF || !node.nodeType?.condFn || node.nodeType?.condFn(vars)
+    match.enabled = node.type !== MEMORY_NODE_TYPE.LEAF || !node.nodeType?.condFn || (node.nodeType?.condFn(vars) ?? true)
     node.matchIds.setValue(match.id, idAttrs)
     node.matches.setValue(idAttrs, match)
     if(node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
@@ -334,7 +330,6 @@ const rightActivationWithJoinNode = <T>(session: Session<T>, node: JoinNode<T>, 
       if(idName && idName !== "" &&
         // REALLY NOT SURE ABOUT THIS LINE!!!
         vars?.getValue(idName) != token.fact[0]) {
-          console.debug("match??", vars?.getValue(idName), token.fact[0])
           return
       }
       if(!vars) {
@@ -477,7 +472,7 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
     // reset state
     session.thenQueue.clear()
     session.thenFinallyQueue.clear()
-    thenQueue.forEach( ([node, idAttrs]) => {
+    thenQueue.forEach( ([node]) => {
       if(node.nodeType) {
         node.nodeType!.trigger = false
       }
@@ -516,9 +511,9 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
     // Execute `then` blocks
     thenQueue.forEach(([node, idAttrs]) => {
       const matches = nodeToMatches.getValue(node)
-      if(matches && matches.containsKey(idAttrs)) {
+      if(matches !== undefined && matches.containsKey(idAttrs)) {
         const match = matches.getValue(idAttrs)
-        if(match && match.enabled) {
+        if(match !== undefined && match.enabled) {
           session.triggeredNodeIds.clear()
           if(!match.vars) {
             throw new Error(`expected match ${match.id} to have vars??`)
@@ -676,19 +671,15 @@ const initSession = <T>(autoFire = true): Session<T> => {
   }
 }
 
-const initProduction = <SCHEMA>(name: string, convertMatchFn: ConvertMatchFn<SCHEMA>, condFn?: CondFn<SCHEMA>, thenFn?: ThenFn<SCHEMA>, thenFinallyFn?: ThenFinallyFn<SCHEMA>): Production<SCHEMA> => {
+const initProduction = <SCHEMA, U>(production: {name: string, convertMatchFn: ConvertMatchFn<SCHEMA, U>, condFn?: CondFn<SCHEMA>, thenFn?: ThenFn<SCHEMA, U>, thenFinallyFn?: ThenFinallyFn<SCHEMA, U>}): Production<SCHEMA, U> => {
   return {
-    name,
-    convertMatchFn, // given a set of var names, return the enum, which I don't think we have
-    condFn,
-    thenFn,
-    thenFinallyFn,
+    ...production,
     conditions: []
   }
 }
 
 
-// lolwut? I think all the different find functions aren't used? Cause they don't seem to have the type params or anything,
+// lolwut? I think all the different find functions aren't used? Because they don't seem to have the type params or anything,
 // and literally have typos in them?
 // const matchParams = <I,T>(vars: MatchT<T>, params: [I, [string, T]]): boolean => {
 //   params.forEach(([varName, val]) => {
@@ -701,8 +692,8 @@ const initProduction = <SCHEMA>(name: string, convertMatchFn: ConvertMatchFn<SCH
 //
 // }
 
-const queryAll = <T>(session: Session<T>, prod: Production<T>): (keyof T)[] => {
-  const result: (keyof T)[] = []
+const queryAll = <T, U>(session: Session<T>, prod: Production<T, U>): U[] => {
+  const result: U[] = []
   session.leafNodes.getValue(prod.name)?.matches.forEach((_, match) => {
     if(match.enabled && match.vars) {
       result.push(prod.convertMatchFn(match.vars))
@@ -727,7 +718,7 @@ const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
   return result
 }
 
-const get = <T>(session: Session<T>, prod: Production<T>, i: number): (keyof T) | undefined => {
+const get = <T, U>(session: Session<T>, prod: Production<T, U>, i: number): U | undefined => {
   const idAttrs = session.leafNodes.getValue(prod.name)?.matchIds.getValue(i)
   if(!idAttrs) return
   const vars = session.leafNodes.getValue(prod.name)?.matches.getValue(idAttrs)?.vars

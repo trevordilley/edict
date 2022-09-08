@@ -51,11 +51,11 @@ export interface Match<T> {
 }
 
 /** functions **/
-export type ThenFn<T> = (session: Session<T>, rule: Production<T>, vars: keyof T) => void
+export type ThenFn<T, U> = (then: {session: Session<T>, rule: Production<T, U>, vars: U}) => void
 export type WrappedThenFn<SCHEMA> = (vars: MatchT<SCHEMA>) => void
-export type ThenFinallyFn<T> = (session: Session<T>, rule: Production<T>) => void
+export type ThenFinallyFn<T, U> = (session: Session<T>, rule: Production<T, U>) => void
 export type WrappedThenFinallyFn = () => void
-export type ConvertMatchFn<T> = (vars: MatchT<T>) => keyof T
+export type ConvertMatchFn<T, U> = (vars: MatchT<T>) => U
 export type CondFn<T> = (vars: MatchT<T>) => boolean
 export type InitMatchFn<T> = () => MatchT<T>
 
@@ -91,7 +91,7 @@ export interface MemoryNode<T> {
 }
 
 export interface LeafNode<T> {
-  condFn: CondFn<T>
+  condFn?: CondFn<T>
   thenFn?: WrappedThenFn<T>
   thenFinallyFn?: WrappedThenFinallyFn,
   trigger?: boolean
@@ -119,13 +119,13 @@ export interface Condition<T> {
 
 
 
-export interface Production<T> {
+export interface Production<T, U> {
   name: string,
   conditions: Condition<T>[],
-  convertMatchFn: ConvertMatchFn<T>,
+  convertMatchFn: ConvertMatchFn<T, U>,
   condFn?: CondFn<T>,
-  thenFn?: ThenFn<T>
-  thenFinallyFn?: ThenFinallyFn<T>
+  thenFn?: ThenFn<T, U>
+  thenFinallyFn?: ThenFinallyFn<T, U>
 }
 
 export interface Session<T> {
