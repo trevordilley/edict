@@ -26,6 +26,7 @@ import {
 } from "./types";
 import {getIdAttr, newDict, newSet} from "@edict/common";
 import {Dictionary, Set} from "typescript-collections";
+import _ = require("lodash");
 // NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
 
 const addNode = <T>(node: AlphaNode<T>, newNode: AlphaNode<T> ): AlphaNode<T> => {
@@ -609,8 +610,9 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const idAttrNodes = newSet<AlphaNode<T>>()
   session.idAttrNodes.getValue(idAttr)?.forEach(i => idAttrNodes.add(i))
   idAttrNodes.forEach(node => {
+    const otherFact = node.facts.getValue(idAttr[0])?.getValue(idAttr[1])
 
-    if(fact !== node.facts.getValue(idAttr[0])?.getValue(idAttr[1])) {
+    if(!_.isEqual(fact, otherFact)) {
       throw new Error(`Expected fact ${fact} to be in node.facts at id: ${idAttr[0]}, attr: ${idAttr[1]}`)
     }
 

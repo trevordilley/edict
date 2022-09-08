@@ -133,30 +133,31 @@ describe('rete', () => {
     expect(newResults[0].getValue("c")).toBe("green")
   });
 
-  it('duplicate facts', () => {
+  it('removing facts', () => {
     const session = rete.initSession<SmallSchema>(false)
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
-        name: "duplicateFacts",
+        name: "removingFacts",
         convertMatchFn,
       }
     )
 
-    rete.addConditionsToProduction(production, {name: "x", field: Field.IDENTIFIER}, "Self", {name: "y", field: Field.VALUE}, true)
-    rete.addConditionsToProduction(production, {name: "x", field: Field.IDENTIFIER}, "Color", {name: "c", field: Field.VALUE}, true)
-    rete.addConditionsToProduction(production, {name: "y", field: Field.IDENTIFIER}, "Color", {name: "c", field: Field.VALUE}, true)
+    rete.addConditionsToProduction(production, {name: "b", field: Field.IDENTIFIER}, "Color", "blue", true)
+    rete.addConditionsToProduction(production, {name: "y", field: Field.IDENTIFIER}, "LeftOf", {name: "z", field: Field.VALUE}, true)
+    rete.addConditionsToProduction(production, {name: "a", field: Field.IDENTIFIER}, "Color", "maize", true)
+    rete.addConditionsToProduction(production, {name: "y", field: Field.IDENTIFIER}, "RightOf", {name: "b", field: Field.VALUE}, true)
     rete.addProductionToSession(session, production)
-    rete.insertFact(session, [Id.Bob, "Self", Id.Bob])
-    rete.insertFact(session,[Id.Bob, "Color", "red"])
+    rete.insertFact(session,[Id.Bob, "Color", "blue"])
+    rete.insertFact(session,[Id.Yair, "LeftOf", Id.Zach])
+    rete.insertFact(session,[Id.Alice, "Color", "maize"])
+    rete.insertFact(session,[Id.Yair, "RightOf", Id.Bob])
 
     rete.fireRules(session)
     const results = rete.queryAll(session, production)
     expect(results.length).toBe(1)
-    expect(results[0].getValue("c")).toBe("red")
 
-    rete.insertFact(session, [Id.Bob, "Color", "green"])
+    rete.retractFact(session, [Id.Yair, "RightOf", Id.Bob])
     rete.fireRules(session)
     const newResults = rete.queryAll(session, production)
-    expect(newResults.length).toBe(1)
-    expect(newResults[0].getValue("c")).toBe("green")
+    expect(newResults.length).toBe(0)
   });
 });

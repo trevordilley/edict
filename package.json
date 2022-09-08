@@ -36,7 +36,7 @@
     "@nrwl/workspace": "14.1.5",
     "@testing-library/react": "13.1.1",
     "@types/jest": "27.4.1",
-    "@types/lodash": "4.14.182",
+    "@types/lodash": "^4.14.184",
     "@types/node": "16.11.7",
     "@types/object-hash": "^2.2.1",
     "@types/react": "18.0.8",
