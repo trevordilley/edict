@@ -374,7 +374,10 @@ const rightActivationWithAlphaNode = <T>(session: Session<T>, node: AlphaNode<T>
     node.facts.getValue(id)!.setValue(attr, token.fact)
   }
   node.successors.forEach(child => {
-    if(token.kind === TokenKind.UPDATE && child.disableFastUpdates) {
+    if(token.kind === TokenKind.UPDATE
+      // TODO: FIgure out why this didn't work when updating facts
+      // && child.disableFastUpdates
+    ) {
       rightActivationWithJoinNode(session, child, idAttr, { fact: token.oldFact!, kind: TokenKind.RETRACT})
       rightActivationWithJoinNode(session, child, idAttr, { fact: token.fact, kind: TokenKind.INSERT})
     } else {
@@ -557,24 +560,25 @@ const getAlphaNodesForFact = <T>(session: Session<T>, node: AlphaNode<T>, fact: 
 const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<T>>) => {
  const idAttr = getIdAttr<T>(fact)
  if(!session.idAttrNodes.containsKey(idAttr)) {
-   // PROBLEM: The leaf alphaNode is not in the nodes array
    nodes.forEach(n => {
      rightActivationWithAlphaNode(session, n, {fact, kind: TokenKind.INSERT})
    })
  }
  else {
    const existingNodes = session.idAttrNodes.getValue(idAttr)
-    if(!existingNodes) {
+    if(existingNodes === undefined) {
       console.warn("Session has no existing nodes?")
       return
     }
    // retract any facts from nodes that the new fact wasn't inserted in
    // we use toSeq here to make a copy of the existingNodes, because
    // rightActivation will modify it
-   existingNodes.forEach(n => {
+   const existingNodesCopy = newSet<AlphaNode<T>>()
+   existingNodes.forEach(n => existingNodesCopy.add(n))
+   existingNodesCopy.forEach(n => {
      if(!nodes.contains(n)) {
        const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1])
-       if(!oldFact) {
+       if(oldFact === undefined) {
          console.warn("Old fact doesn't exist?")
          return
        }
@@ -584,7 +588,9 @@ const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<
 
     // update or insert facts, depending on whether the node already exists
    nodes.forEach(n => {
-     if(existingNodes.contains(n)) {
+     // ERROR: existingNodes _should_ contain n (it does) but .contains() isn't recognizing that
+     // probably due to objectHash() not working as expected. I think I need object references with this set.
+     if(existingNodes.toArray().includes(n)) {
        const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1])
        rightActivationWithAlphaNode(session, n, {fact, kind: TokenKind.UPDATE, oldFact})
      }

@@ -1,6 +1,5 @@
 import {GamePage} from "./gamePage";
 
-
 export function App() {
   return (
     <GamePage/>

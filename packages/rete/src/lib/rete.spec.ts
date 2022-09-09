@@ -1,5 +1,5 @@
 import {rete} from './rete';
-import {Field, MatchT} from "@edict/rete";
+import {FactFragment, Field, MatchT} from "@edict/rete";
 
 type People = [id: number, color: string, leftOf: number, height: number][]
 enum Id {
@@ -159,5 +159,43 @@ describe('rete', () => {
     rete.fireRules(session)
     const newResults = rete.queryAll(session, production)
     expect(newResults.length).toBe(0)
+  });
+
+  it('updating facts', () => {
+    const session = rete.initSession<SmallSchema>(false)
+    let zVal: FactFragment<SmallSchema> | undefined= undefined
+    let fireCount = 0
+    const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+        name: "updatingFacts",
+        convertMatchFn,
+      thenFn: ({vars}) => {
+          fireCount += 1
+          zVal = vars.getValue("z")
+      }
+      }
+    )
+
+    rete.addConditionsToProduction(production, {name: "b", field: Field.IDENTIFIER}, "Color", "blue", true)
+    rete.addConditionsToProduction(production, {name: "y", field: Field.IDENTIFIER}, "LeftOf", {name: "z", field: Field.VALUE}, true)
+    rete.addConditionsToProduction(production, {name: "a", field: Field.IDENTIFIER}, "Color", "maize", true)
+    rete.addConditionsToProduction(production, {name: "y", field: Field.IDENTIFIER}, "RightOf", {name: "b", field: Field.VALUE}, true)
+    rete.addProductionToSession(session, production)
+    rete.insertFact(session,[Id.Bob, "Color", "blue"])
+    rete.insertFact(session,[Id.Yair, "LeftOf", Id.Zach])
+    rete.insertFact(session,[Id.Alice, "Color", "maize"])
+    rete.insertFact(session,[Id.Yair, "RightOf", Id.Bob])
+    rete.fireRules(session)
+    const results = rete.queryAll(session, production)
+    expect(results.length).toBe(1)
+    expect(zVal).toBe(Id.Zach)
+
+    rete.insertFact(session,[Id.Yair, "LeftOf", Id.Xavier])
+    rete.fireRules(session)
+    const newResults = rete.queryAll(session, production)
+    expect(newResults.length).toBe(1)
+    expect(fireCount).toBe(2)
+    expect(zVal).toBe(Id.Xavier)
+
+
   });
 });
