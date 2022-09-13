@@ -12,7 +12,7 @@ import {
   ExecutedNodes,
   Fact,
   FactFragment, FactId,
-  Field, IdAttr, IdAttrs,
+  Field, IdAttr, IdAttrs, InternalFactRepresentation,
   JoinNode,
   Match,
   MatchT,
@@ -24,10 +24,19 @@ import {
   TokenKind,
   Var
 } from "./types";
-import {getIdAttr, newDict, newSet} from "@edict/common";
 import {Dictionary, Set} from "typescript-collections";
-import _ = require("lodash");
+import * as _ from "lodash";
+import * as objectHash from "object-hash";
+import {sum} from "./hash";
+
+
+export const newSet = <T>() => new Set<T>(el =>  sum(el) )
+export const newDict = <K,V>() => new Dictionary<K,V>(k => sum(k))
 // NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
+export const getIdAttr = <SCHEMA>(fact: InternalFactRepresentation<SCHEMA>):IdAttr<SCHEMA> => {
+  // TODO: Good way to assert that fact[1] is actually keyof T at compile time?
+  return [fact[0], fact[1] as (keyof SCHEMA)]
+}
 
 const addNode = <T>(node: AlphaNode<T>, newNode: AlphaNode<T> ): AlphaNode<T> => {
   for(let i = 0; i < node.children.length; i++) {
@@ -47,7 +56,7 @@ const addNodes = <T>(session: Session<T>, nodes: [ Field, keyof T | FactId][] ):
       testValue: testValue,
       successors: [],
       children:[],
-      facts: newDict()
+      facts: new Dictionary()
     })
   })
   return result
@@ -357,7 +366,7 @@ const rightActivationWithAlphaNode = <T>(session: Session<T>, node: AlphaNode<T>
   const [id, attr] = idAttr
   if(token.kind === TokenKind.INSERT) {
     if(!node.facts.containsKey(id)) {
-      node.facts.setValue(id, newDict<FactFragment<T>, Fact<T>>())
+      node.facts.setValue(id, new Dictionary<FactFragment<T>, Fact<T>>())
     }
     node.facts.getValue(id)!.setValue(attr, token.fact)
     if(!session.idAttrNodes.containsKey(idAttr)) {
@@ -649,7 +658,7 @@ const defaultInitMatch = <T>() => {
 
 const initSession = <T>(autoFire = true): Session<T> => {
   const alphaNode: AlphaNode<T> = {
-    facts: newDict<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>(),
+    facts: new Dictionary<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>(),
     successors: [],
     children: []
   }
@@ -675,7 +684,7 @@ const initSession = <T>(autoFire = true): Session<T> => {
     triggeredNodeIds,
     initMatch,
     insideRule: false,
-    autoFire
+    autoFire,
   }
 }
 

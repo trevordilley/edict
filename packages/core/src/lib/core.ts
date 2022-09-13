@@ -2,141 +2,71 @@ import {EdictArgs, EdictOperations, IEdict, InsertEdictFact, Rule,} from "./type
 import {groupFactById, insertFactToFact} from "./utils";
 import * as _ from "lodash";
 import {Binding, InternalFactRepresentation} from "@edict/types";
-import {rete} from "@edict/rete"
+import {ConvertMatchFn, Field, MatchT, Production, rete} from "@edict/rete"
 // TODO: Ideally constrain that any to the value types in the schema someday
 
 export const rule = <T>(r: Rule<T>) => r
 
 export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
-  const facts: InternalFactRepresentation<SCHEMA>[] = []
   const session = rete.initSession<SCHEMA>(args.autoFire ?? false)
-  const findFact = ([id,attr]: [InternalFactRepresentation<SCHEMA>[0], InternalFactRepresentation<SCHEMA>[1]])=> facts.findIndex(f =>f[0] == id && f[1] == attr )
 
   const insert = (insertFacts: InsertEdictFact<SCHEMA>) => {
     // be dumb about this
     const factTuples = insertFactToFact(insertFacts)
 
     factTuples.forEach(f => {
-      const idx = findFact([f[0], f[1]])
       rete.insertFact<SCHEMA>(session, f)
-      if(idx != -1) {
-        facts[idx] = f
-      } else {
-        facts.push(f)
-      }
-
     })
   }
   const retract = (id: string, ...attrs: (keyof SCHEMA)[]) => {
     attrs.map(attr => {
       rete.retractFactByIdAndAttr<SCHEMA>(session, id, attr)
-      const idx = findFact([id, attr])
-      if(idx < 0) return
-      facts.splice(idx, 1)
     })
   }
 
-  const matchAttr = (attr: keyof SCHEMA, facts: InternalFactRepresentation<SCHEMA>[]) => {
-    const filtered = facts.filter(f => f[1] === attr )
-    const grouped = _.groupBy(filtered, (f: InternalFactRepresentation<SCHEMA>) => f[0])
-    return Object.values(grouped).flat()
-  }
-
-
-  const matchIdAttr = (id: string, attr: keyof SCHEMA, facts: InternalFactRepresentation<SCHEMA>[]) => facts.filter(f => f[0] === id && f[1] === attr)
-
-  const rules: {[key: string]: Rule<any>} = {}
   const addRule = <T>(fn: (schema: SCHEMA, operations: EdictOperations<SCHEMA>) => Rule<T>) => {
     const rule = fn(args.factSchema, {insert, retract})
-    rete.initProduction<SCHEMA>(
-      rule.name,
-      (vars) => vars as any,
-      rule.when,
-      rule.then,
-      rule.thenFinally
-    )
-    rules[rule.name] = rule
-    console.log("adding rules", rules)
-    return {query: () => query(rule), rule}
-  }
-  // TODO: Make typesafe
-  // Needs to return a map from rule-name to results
-  const query = <T>(rule: Rule<T> ): Binding<T>[] => {
-    const {what, when} = rule
-    const definedFacts = Object.keys(what).map(id => {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      // Todo: Use Zod?
-      const attrs = Object.keys(what[id]) as [keyof SCHEMA]
-      const matchedFacts = attrs.map(attr =>
-           (id.startsWith("$")) ? matchAttr(attr, facts) : matchIdAttr(id, attr, facts)
-        ).flat()
 
-        const groupedFacts = groupFactById(matchedFacts)
-        const correctFacts = Object.keys(groupedFacts).map((key) => {
-          const factAttrs = groupedFacts[key].map((f:string) => f[0])
-          const hasEverything = _.isEqual(factAttrs, attrs)
-          if(hasEverything) {
-            return  {[id]:  Object.fromEntries([
-                ["id", key],...groupedFacts[key]
-              ])}
-          } else {
-
-            return undefined
-          }
-        }).filter((f: any) => f !== undefined )
-
-        return  correctFacts
-      })
-
-    const length = definedFacts.reduce((acc, c) => acc * c.length, 1)
-    const mergedResults = []
-    for(let i = 0; i < length; i++) {
-      const f = definedFacts.map(d => d[i % d.length])
-      // TODO: GAH kid's movie is almost over just hack it in!
-      const o: any = {}
-      f.forEach((l: any) => {
-        const k = Object.keys(l)[0]
-        o[k] = l[k]
-      })
-      mergedResults.push(o)
+    const convertMatchFn: ConvertMatchFn<SCHEMA, Binding<T>> = (args) => {
+      // This is where we need to convert the dictionary to the
+      // js object we want
+      console.log("convert", args)
+      return args as any
     }
-    const filtered = when ? mergedResults.filter(when) : mergedResults
+    const production = rete.initProduction<SCHEMA, Binding<T>>(
+      {
+        name: rule.name,
+        thenFn: (args) =>  {
+          console.log(args)
+          rule.then?.(args.vars)
+        },
+        thenFinallyFn: rule.thenFinally,
+        condFn: (args) => rule.when?.(convertMatchFn(args)) ?? true,
+        convertMatchFn,
+      }
+    )
 
-    return filtered as unknown as Binding<T>[]
-  }
-
-  const fire = () => {
-    const ruleNames = Object.keys(rules)
-    return ruleNames.filter(name => {
-      // Don't fire anything without then blocks. Stuff without then
-      // blocks are queries and cannot mutate the state of the
-      // facts
-      const {then, thenFinally} = rules[name]
-      return then || thenFinally
-    }).map(name => {
-      const rule = rules[name]
-        const results = query(rule)
-       // This needs to be recursive and stuff, but for now let's just keep it simple
-       // (I think derived facts will require recursive stuffi)
-      const {then, thenFinally} = rule
-       if(then) {
-         results.map((f: any) => then(f))
-       }
-       if(thenFinally) {
-         thenFinally()
-       }
+    const {what} = rule
+    Object.keys(what).forEach(id => {
+      const attrs =  _.keys(_.get(what, id)) as [keyof SCHEMA]
+      attrs.forEach(attr => {
+          const conditionId = (id.startsWith("$")) ? {name: id, field: Field.IDENTIFIER} : id
+          const conditionValue = {name: `${id}_${attr}_value`, field: Field.VALUE}
+          rete.addConditionsToProduction(production, conditionId, attr, conditionValue, !id.endsWith("_transitive"))
+        }
+      )
     })
+    rete.addProductionToSession(session,production)
+
+    return {query: () => rete.queryAll(session, production), rule: production}
   }
 
-
+  const fire = () => rete.fireRules(session)
 
   return {
     insert,
     retract,
     fire,
-    query,
-    facts: () => facts,
     addRule
   }
 }

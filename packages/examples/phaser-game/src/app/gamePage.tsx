@@ -1,7 +1,7 @@
 import {rule, attr, edict} from "@edict/core";
 import * as Phaser from "phaser";
 import {useLayoutEffect} from "react";
-const {insert, retract, addRule, fire, facts} = edict(
+const {insert, retract, addRule, fire } = edict(
   {
     factSchema: {
       speed: attr<number>(),
@@ -79,7 +79,6 @@ const create = (scene: Phaser.Scene) => {
     const {x, y} = pointer
     console.log("clicking?", x, y)
     insert({newDestination: {destX: x, destY: y}})
-    console.log(facts())
   })
 
   const playerCircle = scene.add.circle(0, 0, 50, 0x6666ff)
@@ -102,9 +101,9 @@ const create = (scene: Phaser.Scene) => {
 }
 
 const update = (scene: Phaser.Scene, time: number, deltaTime: number) => {
-  insert({
-    time: {dt: deltaTime}
-  })
+  // insert({
+  //   time: {dt: deltaTime}
+  // })
   fire()
 }
 
