@@ -14,6 +14,19 @@ const {insert, retract, addRule, fire } = edict(
 )
 
 const queries = {
+
+  debug: addRule(({ speed, dt}) => rule(
+    {
+      name: "debug",
+      what: {
+        $npc: { speed },
+        time: {dt},
+      },
+      then: (args) => {
+        console.log(args)
+      }
+    })),
+
   moveTowardsMouse: addRule(({circle, speed, dt, destX, destY}) => rule(
     {
       name: "Circles with a destination move to destination",
@@ -43,35 +56,35 @@ const queries = {
       }
     })),
 
-  setNewDestination: addRule(({circle, destX, destY}) => rule(
-    {
-      name: "When a new destination is set, add the destination to the circles",
-      what: {
-        $npc: {circle},
-        newDestination: {destX, destY}
-      },
-      then: ({newDestination, $npc}) => {
-        insert({[$npc.id]: {destX: newDestination.destX, destY: newDestination.destY}})
-      },
-      thenFinally: () => {
-        retract("newDestination", "destX", "destY")
-      }
-    })),
-
-  arriveAtDestinationThenStop: addRule(({ circle, destX, destY}) => rule({
-    name: "Arriving at their destination stops them",
-    what: {
-      $npc: {destX, destY, circle}
-    },
-    then: ({$npc}) => {
-      const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y)
-      const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY)
-      const distance = dest.distance(pos)
-      if(distance < 10) {
-        retract($npc.id, "destX", "destY")
-      }
-    }
-  }))
+  // setNewDestination: addRule(({circle, destX, destY}) => rule(
+  //   {
+  //     name: "When a new destination is set, add the destination to the circles",
+  //     what: {
+  //       $npc: {circle},
+  //       newDestination: {destX, destY}
+  //     },
+  //     then: ({newDestination, $npc}) => {
+  //       insert({[$npc.id]: {destX: newDestination.destX, destY: newDestination.destY}})
+  //     },
+  //     thenFinally: () => {
+  //       retract("newDestination", "destX", "destY")
+  //     }
+  //   })),
+  //
+  // arriveAtDestinationThenStop: addRule(({ circle, destX, destY}) => rule({
+  //   name: "Arriving at their destination stops them",
+  //   what: {
+  //     $npc: {destX, destY, circle}
+  //   },
+  //   then: ({$npc}) => {
+  //     const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y)
+  //     const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY)
+  //     const distance = dest.distance(pos)
+  //     if(distance < 10) {
+  //       retract($npc.id, "destX", "destY")
+  //     }
+  //   }
+  // }))
 }
 
 const create = (scene: Phaser.Scene) => {
@@ -80,31 +93,54 @@ const create = (scene: Phaser.Scene) => {
     console.log("clicking?", x, y)
     insert({newDestination: {destX: x, destY: y}})
   })
-
-  const playerCircle = scene.add.circle(0, 0, 50, 0x6666ff)
-  const enemy1Circle = scene.add.circle(100, 100, 100, 0x9966ff)
-  const enemy2Circle = scene.add.circle(200, 200, 20, 0xff6699)
+  //
+  // const playerCircle = scene.add.circle(0, 0, 50, 0x6666ff)
+  // const enemy1Circle = scene.add.circle(100, 100, 100, 0x9966ff)
+  // const enemy2Circle = scene.add.circle(200, 200, 20, 0xff6699)
   insert({
     player: {
       speed: 1,
-      circle: playerCircle
     },
     enemy1: {
       speed: 0.2,
-      circle: enemy1Circle
     },
     enemy2: {
       speed: 0.5,
-      circle: enemy2Circle
     }
   })
 }
 
 const update = (scene: Phaser.Scene, time: number, deltaTime: number) => {
-  // insert({
-  //   time: {dt: deltaTime}
-  // })
+  const b = performance.now()
+  insert({
+    time: {dt: deltaTime},
+    player: {
+      speed: deltaTime
+    },
+    enemy1: {
+      speed: deltaTime
+    },
+    enemy2: {
+      speed: deltaTime
+    },
+    enemy3: {
+      speed: deltaTime
+    },
+    enemy4: {
+      speed: deltaTime
+    },
+    enemy5: {
+      speed: deltaTime
+    },
+  })
   fire()
+  const a = performance.now()
+  console.log(a - b, "ms")
+
+  const results = queries.debug.query()
+  results.forEach(r =>
+    console.log(r.$npc.id, " -- speed: ", r.$npc.speed, ", dt ", r.time.dt)
+  )
 }
 
 const config = {

@@ -153,8 +153,10 @@ const mkEdict = () => {
 describe('edict', () => {
   it('complicated happy path is happy', () => {
     const {insert, fire, queries} = mkEdict()
+
     insert(allFacts)
     fire()
+
 
     const results = queries.isDying.query()
     const expectedResults = [
@@ -163,6 +165,28 @@ describe('edict', () => {
     expect(results).toStrictEqual(expectedResults);
   });
 
+  it("Performs quickly with repeated updates", () => {
+
+    const {insert, fire, queries} = mkEdict()
+    // Initial insert
+    insert(playerFacts)
+    fire()
+
+    let numSlow = 0
+    for(let i =0; i < 10000; i++) {
+      let timeUpdate = {
+        player: { x: i},
+      }
+
+      const before = performance.now()
+      insert(timeUpdate)
+      fire()
+      const after = performance.now()
+      console.log(after - before)
+      if(after - before > 1) numSlow++
+    }
+    expect(numSlow).toBe(0)
+  })
 
   it('Missing fact will result in empty array', () => {
     // None of the players are dying, so if those are the only facts the
@@ -171,18 +195,21 @@ describe('edict', () => {
     insert(playerFacts)
     fire()
 
+
+
     const results = queries.isDying.query()
     expect(results).toStrictEqual([]);
   });
 
   it('Retracting facts works', () => {
-    const {queries, retract, insert} = mkEdict()
+    const {queries, retract, insert, fire} = mkEdict()
     const facts = {
       ...playerFacts,
       ...villagerFacts,
       ...timeFacts
     }
     insert(facts)
+    fire()
     const beforeRetract = queries.allNpcs.query()
     const expectedBeforeRetract = [
       {$npc: {id: "player", health: 100, x: 10, y: 10}, time: {id: "time", dt: 15}},
@@ -190,6 +217,7 @@ describe('edict', () => {
     ]
     expect(beforeRetract).toStrictEqual(expectedBeforeRetract);
     retract("villager", "x", "y", "health" )
+    fire()
     const results = queries.allNpcs.query()
     const expectedResults = [
       {$npc: {id: "player", health: 100, x: 10, y: 10}, time: {id: "time", dt: 15}},

@@ -64,6 +64,17 @@ function toString (o: object) {
   return Object.prototype.toString.call(o);
 }
 
+
+
+
 export function sum (o: any) {
-  return pad(foldValue(0, o, '', []).toString(16), 8);
+  const b = performance.now()
+  const r = pad(foldValue(0, o, '', []).toString(16), 8);
+  const a = performance.now()
+  const diff = a - b
+  if (diff > 0.1) {
+    console.log("sum ", a - b, "ms for ", o)
+
+  }
+  return r
 }

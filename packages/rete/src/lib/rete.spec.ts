@@ -28,10 +28,10 @@ describe('rete', () => {
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({name: "numCondsAndFacts",
       convertMatchFn,
       thenFn: ( {vars} ) => {
-        expect(vars.getValue("a")).toBe(Id.Alice)
-        expect(vars.getValue("b")).toBe(Id.Bob)
-        expect(vars.getValue("y")).toBe(Id.Yair)
-        expect(vars.getValue("z")).toBe(Id.Zach)
+        expect(vars.get("a")).toBe(Id.Alice)
+        expect(vars.get("b")).toBe(Id.Bob)
+        expect(vars.get("y")).toBe(Id.Yair)
+        expect(vars.get("z")).toBe(Id.Zach)
       }
     }
     )
@@ -62,10 +62,10 @@ describe('rete', () => {
         name: "outOfOrder",
         convertMatchFn,
       thenFn: ( {vars} ) => {
-        expect(vars.getValue("a")).toBe(Id.Alice)
-        expect(vars.getValue("b")).toBe(Id.Bob)
-        expect(vars.getValue("y")).toBe(Id.Yair)
-        expect(vars.getValue("z")).toBe(Id.Zach)
+        expect(vars.get("a")).toBe(Id.Alice)
+        expect(vars.get("b")).toBe(Id.Bob)
+        expect(vars.get("y")).toBe(Id.Yair)
+        expect(vars.get("z")).toBe(Id.Zach)
       }
 
       }
@@ -119,13 +119,13 @@ describe('rete', () => {
     rete.fireRules(session)
     const results = rete.queryAll(session, production)
     expect(results.length).toBe(1)
-    expect(results[0].getValue("c")).toBe("red")
+    expect(results[0].get("c")).toBe("red")
 
     rete.insertFact(session, [Id.Bob, "Color", "green"])
     rete.fireRules(session)
     const newResults = rete.queryAll(session, production)
     expect(newResults.length).toBe(1)
-    expect(newResults[0].getValue("c")).toBe("green")
+    expect(newResults[0].get("c")).toBe("green")
   });
 
   it('removing facts', () => {
@@ -165,7 +165,7 @@ describe('rete', () => {
         convertMatchFn,
       thenFn: ({vars}) => {
           fireCount += 1
-          zVal = vars.getValue("z")
+          zVal = vars.get("z")
       }
       }
     )
@@ -232,7 +232,7 @@ describe('rete', () => {
         name: "rule1",
         convertMatchFn,
         thenFn:({vars}) => {
-          alice = vars.getValue("a") as Id
+          alice = vars.get("a") as Id
         }
       }
     )
@@ -242,7 +242,7 @@ describe('rete', () => {
         name: "rule2",
         convertMatchFn,
         thenFn:({vars}) => {
-          zach = vars.getValue("z") as Id
+          zach = vars.get("z") as Id
         }
       }
     )
@@ -263,11 +263,11 @@ describe('rete', () => {
         name: "rule1",
         convertMatchFn,
       condFn: (vars) => {
-          return vars.getValue("id2") != vars.getValue("id1")
+          return vars.get("id2") != vars.get("id1")
       },
       thenFn: ({vars, session}) => {
-         rete.insertFact(session, [vars.getValue("id2")! as Id, "Color", "red"])
-        rete.insertFact(session, [vars.getValue("id2")! as Id, "Height", 72])
+         rete.insertFact(session, [vars.get("id2")! as Id, "Color", "red"])
+        rete.insertFact(session, [vars.get("id2")! as Id, "Height", 72])
       }
 
       })

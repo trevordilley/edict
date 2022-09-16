@@ -1,13 +1,13 @@
 
 /*** Facts ***/
-import {Dictionary, Set} from "typescript-collections";
+import {Dictionary, Set as TSet} from "typescript-collections";
 
 // This is a map of string to one of the elements of a fact tuple
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
 export type ValueOf<T> = T[keyof T];
 export type FactFragment<SCHEMA> = FactId | keyof SCHEMA |  ValueOf<SCHEMA>
-export type MatchT<SCHEMA> = Dictionary<string, FactFragment<SCHEMA>>
+export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>
 
 export enum Field {
   IDENTIFIER,
@@ -38,7 +38,7 @@ export interface Token<T> {
 
 /** Matches **/
 
-export type Vars<T> = Dictionary<string, T>
+export type Vars<T> = Map<string, T>
 export interface Var {
   name: string,
   field: Field
@@ -103,7 +103,7 @@ export interface JoinNode<T> {
   alphaNode: AlphaNode<T>,
   condition: Condition<T>,
   idName?: string,
-  oldIdAttrs: Set<IdAttr<T>>,
+  oldIdAttrs: TSet<IdAttr<T>>,
   disableFastUpdates?: boolean,
   ruleName: string
 }
@@ -140,4 +140,4 @@ export interface Session<T> {
   initMatch: InitMatchFn<T>
 }
 
-export type ExecutedNodes<T> = Dictionary<MemoryNode<T>, Set<MemoryNode<T>>>[]
+export type ExecutedNodes<T> = Map<MemoryNode<T>, Set<MemoryNode<T>>>[]
