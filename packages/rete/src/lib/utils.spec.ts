@@ -1,7 +1,4 @@
 import {Dictionary, Set as TsSet} from "typescript-collections";
-import {Field, rete} from "@edict/rete";
-import objectHash from "object-hash";
-import {sum} from "./hash";
 
 describe('Utilities', () => {
 
@@ -83,22 +80,4 @@ describe('Utilities', () => {
     const result = map2.get("key")
     expect(result).toBe("foo")
   })
-
-
-  it("Sets are performant", () => {
-    const arr = [1, "2", 3]
-    const arr2 = [1, "2", 3]
-
-    const collSet = new TsSet((k) => sum(k))
-    const before = performance.now()
-    collSet.add(arr)
-    const after = performance.now()
-    const diff = after - before
-
-    expect(collSet.contains(arr2)).toBe(true)
-    console.log(diff)
-    expect(diff).toBeLessThanOrEqual(1)
-
-  })
-
 });
