@@ -132,6 +132,58 @@ const update = (scene: Phaser.Scene, time: number, deltaTime: number) => {
     enemy5: {
       speed: deltaTime
     },
+
+    enemy6: {
+      speed: deltaTime
+    },
+    enemy7: {
+      speed: deltaTime
+    },
+    enemy8: {
+      speed: deltaTime
+    },
+    enemy9: {
+      speed: deltaTime
+    },
+    enemy10: {
+      speed: deltaTime
+    },
+    enemy11: {
+      speed: deltaTime
+    },
+    enemy12: {
+      speed: deltaTime
+    },
+    enemy13: {
+      speed: deltaTime
+    },
+    enemy14: {
+      speed: deltaTime
+    },
+    enemy15: {
+      speed: deltaTime
+    },
+    enemy16: {
+      speed: deltaTime
+    },
+    enemy17: {
+      speed: deltaTime
+    },
+    enemy18: {
+      speed: deltaTime
+    },
+    enemy19: {
+      speed: deltaTime
+    },
+    enemy20: {
+      speed: deltaTime
+    },
+    enemy21: {
+      speed: deltaTime
+    },
+    enemy22: {
+      speed: deltaTime
+    },
   })
   fire()
   const a = performance.now()
