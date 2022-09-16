@@ -33,26 +33,26 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
     const convertMatchFn: ConvertMatchFn<SCHEMA, Binding<T>> = (args) => {
       // This is where we need to convert the dictionary to the
       // js object we want
-      const keys = args.keys()
       const result = {}
-      keys.map(k => {
+      args.forEach((_, k) => {
         if(k.startsWith(ID_PREFIX)) {
           const id = k.replace(ID_PREFIX, "")
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
-          result[id] = {id: args.getValue(k)}
+          result[id] = {id: args.get(k)}
         }
       })
-      keys.map(k => {
+
+      args.forEach((_,k) => {
         if(k.startsWith(VALUE_PREFIX)) {
           const value = k.replace(VALUE_PREFIX, "")
           const [id, attr] = value.split("_")
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
-          result[id][attr] = args.getValue(k)
+          result[id][attr] = args.get(k)
         }
-
       })
+
       return result as Binding<T>
     }
     const production = rete.initProduction<SCHEMA, Binding<T>>(
