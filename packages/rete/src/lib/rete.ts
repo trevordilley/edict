@@ -508,17 +508,17 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
     //  it'll produce non-deterministic results because `matches`
     //  could be modified by the for loop itself. see test: "non-deterministic behavior"
 
-    const nodeToMatches: Dictionary<MemoryNode<T>, Dictionary<IdAttrs<T>, Match<T>>> = newDict()
+    const nodeToMatches: Map<MemoryNode<T>, Dictionary<IdAttrs<T>, Match<T>>> = new Map()
 
     thenQueue.forEach( ([node, _]) => {
-     if(!nodeToMatches.containsKey(node)) {
-       nodeToMatches.setValue(node, node.matches)
+     if(!nodeToMatches.has(node)) {
+       nodeToMatches.set(node, node.matches)
      }
     })
 
     // Execute `then` blocks
     thenQueue.forEach(([node, idAttrs]) => {
-      const matches = nodeToMatches.getValue(node)
+      const matches = nodeToMatches.get(node)
       if(matches !== undefined && matches.containsKey(idAttrs)) {
         const match = matches.getValue(idAttrs)
         if(match !== undefined && match.enabled) {
@@ -617,7 +617,7 @@ const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
 const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const idAttr = getIdAttr(fact)
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
-  const idAttrNodes = newSet<AlphaNode<T>>()
+  const idAttrNodes = new Set<AlphaNode<T>>()
   session.idAttrNodes.getValue(idAttr)?.forEach(i => idAttrNodes.add(i))
   idAttrNodes.forEach(node => {
     const otherFact = node.facts.getValue(idAttr[0])?.getValue(idAttr[1])
@@ -635,7 +635,7 @@ const retractFactByIdAndAttr = <T>(session:Session<T>, id: string, attr: keyof T
   // TODO: this function is really simliar to the retractFact function, can we make things
   // DRYer?
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
-  const idAttrNodes = newSet<AlphaNode<T>>()
+  const idAttrNodes = new Set<AlphaNode<T>>()
   session.idAttrNodes.getValue([id, attr])?.forEach(i => idAttrNodes.add(i))
   idAttrNodes.forEach(node => {
     const fact = node.facts.getValue(id)?.getValue(attr)
