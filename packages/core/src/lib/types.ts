@@ -9,10 +9,17 @@ export interface TypeOptions {
 // return to inspect them, but the compiler doesn't need to know that!
 export const attr = <T>(options?: TypeOptions): T => options as unknown as T
 
+const what = {
+  ["arbitraryStrnig"] : {
+    somethingFromSchema: {value: 3, then: false}
+  }
+}
 
+export type WHAT<T, SCHEMA> = {[Key2 in keyof T]: {
+  [Key in keyof SCHEMA]: SCHEMA[Key] | undefined | {value?: SCHEMA[Key],  then?: boolean}
+}}
 
 export type ATTR<SCHEMA> = {[attr in keyof SCHEMA]: SCHEMA[attr]}
-
 export interface Rule<T> {
   name: string,
   what: T,
@@ -37,9 +44,8 @@ export type EdictArgs<SCHEMA> =
 
     autoFire?: boolean
   }
-
-
-export type AddRuleArgs<SCHEMA, T> = (schema: SCHEMA, operations: EdictOperations<SCHEMA>) => Rule<T>
+export type THEN_SCHEMA<SCHEMA> = {[Key in keyof SCHEMA as `${string & Key}_passive`]: SCHEMA[Key] }
+export type AddRuleArgs<SCHEMA, T> = (schema: SCHEMA & THEN_SCHEMA<SCHEMA>, operations: EdictOperations<SCHEMA>) => Rule<T>
 export type AddRuleRet<SCHEMA, T> = { query: () => Binding<T>[], rule: Production<SCHEMA, Binding<T>> }
 export type AddRule<SCHEMA> =<T>(fn: AddRuleArgs<SCHEMA, T>) => AddRuleRet<SCHEMA, T>
 
