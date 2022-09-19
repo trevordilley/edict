@@ -76,6 +76,15 @@ const mkEdict = () => {
   return {
     ...rest,
     queries: {
+      time: addRule(({dt}) =>
+        rule({
+          name: "time",
+          what: {
+            time: {
+              dt
+            }
+          }
+        })),
       allTreasure: addRule(({value, x, y}) =>
         rule({
           name: "all_treasure",
@@ -88,8 +97,19 @@ const mkEdict = () => {
           }
         })),
 
-      allNpcs: addRule(({health, x, y, dt}) => rule({
+      allNpcs: addRule(({health, x, y}) => rule({
         name: "all_npcs",
+        what: {
+          $npc: {
+            health,
+            x,
+            y,
+          }
+        }
+      })),
+
+      allNpcsWithTimeDt: addRule(({health, x, y, dt}) => rule({
+        name: "all_npcs_with_dt",
         what: {
           $npc: {
             health,
@@ -102,12 +122,12 @@ const mkEdict = () => {
         }
       })),
 
-      noHealthIsDying: addRule(({health}, {insert, retract}) =>rule({
+      noHealthIsDying: addRule(({health, dt}, {insert, retract}) =>rule({
         name: "no_health_is_dying",
         what: {
           $npc: {
             health,
-          }
+          },
         },
         when: ({$npc}) => $npc.health <= 0,
         then: ({$npc}) => {
@@ -151,6 +171,30 @@ const mkEdict = () => {
 }
 
 describe('edict', () => {
+  it('simple unbound query works', () => {
+    const {insert, fire, queries} = mkEdict()
+
+    insert(timeFacts)
+    fire()
+
+    const results = queries.time.query()
+    const expectedResults = [
+      {time: {id: "time", ...timeFacts.time}},
+    ]
+    expect(results).toStrictEqual(expectedResults);
+  });
+  it('simple bound query works', () => {
+    const {insert, fire, queries} = mkEdict()
+
+    insert(villagerFacts)
+    fire()
+
+    const results = queries.allNpcs.query()
+    const expectedResults = [
+      {$npc: {id: "villager", ...villagerFacts.villager}},
+    ]
+    expect(results).toStrictEqual(expectedResults);
+  });
   it('complicated happy path is happy', () => {
     const {insert, fire, queries} = mkEdict()
 
@@ -187,7 +231,7 @@ describe('edict', () => {
         numSlow++
       }
     }
-    expect(numSlow).toBeLessThanOrEqual(20)
+    expect(numSlow).toBeLessThanOrEqual(100)
   })
 
   it('Missing fact will result in empty array', () => {
@@ -212,7 +256,7 @@ describe('edict', () => {
     }
     insert(facts)
     fire()
-    const beforeRetract = queries.allNpcs.query()
+    const beforeRetract = queries.allNpcsWithTimeDt.query()
     const expectedBeforeRetract = [
       {$npc: {id: "player", health: 100, x: 10, y: 10}, time: {id: "time", dt: 15}},
       {$npc: {id: "villager", health: 30, x: 30, y: 120}, time: {id: "time", dt: 15}},
@@ -220,7 +264,7 @@ describe('edict', () => {
     expect(beforeRetract).toStrictEqual(expectedBeforeRetract);
     retract("villager", "x", "y", "health" )
     fire()
-    const results = queries.allNpcs.query()
+    const results = queries.allNpcsWithTimeDt.query()
     const expectedResults = [
       {$npc: {id: "player", health: 100, x: 10, y: 10}, time: {id: "time", dt: 15}},
       // No villager facts

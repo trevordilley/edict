@@ -7,6 +7,9 @@ import {ConvertMatchFn, Field, MatchT, Production, rete} from "@edict/rete"
 
 export const rule = <T>(r: Rule<T>) => r
 
+const ID_PREFIX = "id___"
+const VALUE_PREFIX = "val___"
+const idPrefix = (i: string) => `${ID_PREFIX}${i}`
 export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
   const session = rete.initSession<SCHEMA>(args.autoFire ?? false)
 
@@ -14,9 +17,8 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
     // be dumb about this
     const factTuples = insertFactToFact(insertFacts)
 
-    factTuples.forEach(f => {
-      rete.insertFact<SCHEMA>(session, f)
-      const after = performance.now()
+    factTuples.forEach(fact => {
+      rete.insertFact<SCHEMA>(session, fact)
     })
   }
   const retract = (id: string, ...attrs: (keyof SCHEMA)[]) => {
@@ -25,8 +27,6 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
     })
   }
 
-  const ID_PREFIX = "id___"
-  const VALUE_PREFIX = "val___"
   const addRule = <T>(fn: (schema: SCHEMA, operations: EdictOperations<SCHEMA>) => Rule<T>) => {
     const rule = fn(args.factSchema, {insert, retract})
 
@@ -34,6 +34,7 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
       // This is where we need to convert the dictionary to the
       // js object we want
       const result = {}
+
       args.forEach((_, k) => {
         if(k.startsWith(ID_PREFIX)) {
           const id = k.replace(ID_PREFIX, "")
@@ -47,6 +48,13 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
         if(k.startsWith(VALUE_PREFIX)) {
           const value = k.replace(VALUE_PREFIX, "")
           const [id, attr] = value.split("_")
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          if(!result[id]) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            result[id] = {id}
+          }
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           result[id][attr] = args.get(k)
@@ -71,8 +79,7 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
     Object.keys(what).forEach(id => {
       const attrs =  _.keys(_.get(what, id)) as [keyof SCHEMA]
       attrs.forEach(attr => {
-          const idPrefix = (i: string) => `${ID_PREFIX}${i}`
-          const conditionId = (id.startsWith("$")) ? {name: idPrefix(id), field: Field.IDENTIFIER} : idPrefix(id)
+          const conditionId = (id.startsWith("$")) ? {name: idPrefix(id), field: Field.IDENTIFIER} : id
           const conditionValue = {name: `${VALUE_PREFIX}${id}_${attr}`, field: Field.VALUE}
           rete.addConditionsToProduction(production, conditionId, attr, conditionValue, !id.endsWith("_transitive"))
         }
