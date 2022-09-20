@@ -122,14 +122,14 @@ const mkEdict = () => {
         }
       })),
 
-      noHealthIsDying: addRule(({health_passive, dt}, {insert, retract}) =>rule({
+      noHealthIsDying: addRule(({health, dt}, {insert, retract}) =>rule({
         name: "no_health_is_dying",
         what: {
           $npc: {
-            health_passive,
+            health,
           },
         },
-        when: ({$npc}) => $npc.health_passive <= 0,
+        when: ({$npc}) => $npc.health <= 0,
         then: ({$npc}) => {
           retract($npc.id, "health")
           insert({[$npc.id]: {isDying: true}})
