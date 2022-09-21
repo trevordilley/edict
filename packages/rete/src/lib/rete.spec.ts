@@ -71,15 +71,34 @@ describe('rete', () => {
       }
     )
 
+    // addConditionsToProduction(production, {"name":"id___$x","field":0}, RightOf, {"name":"val___$x_RightOf","field":2}, true)
     rete.addConditionsToProduction(production, {name: "x", field: Field.IDENTIFIER}, "RightOf", {name: "y", field: Field.VALUE}, true)
+
+    // addConditionsToProduction(production, {"name":"id___$y","field":0}, LeftOf, {"name":"val___$y_LeftOf","field":2}, true)
     rete.addConditionsToProduction(production, {name: "y", field: Field.IDENTIFIER}, "LeftOf", {name: "z", field: Field.VALUE}, true)
+
+    // addConditionsToProduction(production, {"name":"id___$z","field":0}, Color, "red", true)
     rete.addConditionsToProduction(production, {name: "z", field: Field.IDENTIFIER}, "Color", "red", true)
+
+    // addConditionsToProduction(production, {"name":"id___$a","field":0}, Color, "maize", true)
     rete.addConditionsToProduction(production, {name: "a", field: Field.IDENTIFIER}, "Color", "maize", true)
+
+    // addConditionsToProduction(production, {"name":"id___$b","field":0}, Color, "blue", true)
     rete.addConditionsToProduction(production, {name: "b", field: Field.IDENTIFIER}, "Color", "blue", true)
+
+    // addConditionsToProduction(production, {"name":"id___$c","field":0}, Color, "green", true)
     rete.addConditionsToProduction(production, {name: "c", field: Field.IDENTIFIER}, "Color", "green", true)
+
+    // addConditionsToProduction(production, {"name":"id___$d","field":0}, Color, "white", true)
     rete.addConditionsToProduction(production, {name: "d", field: Field.IDENTIFIER}, "Color", "white", true)
+
+    // addConditionsToProduction(production, {"name":"id___$s","field":0}, On, "table", true)
     rete.addConditionsToProduction(production, {name: "s", field: Field.IDENTIFIER}, "On", "table", true)
+
+    // addConditionsToProduction(production, {"name":"id___$y","field":0}, RightOf, {"name":"val___$y_RightOf","field":2}, true)
     rete.addConditionsToProduction(production, {name: "y", field: Field.IDENTIFIER}, "RightOf", {name: "b", field: Field.VALUE}, true)
+
+    // addConditionsToProduction(production, {"name":"id___$a","field":0}, LeftOf, {"name":"val___$a_LeftOf","field":2}, true)
     rete.addConditionsToProduction(production, {name: "a", field: Field.IDENTIFIER}, "LeftOf", {name: "d", field: Field.VALUE}, true)
     rete.addProductionToSession(session, production)
     rete.insertFact(session, [Id.Xavier, "RightOf", Id.Yair])

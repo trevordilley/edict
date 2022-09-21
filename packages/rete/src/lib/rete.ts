@@ -270,7 +270,9 @@ const leftActivationWithoutAlpha = <T>(session: Session<T>, node: JoinNode<T>, i
 const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>, isNew: boolean) =>{
   const idAttr = idAttrs[idAttrs.length - 1]
 
-
+  if(!node.condition.shouldTrigger) {
+    console.log("Not triggering???")
+  }
   // if the insert/update fact is new and this condition doesn't have then = false, let the leaf node trigger
   if(isNew && (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) && node.condition.shouldTrigger && node.nodeType) {
     node.nodeType.trigger = true
@@ -743,6 +745,86 @@ const get = <T, U>(session: Session<T>, prod: Production<T, U>, i: number): U | 
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
   session.idAttrNodes.containsKey([id, attr])
+
+
+const session = () => {
+  const rule = () => {
+    const what = () => {
+      const condition = () => {
+        return
+      }
+      const then = () => {
+
+        return
+      }
+      const thenFinally = () => {
+
+        return
+      }
+     const when = () => {
+
+       return
+     }
+      const query = () => {
+
+        return
+      }
+
+    }
+    const enact = () => {
+
+      return
+    }
+  }
+}
+
+
+/**
+ *
+ * /// API EXPERIEMENTS
+ const sess: any = {}
+
+ sess.rule("my rule")
+
+ // Arbitrary id
+ .join("something", "x", {})
+ // Id here can be part of the schema
+ .cond("else", "y", {})
+
+ // When we do a `then`/`when`, can we magically figure out a way to make it easy to
+ // get intellisense on the value?
+ .then(args => {})
+ .when(args => {})
+ .thenFinally(() => {})
+ .enact()
+
+ const schema = {x: attr<number>(), y: attr<number>(), name: attr<string>()}
+
+
+ // The types
+ interface CondOptions<T> {
+  match?: T,
+  then?: boolean
+}
+
+ interface Condition<ATTR_SCHEMA, ID_SCHEMA, AGGREGATE_COND, COND> {
+  cond:<T extends ATTR_SCHEMA, ID extends ID_SCHEMA>(id: ID, attr: T, options?: CondOptions<T>) => Condition<ATTR_SCHEMA, ID_SCHEMA, AGGREGATE_COND & {[id in keyof ID]: {[attr in keyof T]: T}}, COND>
+  join:<T extends ATTR_SCHEMA>(id: string, attr: T, options?: CondOptions<T>) => Condition<ATTR_SCHEMA, ID_SCHEMA, AGGREGATE_COND & {[id: string]: {[attr in keyof T]: T}}, COND>
+  then: (fn: (args: AGGREGATE_COND) => void) => void
+  when: (fn: (args: AGGREGATE_COND) => boolean) => void
+  thenFinally: (fn: () => void) => void
+}
+
+ interface Rule<ATTR_SCHEMA, ID_SCHEMA> {
+  name: string,
+  cond:<T extends keyof ATTR_SCHEMA>(id: ID_SCHEMA, attr: T, options?: CondOptions<T>) => Condition<ATTR_SCHEMA, ID_SCHEMA, unknown, unknown>
+  join:<T extends keyof ATTR_SCHEMA>(id: string, attr: T, options?: CondOptions<T>) => Condition<ATTR_SCHEMA, ID_SCHEMA, unknown, unknown>
+}
+
+ interface Session<ATTR_SCHEMA, ID_SCHEMA> {
+  rule: (name: string) => Rule<ATTR_SCHEMA, ID_SCHEMA>
+}
+ */
 
 
 export const rete = {

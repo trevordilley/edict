@@ -76,16 +76,21 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<FULL_SCHEMA<SCHE
     )
 
     const {what} = rule
+    const conditions: string[] = []
     Object.keys(what).forEach(id => {
       const attrs =  _.keys(_.get(what, id)) as [keyof FULL_SCHEMA<SCHEMA>]
       attrs.forEach(attr => {
           const value = _.get(what, `${id}.${attr}`)
           const conditionId = (id.startsWith("$")) ? {name: idPrefix(id), field: Field.IDENTIFIER} : id
-          const conditionValue = value ?? {name: `${VALUE_PREFIX}${id}_${attr}`, field: Field.VALUE}
-          rete.addConditionsToProduction(production, conditionId, attr, conditionValue, !id.endsWith(SCHEMA_AUGMENTATIONS.ONCE))
+          const attrName = `${attr}`.replace(`_${SCHEMA_AUGMENTATIONS.ONCE}`, "") as (keyof FULL_SCHEMA<SCHEMA>)
+          const isThen = !`${attr}`.endsWith(SCHEMA_AUGMENTATIONS.ONCE)
+          const conditionValue = value ?? {name: `${VALUE_PREFIX}${id}_${attrName}`, field: Field.VALUE}
+          conditions.push(`addConditionsToProduction(production, ${JSON.stringify(conditionId)}, ${attrName}, ${JSON.stringify(conditionValue)}, ${isThen})`)
+          rete.addConditionsToProduction(production, conditionId, attrName , conditionValue, isThen)
         }
       )
     })
+    console.log(conditions.join("\n"))
     rete.addProductionToSession(session,production)
 
     return {query: () => rete.queryAll(session, production), rule: production}
