@@ -1,10 +1,18 @@
-import {Binding} from "@edict/types";
+import {Binding, InternalFactRepresentation} from "@edict/types";
 import {Production} from "@edict/rete";
 
-export const attr = <T>(): T => undefined as unknown as T
+export interface TypeOptions {
+  then?: boolean
+}
+// use trickery and mischief to force the return type to a primitive for type
+// inference. In the guts of the logic we'll actually pull the options out of the
+// return to inspect them, but the compiler doesn't need to know that!
+export const attr = <T>(options?: TypeOptions): T => options as unknown as T
+
 
 
 export type ATTR<SCHEMA> = {[attr in keyof SCHEMA]: SCHEMA[attr]}
+
 export interface Rule<T> {
   name: string,
   what: T,
@@ -30,10 +38,7 @@ export type EdictArgs<SCHEMA> =
     autoFire?: boolean
   }
 
-  export enum SCHEMA_AUGMENTATIONS {
-    ONCE="ONCE"
-  }
-export type FULL_SCHEMA<SCHEMA> = {[Key in keyof SCHEMA as `${string & Key}_${typeof SCHEMA_AUGMENTATIONS.ONCE}`]: SCHEMA[Key] } & SCHEMA
+
 export type AddRuleArgs<SCHEMA, T> = (schema: SCHEMA, operations: EdictOperations<SCHEMA>) => Rule<T>
 export type AddRuleRet<SCHEMA, T> = { query: () => Binding<T>[], rule: Production<SCHEMA, Binding<T>> }
 export type AddRule<SCHEMA> =<T>(fn: AddRuleArgs<SCHEMA, T>) => AddRuleRet<SCHEMA, T>
