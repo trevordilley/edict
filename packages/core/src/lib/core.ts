@@ -1,11 +1,8 @@
-import {EdictArgs, EdictOperations, IEdict, InsertEdictFact, Rule,} from "./types";
+import {Condition, ConditionArgs, EdictArgs, EdictOperations, EnactArgs, IEdict, InsertEdictFact, Rule,} from "./types";
 import {groupFactById, insertFactToFact} from "./utils";
 import * as _ from "lodash";
 import {Binding, InternalFactRepresentation} from "@edict/types";
 import {ConvertMatchFn, Field, MatchT, Production, rete} from "@edict/rete"
-// TODO: Ideally constrain that any to the value types in the schema someday
-
-export const rule = <T>(r: Rule<T>) => r
 
 const ID_PREFIX = "id___"
 const VALUE_PREFIX = "val___"
@@ -25,6 +22,81 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
     attrs.map(attr => {
       rete.retractFactByIdAndAttr<SCHEMA>(session, id, attr)
     })
+  }
+
+
+  const rule = <T extends ConditionArgs<SCHEMA>>(name: string, conditions: (schema: Condition<SCHEMA>) => T ) => {
+
+
+    const convertMatchFn: ConvertMatchFn<SCHEMA, EnactArgs<SCHEMA, T>> = (args) => {
+      // This is where we need to convert the dictionary to the
+      // js object we want
+      const result = {}
+
+      args.forEach((_, k) => {
+        if(k.startsWith(ID_PREFIX)) {
+          const id = k.replace(ID_PREFIX, "")
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          result[id] = {id: args.get(k)}
+        }
+      })
+
+      args.forEach((_,k) => {
+        if(k.startsWith(VALUE_PREFIX)) {
+          const value = k.replace(VALUE_PREFIX, "")
+          const [id, attr] = value.split("_")
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          if(!result[id]) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            result[id] = {id}
+          }
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          result[id][attr] = args.get(k)
+        }
+      })
+
+      return result as EnactArgs<SCHEMA, T>
+    }
+
+    const enact = (enaction: {
+      then?: (args: EnactArgs<SCHEMA, T> ) => void,
+      when?: (args: EnactArgs<SCHEMA, T>) => boolean,
+      thenFinally?: () => void
+    }) => {
+      const production = rete.initProduction<SCHEMA, EnactArgs<SCHEMA, T>>(
+        {
+          name: rule.name,
+          thenFn: (args) =>  {
+            enaction.then?.(args.vars)
+          },
+          thenFinallyFn: enaction.thenFinally,
+          condFn: (args) => enaction.when?.(convertMatchFn(args)) ?? true,
+          convertMatchFn,
+        }
+      )
+
+      Object.keys(conditions).forEach(id => {
+        const attrs =  _.keys(_.get(conditions, id)) as [keyof SCHEMA]
+        attrs.forEach(attr => {
+            const conditionId = (id.startsWith("$")) ? {name: idPrefix(id), field: Field.IDENTIFIER} : id
+            const conditionValue = {name: `${VALUE_PREFIX}${id}_${attr}`, field: Field.VALUE}
+            rete.addConditionsToProduction(production, conditionId, attr, conditionValue, !id.endsWith("_transitive"))
+          }
+        )
+      })
+      rete.addProductionToSession(session,production)
+
+      return {query: () => rete.queryAll(session, production), rule: production}
+
+
+      return { query: () => true}
+    }
+
+    return { enact }
   }
 
   const addRule = <T>(fn: (schema: SCHEMA, operations: EdictOperations<SCHEMA>) => Rule<T>) => {

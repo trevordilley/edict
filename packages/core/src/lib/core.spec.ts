@@ -108,7 +108,8 @@ const mkEdict = () => {
         }
       })),
 
-      allNpcsWithTimeDt: addRule(({health, x, y, dt}) => rule({
+      allNpcsWithTimeDt: addRule(({health, x, y, dt}) =>
+        rule({
         name: "all_npcs_with_dt",
         what: {
           $npc: {
@@ -122,7 +123,7 @@ const mkEdict = () => {
         }
       })),
 
-      noHealthIsDying: addRule(({health, dt}, {insert, retract}) =>rule({
+      noHealthIsDying: addRule(({ health, dt}, {insert, retract}) =>rule({
         name: "no_health_is_dying",
         what: {
           $npc: {
