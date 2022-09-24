@@ -70,30 +70,33 @@ describe("Basic Usage", () => {
 
     const {rule, insert, fire} = edict<Schema>()
 
-    rule("avoiding infiniite loops", ({ DeltaTime}) => ({
+    const infinite = rule("avoiding infiniite loops", ({DeltaTime}) => ({
         Player: {
           X: {then: false},
         },
         Global: {
-          DeltaTime
+         DeltaTime: {then: false}
         }
-      ,
     })).enact(
       {
-      then: ({ Global, Player}) => {
+      then: ({  Player, Global}) => {
+        // TODO: Ah, we need to refactor a bit and support the "inside rule"
+        // bit for sessions, then I think we'll be god.
+
         console.log("firing")
-        insert({Player: {X: Player.X + Global.DeltaTime}})
+        insert({[Player.id]: {X: Player.X + Global.DeltaTime}})
       }
     }
   )
 
-    const getPlayer = rule("get player", ({X, Y}) => ({
-      Player: {
-        X,
-        Y
-      },
-    })).enact()
 
+    // const getPlayer = rule("get player", ({X, Y}) => ({
+    //   Player: {
+    //     X,
+    //     Y
+    //   },
+    // })).enact()
+    //
     insert({
       Player: {
         X: 0.0,
@@ -104,6 +107,7 @@ describe("Basic Usage", () => {
       }
     })
     fire()
-    expect(getPlayer.query()[0].Player.X).toBe(0.5)
+
+    expect(infinite.query()[0].Player.X).toBe(0.5)
   })
 })

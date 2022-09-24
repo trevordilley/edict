@@ -97,10 +97,10 @@ export const edict = <SCHEMA>(autoFire= false ): IEdict<SCHEMA> => {
       _.keys(cond).forEach(id => {
         const attrs =  _.keys(_.get(cond, id)) as [keyof SCHEMA]
         attrs.forEach(attr => {
-            const options: ConditionOptions<unknown> | undefined = _.get(attrs, attr)
+            const options: ConditionOptions<unknown> | undefined = _.get(cond, `${id}.${attr}`)
             const conditionId = (id.startsWith("$")) ? {name: idPrefix(id), field: Field.IDENTIFIER} : id
             const conditionValue = options?.match ?? {name: `${VALUE_PREFIX}${id}_${attr}`, field: Field.VALUE}
-            rete.addConditionsToProduction(production, conditionId, attr, conditionValue, !options?.then ?? true)
+            rete.addConditionsToProduction(production, conditionId, attr, conditionValue, options?.then ?? true)
           }
         )
       })
