@@ -1,4 +1,4 @@
-import {attr, edict, rule} from "@edict/core";
+import {attr, edict, } from "@edict/core";
 
 const playerFacts =
   {
@@ -62,56 +62,47 @@ const allFacts = {
 
 
 const mkEdict = () => {
-  const {addRule, ...rest} = edict({
-  factSchema: {
-    health: attr<number>(),
-    isDying: attr<boolean>(),
-    dt: attr<number>(),
-    value: attr<number>(),
-    x: attr<number>(),
-    y: attr<number>(),
-    isEvil: attr<boolean>()
-  }})
+  const {rule, insert, retract, ...rest} = edict<{
+    health: number,
+    isDying: boolean,
+    dt: number,
+    value: number,
+    x: number,
+    y: number,
+    isEvil: boolean
+  }>()
 
   return {
+    insert,
+    retract,
     ...rest,
     queries: {
-      time: addRule(({dt}) =>
-        rule({
-          name: "time",
-          what: {
+      time: rule("time", ({dt}) =>
+          ({
             time: {
               dt
             }
-          }
-        })),
-      allTreasure: addRule(({value, x, y}) =>
-        rule({
-          name: "all_treasure",
-          what: {
+        })).enact(),
+      allTreasure: rule("all_treasure", ({value, x, y}) =>
+        ({
             $treasure: {
               value,
               x,
               y
-            }
-          }
-        })),
+           }
+        })).enact(),
 
-      allNpcs: addRule(({health, x, y}) => rule({
-        name: "all_npcs",
-        what: {
+      allNpcs: rule("all_npcs", ({health, x, y}) => ({
           $npc: {
             health,
             x,
             y,
           }
-        }
-      })),
 
-      allNpcsWithTimeDt: addRule(({health, x, y, dt}) =>
-        rule({
-        name: "all_npcs_with_dt",
-        what: {
+      })).enact(),
+
+      allNpcsWithTimeDt: rule("all_npcs_with_time_dt", ({health, x, y, dt}) =>
+        ({
           $npc: {
             health,
             x,
@@ -120,38 +111,31 @@ const mkEdict = () => {
           time: {
             dt
           }
-        }
-      })),
+      })).enact(),
 
-      noHealthIsDying: addRule(({ health, dt}, {insert, retract}) =>rule({
-        name: "no_health_is_dying",
-        what: {
+      noHealthIsDying: rule("no_health_is_dying", ({ health, dt}) =>({
           $npc: {
             health,
           },
-        },
+        })).enact({
         when: ({$npc}) => $npc.health <= 0,
         then: ({$npc}) => {
           retract($npc.id, "health")
           insert({[$npc.id]: {isDying: true}})
         }
-      })),
+      }),
 
-      isDying: addRule(({isDying}) =>
-        rule({
-          name: "is_dying",
-          what: {
+      isDying: rule("id_dying", ({isDying}) =>
+          ({
             $npc: {
               isDying
-            }
-          },
+            }}))
+        .enact({
           when: ({$npc}) => $npc.isDying,
-        })),
+        }),
 
-      complicatedNonsense: addRule(({health, x, y, value, dt}) =>
-        rule({
-          name: "complicated_nonsense",
-          what: {
+      complicatedNonsense: rule("complicated_nonsense", ({health, x, y, value, dt}) =>
+        ({
             $npc: {
               health,
               x,
@@ -166,7 +150,7 @@ const mkEdict = () => {
               dt
             }
           }
-        }))
+        )).enact()
     }
   }
 }
@@ -219,7 +203,7 @@ describe('edict', () => {
 
     let numSlow = 0
     for(let i =0; i < 10000; i++) {
-      let timeUpdate = {
+      const timeUpdate = {
         player: { x: i},
       }
 

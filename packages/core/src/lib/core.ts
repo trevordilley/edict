@@ -3,22 +3,31 @@ import {
   ConditionArgs,
   ConditionOptions,
   EdictArgs,
-  EdictOperations,
   EnactArgs,
   IEdict,
   InsertEdictFact,
-  Rule,
 } from "./types";
-import {groupFactById, insertFactToFact} from "./utils";
 import * as _ from "lodash";
-import {Binding, InternalFactRepresentation} from "@edict/types";
-import {ConvertMatchFn, Field, MatchT, Production, rete} from "@edict/rete"
+import { InternalFactRepresentation} from "@edict/types";
+import {ConvertMatchFn, Field, rete} from "@edict/rete"
 
+export const insertFactToFact = <S>(insertion: InsertEdictFact<S>): InternalFactRepresentation<S> => {
+  // TODO: This is just weird, it doesn't like the type and I don't get why. I'm sure I'll find out when I really
+  // don't want to find out!
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  return _.keys(insertion).map((id:string) =>
+    _.keys(insertion[id]).map((attr: string) => {
+        const val = _.get(insertion, `${id}.${attr}`)
+        return [id, attr, val] as [string, string, any]
+      }
+    )).flat()
+}
 const ID_PREFIX = "id___"
 const VALUE_PREFIX = "val___"
 const idPrefix = (i: string) => `${ID_PREFIX}${i}`
-export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
-  const session = rete.initSession<SCHEMA>(args.autoFire ?? false)
+export const edict = <SCHEMA>(autoFire= false ): IEdict<SCHEMA> => {
+  const session = rete.initSession<SCHEMA>(autoFire )
 
   const insert = (insertFacts: InsertEdictFact<SCHEMA>) => {
     // be dumb about this
@@ -43,29 +52,21 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
       // js object we want
       const result = {}
 
-      args.forEach((_, k) => {
+      args.forEach((v, k) => {
         if(k.startsWith(ID_PREFIX)) {
           const id = k.replace(ID_PREFIX, "")
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          result[id] = {id: args.get(k)}
+         _.set(result, id, {id: args.get(k)})
         }
       })
 
-      args.forEach((_,k) => {
+      args.forEach((v,k) => {
         if(k.startsWith(VALUE_PREFIX)) {
           const value = k.replace(VALUE_PREFIX, "")
           const [id, attr] = value.split("_")
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          if(!result[id]) {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            result[id] = {id}
+          if(!_.get(result, id)) {
+            _.set(result, id, {id})
           }
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          result[id][attr] = args.get(k)
+          _.set(result, `${id}.${attr}`, args.get(k))
         }
       })
 
@@ -89,7 +90,10 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
         }
       )
 
-      const cond = conditions(args.factSchema)
+      // Cast to signal type info, not actually used
+      // TODO: Do we need to do things this way?
+      const schema = {} as unknown as SCHEMA
+      const cond = conditions(schema)
       _.keys(cond).forEach(id => {
         const attrs =  _.keys(_.get(cond, id)) as [keyof SCHEMA]
         attrs.forEach(attr => {
@@ -108,68 +112,6 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
     return { enact }
   }
 
-  const addRule = <T>(fn: (schema: SCHEMA, operations: EdictOperations<SCHEMA>) => Rule<T>) => {
-    const rule = fn(args.factSchema, {insert, retract})
-
-    const convertMatchFn: ConvertMatchFn<SCHEMA, Binding<T>> = (args) => {
-      // This is where we need to convert the dictionary to the
-      // js object we want
-      const result = {}
-
-      args.forEach((_, k) => {
-        if(k.startsWith(ID_PREFIX)) {
-          const id = k.replace(ID_PREFIX, "")
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          result[id] = {id: args.get(k)}
-        }
-      })
-
-      args.forEach((_,k) => {
-        if(k.startsWith(VALUE_PREFIX)) {
-          const value = k.replace(VALUE_PREFIX, "")
-          const [id, attr] = value.split("_")
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          if(!result[id]) {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            result[id] = {id}
-          }
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          result[id][attr] = args.get(k)
-        }
-      })
-
-      return result as Binding<T>
-    }
-    const production = rete.initProduction<SCHEMA, Binding<T>>(
-      {
-        name: rule.name,
-        thenFn: (args) =>  {
-          rule.then?.(args.vars)
-        },
-        thenFinallyFn: rule.thenFinally,
-        condFn: (args) => rule.when?.(convertMatchFn(args)) ?? true,
-        convertMatchFn,
-      }
-    )
-
-    const {what} = rule
-    Object.keys(what).forEach(id => {
-      const attrs =  _.keys(_.get(what, id)) as [keyof SCHEMA]
-      attrs.forEach(attr => {
-          const conditionId = (id.startsWith("$")) ? {name: idPrefix(id), field: Field.IDENTIFIER} : id
-          const conditionValue = {name: `${VALUE_PREFIX}${id}_${attr}`, field: Field.VALUE}
-          rete.addConditionsToProduction(production, conditionId, attr, conditionValue, !id.endsWith("_transitive"))
-        }
-      )
-    })
-    rete.addProductionToSession(session,production)
-
-    return {query: () => rete.queryAll(session, production), rule: production}
-  }
 
   const fire = () => rete.fireRules(session)
 
@@ -177,8 +119,7 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
     insert,
     retract,
     fire,
-    addRule,
-    newRule: rule
+    rule
   }
 }
 

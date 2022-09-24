@@ -1,49 +1,66 @@
-import {attr, edict, rule} from "@edict/core";
+import {attr, edict} from "@edict/core";
 
 type Characters = [id: number, x: number, y: number][]
 
-const args = {factSchema: {
-    DeltaTime: attr<number>(),
-    TotalTime: attr<number>(),
-    X: attr<number>(),
-    Y: attr<number>(),
-    WindowWidth: attr<number>(),
-    WindowHeight: attr<number>(),
-    Width: attr<number>(),
-    Height: attr<number>(),
-    PressedKeys: attr<Set<number>>(),
-    XVelocity: attr<number>(),
-    YVelocity: attr<number>(),
-    XChange: attr<number>(),
-    YChange: attr<number>(),
-    AllCharacters: attr<Characters>()
-  }}
+type Schema =  {
+    DeltaTime: number,
+    TotalTime: number,
+    X: number,
+    Y: number,
+    WindowWidth: number,
+    WindowHeight: number,
+    Width: number,
+    Height: number,
+    PressedKeys: Set<number>,
+    XVelocity: number,
+    YVelocity: number,
+    XChange: number,
+    YChange: number,
+    AllCharacters: Characters
+  }
 
 describe("Basic Usage", () => {
   it("queries", () => {
 
-    const {addRule, insert, fire} = edict(args)
-
-    const results = addRule(({X, Y}) => rule({
-      name: "adding facts out of order",
-      what: {
+    const {rule, insert, fire} = edict<Schema>()
+    const br = performance.now()
+    const r = rule("queries", ({X, Y}) => ({
         Player: {
           X,
           Y
         }
-      }
     }))
+     const ar = performance.now()
+    const be = performance.now()
+    const enacted = r.enact()
+    const ae = performance.now()
 
+    const bi = performance.now()
     insert({
       Player: {
         X: 0.0,
         Y: 1.0
       }
     })
+    const ai = performance.now()
+    const bf = performance.now()
+    fire()
+    const af = performance.now()
 
-    expect(results.query().length).toBe(1)
+    const bq = performance.now()
+    const results = enacted.query()
+    const aq = performance.now()
 
-    const {Player} = results.query()[0]
+    const dr = ar - br
+    const di = ai - bi
+    const de = ae - be
+    const df = af - bf
+    const dq = aq - bq
+    console.log(dr, di, de, df, dq)
+
+    expect(results.length).toBe(1)
+
+    const {Player} = results[0]
 
     expect(Player.X).toBe(0.0)
     expect(Player.Y).toBe(1.0)
@@ -51,33 +68,31 @@ describe("Basic Usage", () => {
 
   it("avoiding infinite loops", () => {
 
-    const {addRule, insert, fire} = edict(args)
+    const {rule, insert, fire} = edict<Schema>()
 
-    addRule(({ X_ONCE, DeltaTime}) => rule({
-      name: "move player",
-      what: {
+    rule("avoiding infiniite loops", ({ DeltaTime}) => ({
         Player: {
-          X_ONCE,
+          X: {then: false},
         },
         Global: {
           DeltaTime
         }
-      },
-      then: (({ Global}) => {
+      ,
+    })).enact(
+      {
+      then: ({ Global, Player}) => {
         console.log("firing")
-        insert({Player: {X: 0 + Global.DeltaTime}})
-      })
-    }))
-
-    const getPlayer = addRule(({X, Y}) => rule({
-      name: "get player",
-      what: {
-        Player: {
-          X,
-          Y
-        },
+        insert({Player: {X: Player.X + Global.DeltaTime}})
       }
-    }))
+    }
+  )
+
+    const getPlayer = rule("get player", ({X, Y}) => ({
+      Player: {
+        X,
+        Y
+      },
+    })).enact()
 
     insert({
       Player: {
