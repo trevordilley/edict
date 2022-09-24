@@ -1,4 +1,14 @@
-import {Condition, ConditionArgs, EdictArgs, EdictOperations, EnactArgs, IEdict, InsertEdictFact, Rule,} from "./types";
+import {
+  Condition,
+  ConditionArgs,
+  ConditionOptions,
+  EdictArgs,
+  EdictOperations,
+  EnactArgs,
+  IEdict,
+  InsertEdictFact,
+  Rule,
+} from "./types";
 import {groupFactById, insertFactToFact} from "./utils";
 import * as _ from "lodash";
 import {Binding, InternalFactRepresentation} from "@edict/types";
@@ -62,7 +72,7 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
       return result as EnactArgs<SCHEMA, T>
     }
 
-    const enact = (enaction: {
+    const enact = (enaction?: {
       then?: (args: EnactArgs<SCHEMA, T> ) => void,
       when?: (args: EnactArgs<SCHEMA, T>) => boolean,
       thenFinally?: () => void
@@ -71,29 +81,27 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
         {
           name: rule.name,
           thenFn: (args) =>  {
-            enaction.then?.(args.vars)
+            enaction?.then?.(args.vars)
           },
-          thenFinallyFn: enaction.thenFinally,
-          condFn: (args) => enaction.when?.(convertMatchFn(args)) ?? true,
+          thenFinallyFn: enaction?.thenFinally,
+          condFn: (args) => enaction?.when?.(convertMatchFn(args)) ?? true,
           convertMatchFn,
         }
       )
 
-      Object.keys(conditions).forEach(id => {
+      _.keys(conditions).forEach(id => {
         const attrs =  _.keys(_.get(conditions, id)) as [keyof SCHEMA]
         attrs.forEach(attr => {
+            const options: ConditionOptions<unknown> | undefined = _.get(attrs, attr)
             const conditionId = (id.startsWith("$")) ? {name: idPrefix(id), field: Field.IDENTIFIER} : id
-            const conditionValue = {name: `${VALUE_PREFIX}${id}_${attr}`, field: Field.VALUE}
-            rete.addConditionsToProduction(production, conditionId, attr, conditionValue, !id.endsWith("_transitive"))
+            const conditionValue = options?.match ?? {name: `${VALUE_PREFIX}${id}_${attr}`, field: Field.VALUE}
+            rete.addConditionsToProduction(production, conditionId, attr, conditionValue, !options?.then ?? true)
           }
         )
       })
       rete.addProductionToSession(session,production)
 
       return {query: () => rete.queryAll(session, production), rule: production}
-
-
-      return { query: () => true}
     }
 
     return { enact }
@@ -168,7 +176,8 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
     insert,
     retract,
     fire,
-    addRule
+    addRule,
+    newRule: rule
   }
 }
 

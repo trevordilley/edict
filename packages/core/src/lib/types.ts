@@ -1,21 +1,17 @@
-import {Binding, InternalFactRepresentation} from "@edict/types";
+import {Binding} from "@edict/types";
 import {Production} from "@edict/rete";
 
-export interface TypeOptions {
-  then?: boolean
-}
-// use trickery and mischief to force the return type to a primitive for type
-// inference. In the guts of the logic we'll actually pull the options out of the
-// return to inspect them, but the compiler doesn't need to know that!
-export const attr = <T>(options?: TypeOptions): T => options as unknown as T
-
+// trick the type-system so we can use the schema like an object
+// TODO: If the new API works, maybe we don't need to do this?
+export const attr = <T>(): T => undefined as unknown as T
 
 
 export type ATTR<SCHEMA> = {[attr in keyof SCHEMA]: SCHEMA[attr]}
-export type Condition<SCHEMA> = {[ATTR in keyof SCHEMA]: {then?: boolean, match?: SCHEMA[ATTR]}}
+export type ConditionOptions<T> = {then?: boolean, match?: T}
+export type Condition<SCHEMA> = {[ATTR in keyof SCHEMA]: ConditionOptions<SCHEMA[ATTR]>}
 export type ConditionArgs<SCHEMA> = {
   [key: string]: {
-    [ATTR in keyof SCHEMA]: {then?: boolean, match?: SCHEMA[ATTR]} | undefined
+    [ATTR in keyof Partial<SCHEMA>]: {then?: boolean, match?: SCHEMA[ATTR]} | undefined
   }
 }
 
@@ -92,4 +88,13 @@ export interface IEdict<SCHEMA> {
   retract: (id: string, ...attrs: (keyof SCHEMA)[]) => void
   fire: () => void,
   addRule: AddRule<SCHEMA>,
+  newRule: <T extends ConditionArgs<SCHEMA>>(name: string, conditions: (schema: Condition<SCHEMA>) => T ) => ({
+    enact: (enaction?: {
+      then?: (args: EnactArgs<SCHEMA, T> ) => void,
+      when?: (args: EnactArgs<SCHEMA, T>) => boolean,
+      thenFinally?: () => void
+    }) => ({
+      query: () => EnactArgs<SCHEMA, T>[]
+    })
+  })
 }
