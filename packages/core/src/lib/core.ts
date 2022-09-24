@@ -79,7 +79,7 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
     }) => {
       const production = rete.initProduction<SCHEMA, EnactArgs<SCHEMA, T>>(
         {
-          name: rule.name,
+          name: name,
           thenFn: (args) =>  {
             enaction?.then?.(args.vars)
           },
@@ -89,8 +89,9 @@ export const edict = <SCHEMA>(args: EdictArgs<SCHEMA> ): IEdict<SCHEMA> => {
         }
       )
 
-      _.keys(conditions).forEach(id => {
-        const attrs =  _.keys(_.get(conditions, id)) as [keyof SCHEMA]
+      const cond = conditions(args.factSchema)
+      _.keys(cond).forEach(id => {
+        const attrs =  _.keys(_.get(cond, id)) as [keyof SCHEMA]
         attrs.forEach(attr => {
             const options: ConditionOptions<unknown> | undefined = _.get(attrs, attr)
             const conditionId = (id.startsWith("$")) ? {name: idPrefix(id), field: Field.IDENTIFIER} : id
