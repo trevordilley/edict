@@ -159,13 +159,13 @@ describe('rete', () => {
   it('updating facts', () => {
     const session = rete.initSession<SmallSchema>(false)
     let zVal: FactFragment<SmallSchema> | undefined= undefined
-    let fireCount = 0
+    let thenCount = 0
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
         name: "updatingFacts",
         convertMatchFn,
       thenFn: ({vars}) => {
-          fireCount += 1
           zVal = vars.get("z")
+          thenCount++
       }
       }
     )
@@ -185,10 +185,10 @@ describe('rete', () => {
     expect(zVal).toBe(Id.Zach)
 
     rete.insertFact(session,[Id.Yair, "LeftOf", Id.Xavier])
-    rete.fireRules(session)
+    const executed = rete.fireRules(session)
     const newResults = rete.queryAll(session, production)
     expect(newResults.length).toBe(1)
-    expect(fireCount).toBe(2)
+    expect(thenCount).toBe(2) // We have a bug where then isn't triggering again too reassign zVal to Xavier
     expect(zVal).toBe(Id.Xavier)
 
 
@@ -317,5 +317,44 @@ describe('rete', () => {
     expect(rete.queryAll(session, rule1).length).toBe(2)
   });
 
+  it("don't trigger rule when updating certain facts", () => {
+    const session = rete.initSession<SmallSchema>(true)
+    let count = 0
+    const rule1 = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+        name: "rule1",
+        convertMatchFn,
+        thenFn: ({vars, session}) => {
+          count = count + 1
+        }
+      }
+    )
+    rete.addConditionsToProduction(rule1, {name: "b", field: Field.IDENTIFIER}, "Color", "blue", true)
+    rete.addConditionsToProduction(rule1, {name: "a", field: Field.IDENTIFIER}, "Color", {name: "c", field: Field.VALUE}, false)
+    rete.addProductionToSession(session, rule1)
+
+    rete.insertFact(session, [Id.Bob, "Color", "blue"])
+    rete.insertFact(session, [Id.Alice, "Color", "red"])
+    rete.insertFact(session, [Id.Alice, "Color", "maize"])
+
+    expect(count).toBe(1)
+  });
+
+  // test "don't trigger rule when updating certain facts":
+  // var count = 0
+  //
+  // var session = initSession(Fact)
+  // session.add:
+  // rule dontTrigger(Fact):
+  // what:
+  //   (b, Color, "blue")
+  //   (a, Color, c, then = false)
+  // then:
+  //   count += 1
+  //
+  // session.insert(Bob, Color, "blue")
+  // session.insert(Alice, Color, "red")
+  // session.insert(Alice, Color, "maize")
+  //
+  // check count == 1
 
 });

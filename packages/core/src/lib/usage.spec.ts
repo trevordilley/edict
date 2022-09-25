@@ -75,13 +75,11 @@ describe("Basic Usage", () => {
           X: {then: false},
         },
         Global: {
-         DeltaTime: {then: false}
+         DeltaTime
         }
     })).enact(
       {
       then: ({  Player, Global}) => {
-        // TODO: Ah, we need to refactor a bit and support the "inside rule"
-        // bit for sessions, then I think we'll be god.
 
         console.log("firing")
         insert({[Player.id]: {X: Player.X + Global.DeltaTime}})

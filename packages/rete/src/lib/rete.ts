@@ -7,19 +7,27 @@
 // real good handle on what's going  on!
 
 import {
-  AlphaNode, CondFn,
-  Condition, ConvertMatchFn,
+  AlphaNode,
+  CondFn,
+  Condition,
+  ConvertMatchFn,
   ExecutedNodes,
   Fact,
-  FactFragment, FactId,
-  Field, IdAttr, IdAttrs, InternalFactRepresentation,
+  FactFragment,
+  FactId,
+  Field,
+  IdAttr,
+  IdAttrs,
+  InternalFactRepresentation,
   JoinNode,
   Match,
   MatchT,
   MEMORY_NODE_TYPE,
   MemoryNode,
   Production,
-  Session, ThenFinallyFn, ThenFn,
+  Session,
+  ThenFinallyFn,
+  ThenFn,
   Token,
   TokenKind,
   Var
@@ -145,8 +153,9 @@ const addProductionToSession = <T, U>(session: Session<T>,production: Production
       condition,
       ruleName: production.name,
       lastMatchId: -1,
-    matches: newDict<IdAttrs<T>, Match<T>>(),
-    matchIds: newDict<number, IdAttrs<T>>()}
+      matches: newDict<IdAttrs<T>, Match<T>>(),
+      matchIds: newDict<number, IdAttrs<T>>()
+    }
     if(memNode.type === MEMORY_NODE_TYPE.LEAF) {
       memNode.nodeType = {
         condFn : production.condFn
@@ -271,7 +280,6 @@ const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>,
   const idAttr = idAttrs[idAttrs.length - 1]
 
 
-  // if the insert/update fact is new and this condition doesn't have then = false, let the leaf node trigger
   if(isNew && (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) && node.condition.shouldTrigger && node.nodeType) {
     node.nodeType.trigger = true
   }
@@ -284,7 +292,7 @@ const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>,
         node.lastMatchId += 1
         match = {id: node.lastMatchId}
       }
-      match.vars = vars
+      match.vars = new Map(vars)
     match.enabled = node.type !== MEMORY_NODE_TYPE.LEAF || !node.nodeType?.condFn || (node.nodeType?.condFn(vars) ?? true)
     node.matchIds.setValue(match.id, idAttrs)
     node.matches.setValue(idAttrs, match)
@@ -319,7 +327,7 @@ const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>,
 
 // session: var Session[T, MatchT], node: JoinNode[T, MatchT], idAttr: IdAttr, token: Token[T]) =
 const rightActivationWithJoinNode = <T>(session: Session<T>, node: JoinNode<T>, idAttr: IdAttr<T>, token: Token<T>) => {
-  if(!node.parent) {
+  if(node.parent === undefined) {
     const vars = session.initMatch()
     if(getVarsFromFact(vars, node.condition, token.fact)) {
       if(!node.child) {
@@ -340,15 +348,14 @@ const rightActivationWithJoinNode = <T>(session: Session<T>, node: JoinNode<T>, 
       if(!vars) {
         throw new Error("Expected vars to not be undefinied???")
       }
-      // Deviating from pararules here, he makes a mutable
-      // copy, I'm not doing that. I think he's doing a Nim
-      // perf thing that may not be possible in Javascript
-      if (getVarsFromFact(vars, node.condition, token.fact)) {
+      const newVars = new Map(vars)
+      if (getVarsFromFact(newVars, node.condition, token.fact)) {
         const newIdAttrs = [...idAttrs]
         newIdAttrs.push(idAttr)
         const child = node.child
         if(!child) throw new Error(`Unexpected null child for node: ${node.idName}`)
-        leftActivationOnMemoryNode(session, child, newIdAttrs, vars, token, true)
+
+        leftActivationOnMemoryNode(session, child, newIdAttrs, newVars, token, true)
       }
     })
   }
@@ -380,7 +387,7 @@ const rightActivationWithAlphaNode = <T>(session: Session<T>, node: AlphaNode<T>
   node.successors.forEach(child => {
     if(token.kind === TokenKind.UPDATE
       // TODO: FIgure out why this didn't work when updating facts
-      // && child.disableFastUpdates
+       && child.disableFastUpdates
     ) {
       rightActivationWithJoinNode(session, child, idAttr, { fact: token.oldFact!, kind: TokenKind.RETRACT})
       rightActivationWithJoinNode(session, child, idAttr, { fact: token.fact, kind: TokenKind.INSERT})
@@ -452,7 +459,7 @@ const raiseRecursionLimit = <T>(limit: number, executedNodes: ExecutedNodes<T>) 
 }
 
 const DEFAULT_RECURSION_LIMIT = 16
-const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECURSION_LIMIT) => {
+const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECURSION_LIMIT, debug = true) => {
   if(session.insideRule) {
     return
   }
@@ -474,7 +481,7 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
     const thenQueue = new Array(...session.thenQueue)
     const thenFinallyQueue = new Array(...session.thenFinallyQueue)
     if(thenQueue.length == 0 && thenFinallyQueue.length == 0) {
-      return
+          return { executedNodes, session }
     }
 
     // reset state
@@ -510,7 +517,7 @@ const fireRules = <T>(session: Session<T>, recursionLimit: number = DEFAULT_RECU
 
     const nodeToMatches: Map<MemoryNode<T>, Dictionary<IdAttrs<T>, Match<T>>> = new Map()
 
-    thenQueue.forEach( ([node, _]) => {
+    thenQueue.forEach( ([node]) => {
      if(!nodeToMatches.has(node)) {
        nodeToMatches.set(node, node.matches)
      }
@@ -577,8 +584,7 @@ const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<
    // retract any facts from nodes that the new fact wasn't inserted in
    // we use toSeq here to make a copy of the existingNodes, because
    // rightActivation will modify it
-   const existingNodesCopy = new Set<AlphaNode<T>>()
-   existingNodes.forEach(n => existingNodesCopy.add(n))
+   const existingNodesCopy = new Set<AlphaNode<T>>(existingNodes)
    existingNodesCopy.forEach(n => {
      if(!nodes.has(n)) {
        const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1])
@@ -592,8 +598,6 @@ const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<
 
     // update or insert facts, depending on whether the node already exists
    nodes.forEach(n => {
-     // ERROR: existingNodes _should_ contain n (it does) but .contains() isn't recognizing that
-     // probably due to objectHash() not working as expected. I think I need object references with this set.
      if(existingNodes.has(n)) {
        const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1])
        rightActivationWithAlphaNode(session, n, {fact, kind: TokenKind.UPDATE, oldFact})
@@ -607,6 +611,11 @@ const upsertFact = <T>(session: Session<T>, fact: Fact<T>, nodes: Set<AlphaNode<
 
 const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const nodes = new Set<AlphaNode<T>>()
+  // Why do we do this mutation in-place function call?
+  // I'd really rather it was `const nodes = getAlphaNodesForFact(...)`
+  // perf reasons?
+  //
+  // TODO: Once we get all the tests passing lets refactor this little thing here
   getAlphaNodesForFact(session, session.alphaNode, fact, true, nodes)
   upsertFact(session, fact, nodes)
   if(session.autoFire) {
