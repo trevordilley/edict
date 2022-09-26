@@ -1,5 +1,6 @@
 import {rete} from './rete';
 import {FactFragment, Field, MatchT} from "@edict/rete";
+import {viz} from "./debug";
 
 type People = [id: number, color: string, leftOf: number, height: number][]
 enum Id {
@@ -187,6 +188,7 @@ describe('rete', () => {
     rete.insertFact(session,[Id.Yair, "LeftOf", Id.Xavier])
     const executed = rete.fireRules(session)
     const newResults = rete.queryAll(session, production)
+    console.log(viz(session))
     expect(newResults.length).toBe(1)
     expect(thenCount).toBe(2) // We have a bug where then isn't triggering again too reassign zVal to Xavier
     expect(zVal).toBe(Id.Xavier)
