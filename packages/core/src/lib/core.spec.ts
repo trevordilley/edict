@@ -201,7 +201,7 @@ describe('edict', () => {
     insert(playerFacts)
     fire()
 
-    let numSlow = 0
+    const diffs = []
     for(let i =0; i < 10000; i++) {
       const timeUpdate = {
         player: { x: i},
@@ -212,11 +212,11 @@ describe('edict', () => {
       fire()
       const after = performance.now()
       const diff = after-before
-      if(after - before > 1)  {
-        numSlow++
-      }
+      diffs.push(diff)
     }
-    expect(numSlow).toBeLessThanOrEqual(100)
+    const avgDiff = diffs.reduce((c, a) => c + a)/diffs.length
+    const MAX_PERF = 0.2
+    expect(avgDiff).toBeLessThanOrEqual(MAX_PERF)
   })
 
   it('Missing fact will result in empty array', () => {

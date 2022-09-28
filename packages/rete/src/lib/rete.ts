@@ -185,6 +185,7 @@ const addProductionToSession = <T, U>(session: Session<T>,production: Production
   for(let i = 0; i < memNodes.length; i++) {
     memNodes[i].leafNode = leafMemNode
   }
+
   for(let i = 0; i < joinNodes.length; i++) {
     const node = joinNodes[i]
     const vars = node.condition.vars
@@ -255,6 +256,7 @@ const leftActivationFromVars = <T>(session: Session<T>, node: JoinNode<T>, idAtt
 
 
 const leftActivationWithoutAlpha = <T>(session: Session<T>, node: JoinNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>) => {
+  // Issue somehere here?? TODO
   if(node.idName && node.idName != "") {
     const id = vars.get(node.idName)
     if(id !== undefined && node.alphaNode.facts.containsKey(id)) {
@@ -276,12 +278,12 @@ const leftActivationWithoutAlpha = <T>(session: Session<T>, node: JoinNode<T>, i
   }
 }
 
+
 const leftActivationOnMemoryNode = <T>(session: Session<T>, node: MemoryNode<T>, idAttrs: IdAttrs<T>, vars: MatchT<T>, token: Token<T>, isNew: boolean) =>{
   const idAttr = idAttrs[idAttrs.length - 1]
 
-
-  if(isNew && (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) && node.condition.shouldTrigger && node.nodeType) {
-    node.nodeType.trigger = true
+  if(isNew && (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) && node.condition.shouldTrigger && node.leafNode && node.leafNode.nodeType) {
+    node.leafNode.nodeType.trigger = true
   }
 
   if(token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) {
@@ -336,7 +338,6 @@ const rightActivationWithJoinNode = <T>(session: Session<T>, node: JoinNode<T>, 
       leftActivationOnMemoryNode(session, node.child, [idAttr], vars, token, true)
     }
   } else {
-
     node.parent.matches.forEach((idAttrs, match) => {
       const vars:MatchT<T> = new Map(match.vars)
       const idName = node.idName
@@ -386,7 +387,6 @@ const rightActivationWithAlphaNode = <T>(session: Session<T>, node: AlphaNode<T>
   }
   node.successors.forEach(child => {
     if(token.kind === TokenKind.UPDATE
-      // TODO: FIgure out why this didn't work when updating facts
        && child.disableFastUpdates
     ) {
       rightActivationWithJoinNode(session, child, idAttr, { fact: token.oldFact!, kind: TokenKind.RETRACT})

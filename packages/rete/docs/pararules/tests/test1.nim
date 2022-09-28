@@ -25,7 +25,7 @@ schema Fact(Id, Attr):
 proc `==`(a: int, b: Id): bool =
   a == b.ord
 
- test "number of conditions != number of facts":
+test "number of conditions != number of facts":
   var session = initSession(Fact)
   echo(session)
   let rule1 =
