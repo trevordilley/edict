@@ -45,15 +45,16 @@ rule(
 
 rule(
   'Arriving at their destination stops them',
-  ({ circle, destX, destY }) => ({
+  ({ circle, destX, destY, dt }) => ({
     $npc: { destX, destY, circle },
+    time: { dt }
   })
 ).enact({
   then: ({ $npc }) => {
     const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y);
     const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY);
     const distance = dest.distance(pos);
-    if (distance < 100) {
+    if (distance < 10) {
       retract($npc.id, 'destX', 'destY');
     }
   },
