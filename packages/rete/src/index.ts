@@ -1,2 +1,2 @@
 export * from './lib/rete';
-export * from "./lib/types"
+export * from './lib/types';

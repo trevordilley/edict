@@ -1,8 +1,7 @@
-import {Dictionary, Set as TsSet} from "typescript-collections";
+import { Dictionary, Set as TsSet } from 'typescript-collections';
 
 describe('Utilities', () => {
-
-  it("Sets set values correctly", () => {
+  it('Sets set values correctly', () => {
     const x = {
       testField: 1,
       testValue: 'name',
@@ -13,10 +12,10 @@ describe('Utilities', () => {
           testValue: 'Bob Johnson',
           successors: [],
           children: [],
-          facts: new Dictionary()
-        }
-      ]
-    }
+          facts: new Dictionary(),
+        },
+      ],
+    };
 
     const y = {
       testField: 2,
@@ -28,56 +27,51 @@ describe('Utilities', () => {
           condition: {},
           ruleName: 'test',
           oldIdAttrs: new Set(),
-          child: []
-        }
+          child: [],
+        },
       ],
       children: [],
-    }
+    };
 
-    const s = new Set()
-    s.add(x)
-    s.add(y)
-    expect(s.size).toBe(2)
+    const s = new Set();
+    s.add(x);
+    s.add(y);
+    expect(s.size).toBe(2);
+  });
 
+  it('dictionary keys are value based', () => {
+    const key1 = ['a', 'b'];
+    const key2 = ['a', 'b'];
+    const d = new Dictionary();
+    const val = 100;
+    d.setValue(key1, val);
+    const result = d.getValue(key2);
 
-  })
+    expect(result).toBe(val);
 
+    const m = new Map();
+    m.set(key1, val);
+    const mResult = m.get(key2);
 
-  it("dictionary keys are value based", () => {
-    const key1 = ["a", "b"]
-    const key2 = ["a", "b"]
-    const d = new Dictionary()
-    const val = 100
-    d.setValue(key1, val)
-    const result = d.getValue(key2)
+    expect(mResult).toBe(undefined);
+  });
 
-    expect(result).toBe(val)
+  it('Maps use string keys as values', () => {
+    const str1 = 'blik';
+    const str2 = 'blik';
 
-    const m = new Map()
-    m.set(key1, val)
-    const mResult = m.get(key2)
+    const m = new Map();
+    m.set(str1, 3);
+    const result = m.get(str2);
+    expect(result).toBe(3);
+  });
 
-    expect(mResult).toBe(undefined)
-  })
+  it('Map has copy constructor', () => {
+    const map1 = new Map<string, string>();
+    map1.set('key', 'foo');
 
-  it("Maps use string keys as values", () => {
-
-    const str1 = "blik"
-    const str2 = "blik"
-
-    const m = new Map()
-    m.set(str1, 3)
-    const result = m.get(str2)
-    expect(result).toBe(3)
-
-  })
-
-  it("Map has copy constructor", () => {
-    const map1 = new Map<string, string>()
-    map1.set("key", "foo")
-
-    const map2 = new Map(map1)
-    const result = map2.get("key")
-    expect(result).toBe("foo")
-  })
+    const map2 = new Map(map1);
+    const result = map2.get('key');
+    expect(result).toBe('foo');
+  });
 });
