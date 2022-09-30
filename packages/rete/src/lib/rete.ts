@@ -24,7 +24,7 @@ import {
   MatchT,
   MEMORY_NODE_TYPE,
   MemoryNode,
-  Production,
+  Production, PRODUCTION_ALREADY_EXISTS_BEHAVIOR,
   Session,
   ThenFinallyFn,
   ThenFn,
@@ -131,11 +131,25 @@ const isAncestor = <T>(x: JoinNode<T>, y: JoinNode<T>): boolean => {
   }
   return false;
 };
-
 const addProductionToSession = <T, U>(
   session: Session<T>,
-  production: Production<T, U>
+  production: Production<T, U>,
+  alreadyExistsBehaviour = PRODUCTION_ALREADY_EXISTS_BEHAVIOR.ERROR
 ) => {
+
+  if (session.leafNodes.containsKey(production.name)) {
+    const message = `${production.name} already exists in session`
+    if(alreadyExistsBehaviour === PRODUCTION_ALREADY_EXISTS_BEHAVIOR.QUIET) return
+    else if (alreadyExistsBehaviour === PRODUCTION_ALREADY_EXISTS_BEHAVIOR.WARN) {
+      console.warn(message)
+      return
+    } else if (alreadyExistsBehaviour === PRODUCTION_ALREADY_EXISTS_BEHAVIOR.ERROR) {
+      throw new Error(message)
+    }
+  }
+
+
+
   const memNodes: MemoryNode<T>[] = [];
   const joinNodes: JoinNode<T>[] = [];
   const last = production.conditions.length - 1;
@@ -199,7 +213,7 @@ const addProductionToSession = <T, U>(
       }
 
       if (session.leafNodes.containsKey(production.name)) {
-        throw new Error(`${production.name} already exists in session`);
+        throw new Error(`${production.name} already exists in session, this should have been handled above`);
       }
       session.leafNodes.setValue(production.name, memNode);
     }

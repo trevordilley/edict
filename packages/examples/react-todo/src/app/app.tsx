@@ -1,4 +1,4 @@
-import {attr, edict, rule} from "@edict/core";
+import { edict} from "@edict/core";
 import {invokeEdict} from "@edict/react";
 import {FC, useState} from "react";
 import {ITodo} from "./types";
@@ -17,11 +17,7 @@ import {ITodo} from "./types";
 // The `factSchema` is a mapping from name to type via the `attr()`
 // function. Providing a fact schema will provide comprehensive type
 // safety.
-const { Edict, useEdict } = invokeEdict(edict({
-  factSchema: {
-    isComplete: attr<boolean>(),
-    title: attr<string>(),
-  }}))
+const { Edict, useEdict } = invokeEdict(edict<{isComplete: boolean, title: string}>())
 
 // the `useEdict()` function exposes the api of the Edict library.
 // Here we're defining a rule which grabs all facts in the fact database
@@ -34,13 +30,8 @@ export const useTodosRule = () => {
 
   // The `useRule()` hook's first argument is always the `factSchema` which
   // when destructured will keep your rule type-safe and readable
-  return useRule(({title, isComplete}) => rule({
+  const {enact, results} = useRule("All Todos", ({title, isComplete}) => ({
 
-    // All facts have a unique name, it can be descriptive!
-    name: "All Todos",
-
-    // The `what` block describes the attributes to match facts with.
-    what: {
       // `$todo` is a _bound_ id. What that means is we're not matching on a
       // specific id for a fact, but any facts which have the `title` and `isComplete`
       // attribute.
@@ -48,8 +39,10 @@ export const useTodosRule = () => {
         title,
         isComplete,
       }
-    }
+
   }))
+  enact()
+  return results || []
 }
 
 const NewTodo: FC = () => {

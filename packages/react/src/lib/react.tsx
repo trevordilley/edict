@@ -1,5 +1,6 @@
 import React, {FC, PropsWithChildren, useCallback, useContext, useEffect, useRef, useState} from "react";
-import {ConditionArgs, IEdict, InsertEdictFact} from "@edict/core";
+import {Condition, ConditionArgs, Enact, EnactArgs, EnactionArgs, IEdict, InsertEdictFact} from "@edict/core";
+import {PRODUCTION_ALREADY_EXISTS_BEHAVIOR} from "@edict/rete";
 
 let currentSubId = 0
 const getSubId = () => {
@@ -31,13 +32,26 @@ export const invokeEdict = <SCHEMA,>(args: IEdict<SCHEMA>) => {
         console.log(subs)
       }
     }, [dirty])
-    const useRule = <T,>(name: string, rule: ConditionArgs<SCHEMA>) => {
-      const { enact } = coreRule(name, rule)
+    const useRule = (name: string, rule:(schema: Condition<SCHEMA>) => ConditionArgs<SCHEMA>) => {
+      console.log(`Adding ${name}`)
+      const r = coreRule(name, rule, PRODUCTION_ALREADY_EXISTS_BEHAVIOR.QUIET)
       const id = useRef(`${getSubId()}-${name}`)
-      const [results, setResults] = useState(query())
+      const {enact: coreEnact} = r
+
+      const [results, setResults] = useState<EnactArgs<SCHEMA, ConditionArgs<SCHEMA>>[] | undefined>([])
       const [retrieve, setRetrieve] = useState(false)
+      const query = useRef<() => EnactArgs<SCHEMA, ConditionArgs<SCHEMA>>[] | undefined>()
+      const enact = (enaction?: EnactionArgs<SCHEMA, ConditionArgs<SCHEMA>>) => {
+        if(query.current) return
+        const {query: coreQuery} = coreEnact(enaction)
+        query.current = coreQuery
+      }
+
       const onRetrieve = () => {
-        setResults(query())
+        if(!query.current) return
+        console.log("query ", query.current)
+        const results = query.current()
+        setResults(results)
         setRetrieve(!retrieve)
       }
       useEffect(() => {
@@ -47,9 +61,7 @@ export const invokeEdict = <SCHEMA,>(args: IEdict<SCHEMA>) => {
             }
         }, [])
 
-
-
-      return results
+      return { enact, results}
     }
     const insert = (fact: InsertEdictFact<SCHEMA>) => {
       setDirty(true)

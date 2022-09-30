@@ -8,6 +8,12 @@ export type ValueOf<T> = T[keyof T];
 export type FactFragment<SCHEMA> = FactId | keyof SCHEMA | ValueOf<SCHEMA>;
 export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>;
 
+export enum PRODUCTION_ALREADY_EXISTS_BEHAVIOR {
+  QUIET,
+  WARN,
+  ERROR
+}
+
 export enum Field {
   IDENTIFIER,
   ATTRIBUTE,
