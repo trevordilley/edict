@@ -30,6 +30,13 @@ export const insertFactToFact = <S>(
 const ID_PREFIX = 'id___';
 const VALUE_PREFIX = 'val___';
 const idPrefix = (i: string) => `${ID_PREFIX}${i}`;
+
+const extractId = (id: string) => id.startsWith('$')
+    ? { name: idPrefix(id), field: Field.IDENTIFIER }
+    : id;
+
+
+
 export const edict = <SCHEMA>(autoFire = false): IEdict<SCHEMA> => {
   const session = rete.initSession<SCHEMA>(autoFire);
 
@@ -105,13 +112,32 @@ export const edict = <SCHEMA>(autoFire = false): IEdict<SCHEMA> => {
             cond,
             `${id}.${attr}`
           );
-          const conditionId = id.startsWith('$')
-            ? { name: idPrefix(id), field: Field.IDENTIFIER }
-            : id;
-          const conditionValue = options?.match ?? {
-            name: `${VALUE_PREFIX}${id}_${attr}`,
-            field: Field.VALUE,
-          };
+          const conditionId = extractId(id)
+
+          const join = options?.join
+          const match = options?.match
+          if(join && match) throw new Error(`Invalid options for condition $${conditionId}, join and match are mutually exclusive. Please use one or the other`)
+
+          if(join && !_.keys(cond).includes(join)) {
+            throw new Error(`Incorrect "join" usage. It must be one of the key's defined in your conditions. Valid options are ${_.keys(cond).join(",")}`)
+          }
+
+          let conditionValue
+          if(match) {
+            conditionValue = match
+          } else if(join) {
+            conditionValue = {
+              name: idPrefix(join),
+              field: Field.VALUE,
+            }
+          }
+          else {
+            conditionValue = {
+              name: `${VALUE_PREFIX}${id}_${attr}`,
+              field: Field.VALUE,
+            };
+          }
+
           rete.addConditionsToProduction(
             production,
             conditionId,

@@ -116,7 +116,7 @@ const addConditionsToProduction = <T, U>(
       }
     }
   });
-
+  console.log(condition)
   production.conditions.push(condition);
 };
 

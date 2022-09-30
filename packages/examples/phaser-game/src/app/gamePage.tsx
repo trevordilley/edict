@@ -11,7 +11,7 @@ const { insert, rule, fire, retract } = edict<{
 
 rule(
   'Circles with a destination move to destination',
-  ({ circle, speed, dt, destX, destY }) => ({
+  ({  circle, speed , dt, destX, destY }) => ({
     $npc: { circle, speed, destX, destY },
     time: { dt },
   })

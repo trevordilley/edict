@@ -1,5 +1,5 @@
 import React, {FC, PropsWithChildren, useCallback, useContext, useEffect, useRef, useState} from "react";
-import {AddRuleArgs, IEdict, InsertEdictFact} from "@edict/core";
+import {ConditionArgs, IEdict, InsertEdictFact} from "@edict/core";
 
 let currentSubId = 0
 const getSubId = () => {
@@ -15,7 +15,7 @@ export const invokeEdict = <SCHEMA,>(args: IEdict<SCHEMA>) => {
 
   const useEdict = () => {
     const e = useContext(EdictContext)
-    const {retract: coreRetract, insert: coreInsert, fire: coreFire, addRule: coreAddRRule, ...rest } = e
+    const {retract: coreRetract, insert: coreInsert, fire: coreFire, rule: coreRule, ...rest } = e
     const [dirty, setDirty] = useState(false)
 
 
@@ -31,9 +31,9 @@ export const invokeEdict = <SCHEMA,>(args: IEdict<SCHEMA>) => {
         console.log(subs)
       }
     }, [dirty])
-    const useRule = <T,>(rule: AddRuleArgs<SCHEMA, T>) => {
-      const { query, rule: addedRule } = coreAddRRule(rule)
-      const id = useRef(`${getSubId()}-${addedRule.name}`)
+    const useRule = <T,>(name: string, rule: ConditionArgs<SCHEMA>) => {
+      const { enact } = coreRule(name, rule)
+      const id = useRef(`${getSubId()}-${name}`)
       const [results, setResults] = useState(query())
       const [retrieve, setRetrieve] = useState(false)
       const onRetrieve = () => {

@@ -1,16 +1,15 @@
 // trick the type-system so we can use the schema like an object
 // TODO: If the new API works, maybe we don't need to do this?
-export const attr = <T>(): T => undefined as unknown as T;
 
 export type ATTR<SCHEMA> = { [attr in keyof SCHEMA]: SCHEMA[attr] };
-export type ConditionOptions<T> = { then?: boolean; match?: T };
+export type ConditionOptions<T> = { then?: boolean; match?: T,  join?: string};
 export type Condition<SCHEMA> = {
   [ATTR in keyof SCHEMA]: ConditionOptions<SCHEMA[ATTR]>;
 };
 export type ConditionArgs<SCHEMA> = {
   [key: string]: {
     [ATTR in keyof Partial<SCHEMA>]:
-      | { then?: boolean; match?: SCHEMA[ATTR] }
+      | ConditionOptions<SCHEMA[ATTR]>
       | undefined;
   };
 };
