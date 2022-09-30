@@ -1,6 +1,9 @@
 import { edict } from '@edict/core';
 import * as Phaser from 'phaser';
 import { useLayoutEffect } from 'react';
+
+
+// Start an edict session
 const { insert, rule, fire, retract } = edict<{
   speed: number;
   dt: number;
@@ -9,6 +12,8 @@ const { insert, rule, fire, retract } = edict<{
   circle: Phaser.GameObjects.Arc;
 }>();
 
+
+// Enact the rules for this session
 rule(
   'Circles with a destination move to destination',
   ({  circle, speed , dt, destX, destY }) => ({
@@ -60,6 +65,8 @@ rule(
   },
 });
 
+
+// Setup initial facts and input handlers
 const create = (scene: Phaser.Scene) => {
   scene.input.on('pointerdown', (pointer: MouseEvent) => {
     const { x, y } = pointer;
@@ -85,12 +92,14 @@ const create = (scene: Phaser.Scene) => {
 };
 
 const update = (scene: Phaser.Scene, time: number, deltaTime: number) => {
+  // Continuously update the dt fact (delta time)
   insert({
     time: { dt: deltaTime },
   });
   fire();
 };
 
+// Phaser and React tom-foolerly
 const config = {
   type: Phaser.AUTO,
   width: 800,
