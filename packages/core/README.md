@@ -4,9 +4,7 @@ Write your business logic simply and declaratively with Edict!
 
 ## Usage
 
-Let's walk through a simple usage of Edict. To illustrate the leverage rule-based
-systems provide during implementation we will build the following app (without a UI! Please see
-the React example in the `examples/` directory to see how this ties to UI!).
+Let's walk through a simple usage of Edict.
 
 In this example we'll build an application that figures out which users are
 having a birthday!
