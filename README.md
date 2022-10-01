@@ -1,6 +1,8 @@
 # Edict
 
-**current version: `0.0.0-coding-before-children-start-screaming`**
+**current version: `0.1.0-beta`**
+
+_cleaning up documentation, fixing bugs and writing more tests_
 
 Edict is a simple ~~state~~ **logic** management library exposing an API making organizing the most critical part of your application easy and intuitive.
 
@@ -16,36 +18,30 @@ the React example in the `examples/` directory to see how this ties to UI!).
 In this example we'll build an application that figures out which users are
 having a birthday!
 
-### The _AttributeSchema_
+### The Schema
 
-The `attributeSchema` describes the shape of your facts, specifically the
+The `Schema` describes the shape of your facts, specifically the
 types of data that can be associated with an id and value. Later when we insert
 a fact it will be clearer how the schema relates to both rules and
 facts.
 
 ```typescript
-// TODO: RENAME `factSchema` to `attributeSchema`!
-const factSchema = {
-  // `attr()` is a type narrowing function
-  // that also lets us avoid needing
-  // to provide a value while using a JSON object
-  // to describe our schema!
-  // Open to suggestions concerning better ways to do this!
-  name: attr<string>(),
-  email: attr<string>(),
-  birthDay: attr<Date>(),
-  isCelebratingBirthDay: attr<boolean>(),
+type Schema = {
+  name: string,
+  email: string,
+  birthDay: Date,
+  isCelebratingBirthDay: boolean,
 
   // An attribute that will be tied to a "single" fact
-  todaysDate: attr<Date>(),
+  todaysDate: Date,
 };
 
 // This `session` will maintain it's own database of facts and rules. It also will
 // expose functions to add/remove new rules and facts, query the facts etc.
 //
-// Edict does not create "global" objects, each invocation of `edict()` creates
+// Edict does not create "global" data, each invocation of `edict()` creates
 // new independent sessions
-const mySession = edict(factSchema);
+const mySession = edict<Schema>();
 ```
 
 One the key benefits to having an attribute schema is type-safety. Edict will not allow you to insert
@@ -99,76 +95,71 @@ insert({
 Now let's create our first rule!
 
 ```typescript
-const { addRule } = mySession;
+const { rule } = mySession;
 
-const birthDaysMatchingTodayAreCelebrating! = addRule(
+const results = rule('When a birthday is today, celebrate the birthday!',
   ({ birthDay, todaysDate }) =>
-    rule({
-      // All rules have a unique name, it can be descriptive!
-      name: 'When a birthday is today, celebrate the birthday!',
-
-      what: {
-        // "today" matches the id when inserting the fact (see above)
-        today: {
-          todaysDate,
-        },
-
-        // "$user" is a _bound_ id. By prefixing the id with "$" you signal to edict that
-        // you want to match ANY fact with the following attributes. This allows you to "join"
-        // many facts to be processed by this rule!
-        $user: {
-          birthDay,
-        },
+    ({
+      // "today" matches the id when inserting the fact (see above)
+      today: {
+        todaysDate,
       },
 
-      // "when" filters out facts, runs before "then"
-      when: ({ $user, today }) => {
-        // Match users who have a birthday today!
-        return (
-          $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
-          $user.birthDay.getDate() === today.todaysDate.getDate()
-        );
+      // "$user" is a _bound_ id. By prefixing the id with "$" you signal to edict that
+      // you want to match ANY fact with the following attributes. This allows you to "join"
+      // many facts to be processed by this rule!
+      $user: {
+        birthDay,
       },
+    }))
+  // `rule()` returns an object with `enact()` 
+  // `enact()` let's you apply reactions to the
+  // rule you've defined, and adds it to the session
+  .enact({
+  // "when" filters out facts, runs before "then"
+  when: ({ $user, today }) => {
+    // Match users who have a birthday today!
+    return (
+      $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
+      $user.birthDay.getDate() === today.todaysDate.getDate()
+    );
+  },
 
-      // The "then" block will receive two arguments. First is an object
-      // with the matches (as described above) and the second is operations
-      // that can be done within the session (for convenience in case the rule is not
-      // in a scope where the session is available)
-      then: ({ $user, today }, { insert }) => {
-        insert({ [$user.id]: { isCelebratingBirthDay: true } });
-      },
-    })
-);
+  // The "then" block will receive two arguments. First is an object
+  // with the matches (as described above) and the second is operations
+  // that can be done within the session (for convenience in case the rule is not
+  // in a scope where the session is available)
+  then: ({ $user, today }, { insert }) => {
+    insert({ [$user.id]: { isCelebratingBirthDay: true } });
+  },
+});
 ```
 
 ### Queries
 
-All rules are also queries. The `birthDaysMatchingTodayAreCelebrating` exposes a `query()` function
-that will return the facts matched by the rule. This is helpful because often your rules match
-the data you need for the rest of your applications logic.
+The object returned from calling `rule()` contains a function named `enact()`. 
 
-Some rules are just queries, here's an example of that:
+The arguments to `enact()` are optional, but allow you to specify what happens when a rule
+is triggered by the fact database.  
+
+The return value of `enact()` is an object containing the `query()` function. `query()` will
+return an array of facts matching your rule. 
+
+You don't have to supply arguments to `enact()` by the way! Some rules are more 
+like queries, and allow you to pull out a subset of the facts matching the conditions
+of the rule!
 
 ```typescript
-const usersCelebratingBirthdays = addRule(({ isCelebratingBirthday }) =>
-  rule({
-    name: 'All users celebrating their birthday',
-    what: {
-      $user: {
-        isCelebratingBirthday,
-      },
+const usersCelebratingBirthdays = rule("All users celebrating their birthday", ({ isCelebratingBirthday }) =>
+  ({
+    $user: {
+      isCelebratingBirthday,
     },
   })
-);
-
-// Queries won't have data until at least one `fire()` is called!
-mySession.fire();
+).enact() // Don't forget to call `enact()`! Your editor should give you a hint when you go to query things!
 
 const { $user } = usersCelebratingBirthdays.query();
 
 $user.forEach((u) => console.log(`${u.name} is celebrating their birthday!`));
 ```
 
-The subtle power of this is that we're really leaning on JSON being a native Javascript
-feature, so we can use language features like the spread operator to reuse `what` blocks and compose
-rules in general!
