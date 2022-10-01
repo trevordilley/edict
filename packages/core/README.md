@@ -2,6 +2,14 @@
 
 Write your business logic simply and declaratively with Edict!
 
+## Acknowledgements!
+
+The API and underlying motivations were inspired by the [O'doyle rules](https://github.com/oakes/odoyle-rules) library. Edict aims to
+expose an API which follows the reactive spirit of the O'doyle Rules library.
+
+This library leverages the powerful and efficient Rete Algorithm. The `@edict/rete` package used in this library
+is as literal a port from Sekao's Pararules engine.nim as possible. This library wouldn't have been remotely possible without the hard work he put into his implementation. This library stands on his shoulders in every way! 
+
 ## Usage
 
 Let's walk through a simple usage of Edict.
