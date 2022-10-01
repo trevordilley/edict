@@ -1,4 +1,4 @@
-import { attr, edict } from '@edict/core';
+import { edict } from '@edict/core';
 import { Schema } from 'inspector';
 
 type Characters = [id: number, x: number, y: number][];

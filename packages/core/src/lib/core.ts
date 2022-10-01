@@ -48,8 +48,9 @@ export const edict = <SCHEMA>(autoFire = false): IEdict<SCHEMA> => {
   const rule = <T extends ConditionArgs<SCHEMA>>(
     name: string,
     conditions: (schema: Condition<SCHEMA>) => T,
-    onAlreadyExistsBehaviour: PRODUCTION_ALREADY_EXISTS_BEHAVIOR = PRODUCTION_ALREADY_EXISTS_BEHAVIOR.ERROR
+    onAlreadyExistsBehaviour?: PRODUCTION_ALREADY_EXISTS_BEHAVIOR
   ) => {
+    const onAlreadyExists = onAlreadyExistsBehaviour ?? PRODUCTION_ALREADY_EXISTS_BEHAVIOR.ERROR
     const convertMatchFn: ConvertMatchFn<SCHEMA, EnactArgs<SCHEMA, T>> = (
       args
     ) => {
@@ -135,7 +136,7 @@ export const edict = <SCHEMA>(autoFire = false): IEdict<SCHEMA> => {
           );
         });
       });
-      rete.addProductionToSession(session, production, onAlreadyExistsBehaviour);
+      rete.addProductionToSession(session, production, onAlreadyExists);
 
       return {
         query: () => rete.queryAll(session, production),

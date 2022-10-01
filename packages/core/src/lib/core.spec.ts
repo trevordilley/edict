@@ -1,4 +1,4 @@
-import { attr, edict } from '@edict/core';
+import { edict } from '@edict/core';
 
 const playerFacts = {
   player: {

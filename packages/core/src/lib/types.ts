@@ -51,6 +51,6 @@ export interface IEdict<SCHEMA> {
   rule: <T extends ConditionArgs<SCHEMA>>(
     name: string,
     conditions: (schema: Condition<SCHEMA>) => T,
-    onAlreadyExistsBehaviour: PRODUCTION_ALREADY_EXISTS_BEHAVIOR
+    onAlreadyExistsBehaviour?: PRODUCTION_ALREADY_EXISTS_BEHAVIOR
   ) => {enact: Enact<SCHEMA, T>};
 }
