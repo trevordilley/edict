@@ -103,26 +103,26 @@ const results = rule('When a birthday is today, celebrate the birthday!',
         birthDay,
       },
     }))
-  // `rule()` returns an object with `enact()` 
-  // `enact()` let's you apply reactions to the
-  // rule you've defined, and adds it to the session
-  .enact({
-  // "when" filters out facts, runs before "then"
-  when: ({ $user, today }) => {
-    // Match users who have a birthday today!
-    return (
-      $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
-      $user.birthDay.getDate() === today.todaysDate.getDate()
-    );
-  },
+    // `rule()` returns an object with `enact()` 
+    // `enact()` let's you apply reactions to the
+    // rule you've defined, and adds it to the session
+    .enact({
+      // "when" filters out facts, runs before "then"
+      when: ({ $user, today }) => {
+        // Match users who have a birthday today!
+        return (
+          $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
+          $user.birthDay.getDate() === today.todaysDate.getDate()
+        )
+     },
 
-  // The "then" block will receive two arguments. First is an object
-  // with the matches (as described above) and the second is operations
-  // that can be done within the session (for convenience in case the rule is not
-  // in a scope where the session is available)
-  then: ({ $user, today }, { insert }) => {
-    insert({ [$user.id]: { isCelebratingBirthDay: true } });
-  },
+     // The "then" block will receive two arguments. First is an object
+     // with the matches (as described above) and the second is operations
+     // that can be done within the session (for convenience in case the rule is not
+     // in a scope where the session is available)
+     then: ({ $user, today }, { insert }) => {
+      insert({ [$user.id]: { isCelebratingBirthDay: true } });
+     },
 });
 ```
 
