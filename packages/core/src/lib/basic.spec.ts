@@ -29,7 +29,7 @@ type Schema = {
 describe('edict...', () => {
   it('test', () => {
     const { rule, insert, fire } = edict<Schema>();
-    const results = rule('number of conditions != number of factts', ({ LeftOf, RightOf, Height }) =>
+    const results = rule('number of conditions != number of facts', ({ LeftOf, RightOf, Height }) =>
       ({
           [Id.Bob]: {
             Color: {match: 'blue'},
