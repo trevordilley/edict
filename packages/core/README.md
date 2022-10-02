@@ -58,7 +58,7 @@ remotely possible without Zach's work. This library stands on his shoulders in e
 (Also, if Javascript didn't allow `$` in the variable names, or allow the simple syntax of json attribute names, this libraries API wouldn't have worked either.)
 
 I'd also like to thank my youngest child for waking me up at god-awful early hours to "flatten his blanket" and "turn his pillow the other way", allowing me plenty of 
-early morning hours to keep on this work!
+early mornings to keep on this work!
 
 
 ## Usage
