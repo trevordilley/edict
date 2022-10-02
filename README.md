@@ -4,6 +4,7 @@
 
 Write declarative business logic driven by facts with Edict!
 
+
 ```typescript
 // Contrived foobar example, more interesting 
 // examples below! Just wanna be sure you see the code
@@ -46,6 +47,18 @@ insert({current: {count: 1}}) // "1"
 insert({current: {count: 5}}) // "foo"
 insert({current: {count: 7}}) // "bar"
 insert({current: {count: 35}}) // "foobar"
+```
+
+## Installation
+
+_Definitely plan on cleaning this up in the future! For now there are a few peer dependencies to install!_
+
+```bash
+yarn add @edict/core @edict/types @edict/rete lodash typescript-collections
+
+# or...
+
+npm i @edict/core @edict/types @edict/rete lodash typescript-collections
 ```
 
 ## Acknowledgements!
