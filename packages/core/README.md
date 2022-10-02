@@ -1,14 +1,65 @@
 # @edict/core
 
-Write your business logic simply and declaratively with Edict!
+Write declarative business logic driven by facts with Edict! 
+
+```typescript
+// Contrived foobar example, more interesting 
+// examples below! Just wanna be sure you see the code
+// right away!
+
+// Shape of the data you'll work with
+type Schema = {
+  count: number
+  message: string
+}
+
+// Start a session, `true` turns on autofiring!
+const {insert, rule, fire} = edict<Schema>(true) 
+
+// Rules capturiing your business logic, select only the relevant data!
+rule("multiples of 5 are foo, multiples of 7 are bar, multiples of both are foobar, otherwise it's just the count", 
+  ({count,}) => ({
+  current: {
+    count,
+  }
+})).enact({
+  then: ({current}) =>   {
+    const foo = current.count % 5 === 0 ? "foo" : ""
+    const bar = current.count % 7 === 0 ? "bar" : ""
+    const message = `${foo}${bar}`
+    insert({print: { message: message === "" ? `${current.count}` : message }})
+  } 
+})
+
+rule("console.log when count changes", ({message}) => ({
+  print: {
+    message
+  }
+})).enact({
+  then: ({print}) => console.log(print.message)
+})
+
+// Insert facts for your rules!
+insert({current: {count: 1}}) // "1"
+insert({current: {count: 5}}) // "foo"
+insert({current: {count: 7}}) // "bar"
+insert({current: {count: 35}}) // "foobar"
+```
 
 ## Acknowledgements!
 
-The API and underlying motivations were inspired by the [O'doyle rules](https://github.com/oakes/odoyle-rules) library. Edict aims to
-expose an API which follows the reactive spirit of the O'doyle Rules library.
+Edict is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle rules](https://github.com/oakes/odoyle-rules) and [Pararules](https://github.com/oakes/pararules)! 
+Edict aims to bring their ideas into the TypeScript ecosystem!
 
-This library leverages the powerful and efficient Rete Algorithm. The `@edict/rete` package used in this library
-is as literal a port from Sekao's Pararules engine.nim as possible. This library wouldn't have been remotely possible without the hard work he put into his implementation. This library stands on his shoulders in every way! 
+Edict leverages the powerful and efficient Rete Algorithm. The [@edict/rete](https://github.com/trevordilley/edict/tree/main/packages/rete) package used in Edict 
+is an extremely literal port  [Pararules engine.nim](https://github.com/paranim/pararules/blob/master/src/pararules/engine.nim) as possible. This library wouldn't have been 
+remotely possible without Zach's work. This library stands on his shoulders in every way!
+
+(Also, if Javascript didn't allow `$` in the variable names, or allow the simple syntax of json attribute names, this libraries API wouldn't have worked either.)
+
+I'd also like to thank my youngest child for waking me up at god-awful early hours to "flatten his blanket" and "turn his pillow the other way", allowing me plenty of 
+early morning hours to keep on this work!
+
 
 ## Usage
 
@@ -47,49 +98,6 @@ One the key benefits to having an attribute schema is type-safety. Edict will no
 facts with attributes not declared in the schema for that session. The other really nice benefit is that
 with proper editor tooling (auto-completion!) it's trivial to explore the space of possible facts and attributes!
 
-### Inserting Facts
-
-Now that we have our session, let's insert some facts.
-
-```typescript
-// Here is how you would insert multiple facts about different people with names and emails
-const { insert } = mySession;
-
-insert({
-  // "bob" is the "id", it could be an integer, uuid, whatever makes sense for your application!
-  bob: {
-    name: 'Bob Johnson',
-    email: 'bob@hotmail.com',
-    birthDay: new Date('2008-01-19'),
-  },
-  tom: {
-    name: 'Tom Kennedy',
-    email: 'tomk@aol.com',
-    birthDay: new Date('1967-03-02'),
-  },
-
-  // Let's assume these two are twins born on the same day!
-  jack: {
-    name: 'Jack Maxwell',
-    email: 'jack@gmail.com',
-    birthDay: new Date('2022-03-02'),
-  },
-  jill: {
-    name: 'Jill Maxwell',
-    email: 'jill@gmail.com',
-    birthDay: new Date('2022-03-02'),
-  },
-
-  today: { todaysDate: new Date() },
-});
-```
-
-> Under the hood, facts are represented as entity-attribute-value tuples. So the
-> entry "bob" above is internally stored as
-> ["bob", "name", "Bob Johnson"], ["bob", "email", "bob@hotmail.com"], etc.
-> This enables maximum flexibility for rule definition and engine implementation.
-> However a design goal of Edict is to expose an idiomatic javascript API
-> to keep usage ergonomic.
 
 Now let's create our first rule!
 
@@ -124,15 +132,58 @@ const results = rule('When a birthday is today, celebrate the birthday!',
         )
      },
 
-     // The "then" block will receive two arguments. First is an object
-     // with the matches (as described above) and the second is operations
-     // that can be done within the session (for convenience in case the rule is not
-     // in a scope where the session is available)
-     then: ({ $user, today }, { insert }) => {
+     then: ({ $user }) => {
       insert({ [$user.id]: { isCelebratingBirthDay: true } });
      },
 });
 ```
+
+### Inserting Facts
+
+Now that we have our session, let's insert some facts.
+
+*Note! You need to define rules before your facts are inserted!* 
+
+```typescript
+// Here is how you would insert multiple facts about different people with names and emails
+const { insert } = mySession;
+
+insert({
+  // "bob" is the "id", it could be an integer, uuid, whatever makes sense for your application!
+  bob: {
+    name: 'Bob Johnson',
+    email: 'bob@hotmail.com',
+    birthDay: new Date('2008-01-19'),
+  },
+  tom: {
+    name: 'Tom Kennedy',
+    email: 'tomk@aol.com',
+    birthDay: new Date('1967-03-02'),
+  },
+
+  // Let's assume these two are twins born on the same day!
+  jack: {
+    name: 'Jack Maxwell',
+    email: 'jack@gmail.com',
+    birthDay: new Date('2022-03-02'),
+  },
+  jill: {
+    name: 'Jill Maxwell',
+    email: 'jill@gmail.com',
+    birthDay: new Date('2022-03-02'),
+  },
+
+  // Let's pretend it's Tom, Jack and Jill's birthdays!
+  today: {todaysDate: new Date('2022-03-02')},
+});
+```
+
+> Under the hood, facts are represented as entity-attribute-value tuples. So the
+> entry "bob" above is internally stored as
+> ["bob", "name", "Bob Johnson"], ["bob", "email", "bob@hotmail.com"], etc.
+> This enables maximum flexibility for rule definition and engine implementation.
+> However a design goal of Edict is to expose an idiomatic javascript API
+> to keep usage ergonomic.
 
 ### Queries
 
@@ -149,15 +200,26 @@ like queries, and allow you to pull out a subset of the facts matching the condi
 of the rule!
 
 ```typescript
-const usersCelebratingBirthdays = rule("All users celebrating their birthday", ({ isCelebratingBirthday }) =>
+const usersCelebratingBirthdays = rule("All users celebrating their birthday", ({ isCelebratingBirthDay }) =>
   ({
     $user: {
-      isCelebratingBirthday,
+      name, 
+      isCelebratingBirthDay,
     },
   })
-).enact() // Don't forget to call `enact()`! Your editor should give you a hint when you go to query things!
+).enact(
+  {when: ({$user}) => $user.isCelebratingBirthDay}
+)
 
-const { $user } = usersCelebratingBirthdays.query();
+const {fire} = mySession
 
-$user.forEach((u) => console.log(`${u.name} is celebrating their birthday!`));
+// fire() will actually trigger your rules. If you call edict like
+// this: `edict(true)` then every insert or retraction will automatically
+// call `fire()`, which may or may not be what you want depending on your
+// use-case.
+fire()
+
+const users = usersCelebratingBirthdays.query();
+
+users.forEach(({$user}) => console.log(`${$user.name} is celebrating their birthday!`));
 ```
