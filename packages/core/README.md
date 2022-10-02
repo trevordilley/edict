@@ -223,3 +223,10 @@ const users = usersCelebratingBirthdays.query();
 
 users.forEach(({$user}) => console.log(`${$user.name} is celebrating their birthday!`));
 ```
+
+### More Advanced Examples
+
+_Coming soon! I'll cover complex joins and value matching!_ 
+
+However, you can also look at [basic.spec.ts](src/lib/basic.spec.ts) for
+very advanced examples of usage!
