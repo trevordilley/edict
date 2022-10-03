@@ -2,50 +2,6 @@
 
 Write declarative business logic driven by facts with Edict! 
 
-```typescript
-// Contrived foobar example, more interesting 
-// examples below! Just wanna be sure you see the code
-// right away!
-
-// Shape of the data you'll work with
-type Schema = {
-  count: number
-  message: string
-}
-
-// Start a session, `true` turns on autofiring!
-const {insert, rule, fire} = edict<Schema>(true) 
-
-// Rules capturiing your business logic, select only the relevant data!
-rule("multiples of 5 are foo, multiples of 7 are bar, multiples of both are foobar, otherwise it's just the count", 
-  ({count,}) => ({
-  current: {
-    count,
-  }
-})).enact({
-  then: ({current}) =>   {
-    const foo = current.count % 5 === 0 ? "foo" : ""
-    const bar = current.count % 7 === 0 ? "bar" : ""
-    const message = `${foo}${bar}`
-    insert({print: { message: message === "" ? `${current.count}` : message }})
-  } 
-})
-
-rule("console.log when count changes", ({message}) => ({
-  print: {
-    message
-  }
-})).enact({
-  then: ({print}) => console.log(print.message)
-})
-
-// Insert facts for your rules!
-insert({current: {count: 1}}) // "1"
-insert({current: {count: 5}}) // "foo"
-insert({current: {count: 7}}) // "bar"
-insert({current: {count: 35}}) // "foobar"
-```
-
 ## Acknowledgements!
 
 Edict is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle rules](https://github.com/oakes/odoyle-rules) and [Pararules](https://github.com/oakes/pararules)! 
