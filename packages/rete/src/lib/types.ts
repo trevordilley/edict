@@ -129,6 +129,7 @@ export interface Production<T, U> {
   name: string;
   conditions: Condition<T>[];
   convertMatchFn: ConvertMatchFn<T, U>;
+  subscriptions: Set<(results: U[]) => void>
   condFn?: CondFn<T>;
   thenFn?: ThenFn<T, U>;
   thenFinallyFn?: ThenFinallyFn<T, U>;
@@ -142,6 +143,7 @@ export interface Session<T> {
   thenQueue: Set<[node: MemoryNode<T>, idAttrs: IdAttrs<T>]>;
   thenFinallyQueue: Set<MemoryNode<T>>;
   triggeredNodeIds: Set<MemoryNode<T>>;
+  subscriptionQueue: Map<string, () => void>
   autoFire: boolean;
   initMatch: InitMatchFn<T>;
 }

@@ -154,7 +154,6 @@ const addProductionToSession = <T, U>(
   const last = production.conditions.length - 1;
   const bindings = newSet<string>();
   const joinedBindings = newSet<string>();
-
   for (let i = 0; i <= last; i++) {
     const condition = production.conditions[i];
     const leafAlphaNode = addNodes(session, condition.nodes);
@@ -198,17 +197,31 @@ const addProductionToSession = <T, U>(
       const pThenFn = production.thenFn;
       if (pThenFn) {
         const sess = { ...session, insideRule: true };
-        memNode.nodeType.thenFn = (vars) =>
+        memNode.nodeType.thenFn = (vars) => {
+          if(session.subscriptionQueue.has(production.name)) return
+          session.subscriptionQueue.set(production.name, () => {
+            const results =queryAll(session, production)
+            production.subscriptions.forEach(s => s(results))
+          })
           pThenFn({
             session: sess,
             rule: production,
             vars: production.convertMatchFn(vars),
           });
+        }
       }
       const pThenFinallyFn = production.thenFinallyFn;
       if (pThenFinallyFn) {
         const sess = { ...session, insideRule: true };
-        memNode.nodeType.thenFinallyFn = () => pThenFinallyFn(sess, production);
+        memNode.nodeType.thenFinallyFn = () => {
+          // TODO: Dedupe this
+          if(session.subscriptionQueue.has(production.name)) return
+          session.subscriptionQueue.set(production.name, () => {
+            const results =queryAll(session, production)
+            production.subscriptions.forEach(s => s(results))
+          })
+          pThenFinallyFn(sess, production);
+        }
       }
 
       if (session.leafNodes.containsKey(production.name)) {
@@ -678,6 +691,10 @@ const fireRules = <T>(
 
     executedNodes.push(nodeToTriggeredNodeIds);
   }
+  if(session.subscriptionQueue.size > 0) {
+    session.subscriptionQueue.forEach(s => s())
+    session.subscriptionQueue.clear()
+  }
 };
 
 const getAlphaNodesForFact = <T>(
@@ -848,7 +865,10 @@ const initSession = <T>(autoFire = true): Session<T> => {
 
   const triggeredNodeIds = new Set<MemoryNode<T>>();
 
+  const subscriptionQueue =  new Map<string, () => void>()
+
   const initMatch = () => defaultInitMatch();
+
 
   return {
     alphaNode,
@@ -859,6 +879,7 @@ const initSession = <T>(autoFire = true): Session<T> => {
     triggeredNodeIds,
     initMatch,
     insideRule: false,
+    subscriptionQueue,
     autoFire,
   };
 };
@@ -873,6 +894,7 @@ const initProduction = <SCHEMA, U>(production: {
   return {
     ...production,
     conditions: [],
+    subscriptions: new Set(),
   };
 };
 
