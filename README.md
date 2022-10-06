@@ -67,7 +67,7 @@ Edict is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle 
 Edict aims to bring their ideas into the TypeScript ecosystem!
 
 Edict leverages the powerful and efficient Rete Algorithm. The [@edict/rete](https://github.com/trevordilley/edict/tree/main/packages/rete) package used in Edict
-is an extremely literal port  [Pararules engine.nim](https://github.com/paranim/pararules/blob/master/src/pararules/engine.nim) as possible. This library wouldn't have been
+is an extremely literal port of [Pararules engine.nim](https://github.com/paranim/pararules/blob/master/src/pararules/engine.nim). This library wouldn't have been
 remotely possible without Zach's work. This library stands on his shoulders in every way!
 
 (Also, if Javascript didn't allow `$` in the variable names, or allow the simple syntax of json attribute names, this libraries API wouldn't have worked either.)
