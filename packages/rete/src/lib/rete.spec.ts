@@ -33,6 +33,7 @@ describe('rete', () => {
   it('number of conditions != number of facts', () => {
     const session = rete.initSession<SmallSchema>(false);
 
+    let subResults: MatchT<SmallSchema>[] = []
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'numCondsAndFacts',
       convertMatchFn,
@@ -43,7 +44,7 @@ describe('rete', () => {
         expect(vars.get('z')).toBe(Id.Zach);
       },
     });
-
+    rete.subscribeToProduction(session, production, (results) => {subResults = results})
     rete.addConditionsToProduction(
       production,
       `${Id.Bob}`,
@@ -91,6 +92,7 @@ describe('rete', () => {
     rete.fireRules(session);
     const results = rete.queryAll(session, production);
     expect(results.length).toBe(3);
+    expect(subResults).toStrictEqual(results)
   });
 
   it('adding facts out of order', () => {
@@ -105,6 +107,11 @@ describe('rete', () => {
         expect(vars.get('z')).toBe(Id.Zach);
       },
     });
+
+    let subResults: MatchT<SmallSchema>[] = []
+    rete.subscribeToProduction(session, production, (results) => {
+      subResults = results
+    })
 
     rete.addConditionsToProduction(
       production,
@@ -193,6 +200,7 @@ describe('rete', () => {
     rete.fireRules(session);
     const results = rete.queryAll(session, production);
     expect(results.length).toBe(1);
+    expect(subResults).toStrictEqual(results)
   });
 
   it('duplicate facts', () => {
@@ -201,7 +209,10 @@ describe('rete', () => {
       name: 'duplicateFacts',
       convertMatchFn,
     });
-
+    let subResults: MatchT<SmallSchema>[] = []
+    rete.subscribeToProduction(session, production, (results) => {
+      subResults = results
+    })
     rete.addConditionsToProduction(
       production,
       { name: 'x', field: Field.IDENTIFIER },
@@ -230,12 +241,14 @@ describe('rete', () => {
     rete.fireRules(session);
     const results = rete.queryAll(session, production);
     expect(results.length).toBe(1);
+    expect(subResults).toStrictEqual(results);
     expect(results[0].get('c')).toBe('red');
 
     rete.insertFact(session, [Id.Bob, 'Color', 'green']);
     rete.fireRules(session);
     const newResults = rete.queryAll(session, production);
     expect(newResults.length).toBe(1);
+    expect(subResults).toStrictEqual(newResults);
     expect(newResults[0].get('c')).toBe('green');
   });
 
@@ -592,21 +605,24 @@ describe('rete', () => {
     expect(count).toBe(1);
   });
 
-  // test "don't trigger rule when updating certain facts":
-  // var count = 0
-  //
-  // var session = initSession(Fact)
-  // session.add:
-  // rule dontTrigger(Fact):
-  // what:
-  //   (b, Color, "blue")
-  //   (a, Color, c, then = false)
-  // then:
-  //   count += 1
-  //
-  // session.insert(Bob, Color, "blue")
-  // session.insert(Alice, Color, "red")
-  // session.insert(Alice, Color, "maize")
-  //
-  // check count == 1
+  it("subscriptions do not fire when inserting facts that are not related to the production", () => {
+  });
+
+  it("subscribing, unsubscriing, resubscribing works", () => {
+  });
+
+  it("multiple subscriptions work", () => {
+  });
+
+  it("multiple subscriptions, unsubscriptions, resubscriptions works", () => {
+  });
+
+  it("retractions trigger subscriptions", () => {
+  });
+
+  it("multiple identical inserts do not trigger subscriptions??? (not sure if this is correct or not)", () => {
+  });
+
+  it("multiple identical retractions do not trigger multiple subscriptions??? (not sure if this is correct or not)", () => {
+  });
 });

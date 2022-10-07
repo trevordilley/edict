@@ -75,7 +75,6 @@ export interface AlphaNode<T> {
   testField?: Field;
   testValue?: keyof T | FactId;
 
-  // TODO: Is this right? This looks kinda bonkers
   facts: Dictionary<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>;
   successors: JoinNode<T>[];
   children: AlphaNode<T>[];
@@ -143,7 +142,8 @@ export interface Session<T> {
   thenQueue: Set<[node: MemoryNode<T>, idAttrs: IdAttrs<T>]>;
   thenFinallyQueue: Set<MemoryNode<T>>;
   triggeredNodeIds: Set<MemoryNode<T>>;
-  subscriptionQueue: Map<string, () => void>
+  subscriptionsOnProductions: Map<string, () => void>
+  triggeredSubscriptionQueue: Set<string>
   autoFire: boolean;
   initMatch: InitMatchFn<T>;
 }

@@ -130,6 +130,7 @@ const isAncestor = <T>(x: JoinNode<T>, y: JoinNode<T>): boolean => {
   }
   return false;
 };
+
 const addProductionToSession = <T, U>(
   session: Session<T>,
   production: Production<T, U>,
@@ -194,15 +195,11 @@ const addProductionToSession = <T, U>(
       memNode.nodeType = {
         condFn: production.condFn,
       };
+
       const pThenFn = production.thenFn;
       if (pThenFn) {
         const sess = { ...session, insideRule: true };
         memNode.nodeType.thenFn = (vars) => {
-          if(session.subscriptionQueue.has(production.name)) return
-          session.subscriptionQueue.set(production.name, () => {
-            const results =queryAll(session, production)
-            production.subscriptions.forEach(s => s(results))
-          })
           pThenFn({
             session: sess,
             rule: production,
@@ -214,12 +211,6 @@ const addProductionToSession = <T, U>(
       if (pThenFinallyFn) {
         const sess = { ...session, insideRule: true };
         memNode.nodeType.thenFinallyFn = () => {
-          // TODO: Dedupe this
-          if(session.subscriptionQueue.has(production.name)) return
-          session.subscriptionQueue.set(production.name, () => {
-            const results =queryAll(session, production)
-            production.subscriptions.forEach(s => s(results))
-          })
           pThenFinallyFn(sess, production);
         }
       }
@@ -251,6 +242,23 @@ const addProductionToSession = <T, U>(
     }
   }
 };
+
+
+const subscribeToProduction = <T, U>(session: Session<T>,  production: Production<T, U>, callback: (results: U[]) => void): () => void => {
+  production.subscriptions.add(callback)
+  if(!session.subscriptionsOnProductions.has(production.name))  {
+    session.subscriptionsOnProductions.set(production.name, () => {
+      const results = queryAll(session, production)
+      production.subscriptions.forEach(s => s(results))
+    })
+  }
+  return () => {
+   production.subscriptions.delete(callback)
+    if(production.subscriptions.size === 0 ) {
+      session.subscriptionsOnProductions.delete(production.name)
+    }
+  }
+}
 
 // MatchT represents a mapping from condition key to a value
 // So given this condidtion:
@@ -391,6 +399,8 @@ const leftActivationOnMemoryNode = <T>(
     node.matchIds.setValue(match.id, idAttrs);
     node.matches.setValue(idAttrs, match);
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
+      session.triggeredSubscriptionQueue.add(node.ruleName)
+
       if (node.nodeType?.thenFn) {
         session.thenQueue.add([node, idAttrs]);
       }
@@ -407,6 +417,7 @@ const leftActivationOnMemoryNode = <T>(
     node.matches.remove(idAttrs);
     node.parent.oldIdAttrs.remove(idAttr);
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType) {
+      session.triggeredSubscriptionQueue.add(node.ruleName)
       if (node.nodeType.thenFinallyFn) {
         session.thenFinallyQueue.add(node);
       }
@@ -594,7 +605,6 @@ const DEFAULT_RECURSION_LIMIT = 16;
 const fireRules = <T>(
   session: Session<T>,
   recursionLimit: number = DEFAULT_RECURSION_LIMIT,
-  debug = true
 ) => {
   if (session.insideRule) {
     return;
@@ -606,7 +616,8 @@ const fireRules = <T>(
   // `raiseRecursionLimit(recursionLimit, executedNodes) will explode
   // noinspection InfiniteLoopJS
   // eslint-disable-next-line no-constant-condition
-  while (true) {
+  let notFinishedExecuting = true
+  while (notFinishedExecuting) {
     if (recursionLimit >= 0) {
       if (recurCount == recursionLimit) {
         raiseRecursionLimit(recursionLimit, executedNodes);
@@ -617,7 +628,8 @@ const fireRules = <T>(
     const thenQueue = new Array(...session.thenQueue);
     const thenFinallyQueue = new Array(...session.thenFinallyQueue);
     if (thenQueue.length == 0 && thenFinallyQueue.length == 0) {
-      return { executedNodes, session };
+      notFinishedExecuting = false
+      break
     }
 
     // reset state
@@ -691,10 +703,16 @@ const fireRules = <T>(
 
     executedNodes.push(nodeToTriggeredNodeIds);
   }
-  if(session.subscriptionQueue.size > 0) {
-    session.subscriptionQueue.forEach(s => s())
-    session.subscriptionQueue.clear()
+
+  if(session.subscriptionsOnProductions.size > 0 && session.triggeredSubscriptionQueue.size > 0) {
+    session.triggeredSubscriptionQueue.forEach(ts => {
+      const fn = session.subscriptionsOnProductions.get(ts)
+      if(fn) fn()
+    })
+    session.triggeredSubscriptionQueue.clear()
   }
+
+  return { executedNodes, session };
 };
 
 const getAlphaNodesForFact = <T>(
@@ -804,7 +822,6 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   session.idAttrNodes.getValue(idAttr)?.forEach((i) => idAttrNodes.add(i));
   idAttrNodes.forEach((node) => {
     const otherFact = node.facts.getValue(idAttr[0])?.getValue(idAttr[1]);
-
     if (!_.isEqual(fact, otherFact)) {
       throw new Error(
         `Expected fact ${fact} to be in node.facts at id: ${idAttr[0]}, attr: ${idAttr[1]}`
@@ -879,7 +896,8 @@ const initSession = <T>(autoFire = true): Session<T> => {
     triggeredNodeIds,
     initMatch,
     insideRule: false,
-    subscriptionQueue,
+    subscriptionsOnProductions: subscriptionQueue,
+    triggeredSubscriptionQueue: new Set<string>(),
     autoFire,
   };
 };
@@ -897,19 +915,6 @@ const initProduction = <SCHEMA, U>(production: {
     subscriptions: new Set(),
   };
 };
-
-// lolwut? I think all the different find functions aren't used? Because they don't seem to have the type params or anything,
-// and literally have typos in them?
-// const matchParams = <I,T>(vars: MatchT<T>, params: [I, [string, T]]): boolean => {
-//   params.forEach(([varName, val]) => {
-//     if(vars.get(varName) != val) {
-//       return false
-//     }
-//   })
-//   return true
-// export const find = <I,T>(session: Session<T>, prod: Production<T>, params: [I, [string, T]]): string => {
-//
-// }
 
 const queryAll = <T, U>(session: Session<T>, prod: Production<T, U>): U[] => {
   const result: U[] = [];
@@ -970,4 +975,5 @@ export const rete = {
   contains,
   addProductionToSession,
   addConditionsToProduction,
+  subscribeToProduction
 };
