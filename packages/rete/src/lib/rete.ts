@@ -860,6 +860,9 @@ const retractFactByIdAndAttr = <T>(
       console.warn('Missing fact during retraction?');
     }
   });
+  if (session.autoFire) {
+    fireRules(session);
+  }
 };
 
 const defaultInitMatch = <T>() => {

@@ -1,6 +1,5 @@
 import { edict} from "@edict/core";
-import {invokeEdict} from "@edict/react";
-import {FC, useState} from "react";
+import {FC, useEffect, useState} from "react";
 import {ITodo} from "./types";
 
 // Edict is a simple state management library leveraging a reactive rule-based
@@ -17,7 +16,20 @@ import {ITodo} from "./types";
 // The `factSchema` is a mapping from name to type via the `attr()`
 // function. Providing a fact schema will provide comprehensive type
 // safety.
-const { Edict, useEdict } = invokeEdict(edict<{isComplete: boolean, title: string}>())
+
+const {rule, retract, insert} = edict<{isComplete: boolean, title: string}>(true)
+
+const { subscribe, query } = rule("All Todos", ({title, isComplete}) => ({
+
+  // `$todo` is a _bound_ id. What that means is we're not matching on a
+  // specific id for a fact, but any facts which have the `title` and `isComplete`
+  // attribute.
+  $todo: {
+    title,
+    isComplete,
+  }
+
+})).enact()
 
 // the `useEdict()` function exposes the api of the Edict library.
 // Here we're defining a rule which grabs all facts in the fact database
@@ -26,27 +38,17 @@ const { Edict, useEdict } = invokeEdict(edict<{isComplete: boolean, title: strin
 // There are a few important elements here, which we'll go over line by line
 // below.
 export const useTodosRule = () => {
-  const { useRule } = useEdict()
-
-  // The `useRule()` hook's first argument is always the `factSchema` which
-  // when destructured will keep your rule type-safe and readable
-  const {enact, results} = useRule("All Todos", ({title, isComplete}) => ({
-
-      // `$todo` is a _bound_ id. What that means is we're not matching on a
-      // specific id for a fact, but any facts which have the `title` and `isComplete`
-      // attribute.
-      $todo: {
-        title,
-        isComplete,
-      }
-
-  }))
-  enact()
-  return results || []
+  const [todos, setTodos] = useState(query())
+  useEffect(() => {
+    return subscribe((results) => {
+      console.log(results)
+      setTodos(results)
+    })
+  })
+  return todos
 }
 
 const NewTodo: FC = () => {
-  const {insert} = useEdict()
   const [title, setTitle] = useState("")
   const id = (title: string) =>
     title.replace(" ", "-").toLowerCase()
@@ -75,7 +77,6 @@ const NewTodo: FC = () => {
 
 
 const Todo: FC<ITodo> = ({id, isComplete, title}) => {
-  const {insert, retract} = useEdict()
   return (<li>
     <label>
       <input type={"checkbox"} checked={isComplete} value={title} onChange={() => {
@@ -112,13 +113,13 @@ const TodoList:FC = () => {
 
 export function App() {
   return (
-    <Edict>
+    <>
         <h1>Example To-Do App</h1>
             <div>
               <NewTodo/>
               <TodoList />
             </div>
-    </Edict>
+    </>
   );
 }
 
