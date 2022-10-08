@@ -42,6 +42,7 @@ export type EnactionArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
 export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> =
    (enaction?: EnactionArgs<SCHEMA, T>) => {
     query: () => EnactArgs<SCHEMA, T>[];
+    subscribe: (fn: (results: EnactArgs<SCHEMA, T>[]) => void) => (() => void)
   };
 
 export interface IEdict<SCHEMA> {

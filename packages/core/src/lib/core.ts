@@ -140,6 +140,7 @@ export const edict = <SCHEMA>(autoFire = false): IEdict<SCHEMA> => {
 
       return {
         query: () => rete.queryAll(session, production),
+        subscribe: (fn: (results: EnactArgs<SCHEMA, T>[]) => void) => rete.subscribeToProduction(session, production, fn),
         rule: production,
       };
     };

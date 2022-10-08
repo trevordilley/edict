@@ -52,7 +52,9 @@ describe('edict...', () => {
         expect(arg.$y.id).toBe(Id.Yair);
       },
     })
-
+    results.subscribe(results => {
+      expect(results.length).toBe(3);
+    })
     insert({
       [Id.Bob]: {
         Color: 'blue',
