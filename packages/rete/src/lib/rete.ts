@@ -709,8 +709,8 @@ const fireRules = <T>(
       const fn = session.subscriptionsOnProductions.get(ts)
       if(fn) fn()
     })
-    session.triggeredSubscriptionQueue.clear()
   }
+  session.triggeredSubscriptionQueue.clear()
 
   return { executedNodes, session };
 };
@@ -833,6 +833,10 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
       kind: TokenKind.RETRACT,
     });
   });
+
+  if (session.autoFire) {
+    fireRules(session);
+  }
 };
 
 const retractFactByIdAndAttr = <T>(

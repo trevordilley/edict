@@ -606,23 +606,233 @@ describe('rete', () => {
   });
 
   it("subscriptions do not fire when inserting facts that are not related to the production", () => {
+    const session = rete.initSession<SmallSchema>(false);
+    const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+      name: 'rule1',
+      convertMatchFn,
+    });
+    rete.addConditionsToProduction(
+      production,
+      { name: 'b', field: Field.IDENTIFIER },
+      'Color',
+      'blue',
+      true
+    );
+
+    rete.addProductionToSession(session, production)
+    let fired = false
+    rete.subscribeToProduction(session, production, () => {
+      fired = true
+    })
+
+    rete.insertFact(session, ["Bill", "LeftOf", "Bob"])
+    rete.fireRules(session)
+
+    expect(fired).toBe(false)
+
+    rete.insertFact(session, ["Bill", "Color", "blue"])
+    expect(fired).toBe(false)
+    rete.fireRules(session)
+    expect(fired).toBe(true)
+
   });
 
-  it("subscribing, unsubscriing, resubscribing works", () => {
+  it("subscribing, unsubscribing, resubscribing works", () => {
+    const session = rete.initSession<SmallSchema>(false);
+    const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+      name: 'rule1',
+      convertMatchFn,
+    });
+    rete.addConditionsToProduction(
+      production,
+      { name: 'b', field: Field.IDENTIFIER },
+      'Color',
+      'blue',
+      true
+    );
+
+    rete.addProductionToSession(session, production)
+    let fireCount = 0
+    const unsub = rete.subscribeToProduction(session, production, () => {
+      fireCount++
+    })
+
+    rete.insertFact(session, ["Bob", "Color", "blue"])
+    rete.fireRules(session)
+
+    expect(fireCount).toBe(1)
+    unsub()
+    rete.insertFact(session, ["Bill", "Color", "blue"])
+    expect(fireCount).toBe(1)
+    rete.fireRules(session)
+    expect(fireCount).toBe(1)
+
+    rete.subscribeToProduction(session, production, () => {
+      fireCount++
+    })
+    rete.insertFact(session, ["Hank", "Color", "blue"])
+    expect(fireCount).toBe(1)
+    rete.fireRules(session)
+    expect(fireCount).toBe(2)
+
   });
 
   it("multiple subscriptions work", () => {
-  });
 
-  it("multiple subscriptions, unsubscriptions, resubscriptions works", () => {
+    const session = rete.initSession<SmallSchema>(true);
+    const colorProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+      name: 'color',
+      convertMatchFn,
+    });
+    rete.addConditionsToProduction(
+      colorProd,
+      { name: 'b', field: Field.IDENTIFIER },
+      'Color',
+      'blue',
+      true
+    );
+
+    rete.addProductionToSession(session, colorProd)
+
+    const leftOfProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+      name: 'leftOf',
+      convertMatchFn,
+    });
+    rete.addConditionsToProduction(
+      leftOfProd,
+      { name: 'l', field: Field.IDENTIFIER },
+      'LeftOf',
+      'Bob',
+      true
+    );
+
+    rete.addProductionToSession(session, leftOfProd)
+
+    const rightOfProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+      name: 'rightOf',
+      convertMatchFn,
+    });
+    rete.addConditionsToProduction(
+      rightOfProd,
+      { name: 'r', field: Field.IDENTIFIER },
+      'RightOf',
+      'Bill',
+      true
+    );
+
+    rete.addProductionToSession(session, rightOfProd)
+    let colorFired = 0
+    let leftFired = 0
+    let rightFired = 0
+    const unsubColor = rete.subscribeToProduction(session, colorProd, () => {
+      colorFired++
+    })
+    const unsubLeft = rete.subscribeToProduction(session, leftOfProd, () => {
+      leftFired++
+    })
+    const unsubRight = rete.subscribeToProduction(session, rightOfProd, () => {
+      rightFired++
+    })
+
+    rete.insertFact(session, ["Bob", "Color", "blue"])
+    expect(colorFired).toBe(1)
+    expect(leftFired).toBe(0)
+    expect(rightFired).toBe(0)
+    rete.insertFact(session, ["Bill", "LeftOf", "Bob"])
+    expect(colorFired).toBe(1)
+    expect(leftFired).toBe(1)
+    expect(rightFired).toBe(0)
+    rete.insertFact(session, ["Hank", "RightOf", "Bill"])
+    expect(colorFired).toBe(1)
+    expect(leftFired).toBe(1)
+    expect(rightFired).toBe(1)
+    unsubLeft()
+    unsubRight()
+    unsubColor()
+    rete.insertFact(session, ["Jill", "Color", "blue"])
+    rete.insertFact(session, ["George", "LeftOf", "Bob"])
+    rete.insertFact(session, ["Jerry", "RightOf", "Bill"])
+    expect(colorFired).toBe(1)
+    expect(leftFired).toBe(1)
+    expect(rightFired).toBe(1)
+
+    rete.subscribeToProduction(session, colorProd, () => {
+      colorFired++
+    })
+    rete.subscribeToProduction(session, leftOfProd, () => {
+      leftFired++
+    })
+    rete.subscribeToProduction(session, rightOfProd, () => {
+      rightFired++
+    })
+
+    rete.insertFact(session, ["Tom", "Color", "blue"])
+    expect(colorFired).toBe(2)
+    expect(leftFired).toBe(1)
+    expect(rightFired).toBe(1)
+    rete.insertFact(session, ["Tilly", "LeftOf", "Bob"])
+    expect(colorFired).toBe(2)
+    expect(leftFired).toBe(2)
+    expect(rightFired).toBe(1)
+    rete.insertFact(session, ["Billy", "RightOf", "Bill"])
+    expect(colorFired).toBe(2)
+    expect(leftFired).toBe(2)
+    expect(rightFired).toBe(2)
   });
 
   it("retractions trigger subscriptions", () => {
+    const session = rete.initSession<SmallSchema>(true);
+    const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+      name: 'rule1',
+      convertMatchFn,
+    });
+    rete.addConditionsToProduction(
+      production,
+      { name: 'b', field: Field.IDENTIFIER },
+      'Color',
+      'blue',
+      true
+    );
+
+    rete.addProductionToSession(session, production)
+    let fireCount = 0
+    rete.subscribeToProduction(session, production, () => {
+      fireCount++
+    })
+    rete.insertFact(session, ["Bill", "Color", "blue"])
+
+    expect(fireCount).toBe(1)
+
+    rete.insertFact(session, ["Bob", "Color", "blue"])
+    expect(fireCount).toBe(2)
+    rete.retractFact(session, ["Bob", "Color", "blue"])
+    expect(fireCount).toBe(3)
+
   });
 
-  it("multiple identical inserts do not trigger subscriptions??? (not sure if this is correct or not)", () => {
-  });
+  it("Firing rules several times in a row does not trigger subscription", () => {
+    const session = rete.initSession<SmallSchema>();
+    const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+      name: 'rule1',
+      convertMatchFn,
+    });
+    rete.addConditionsToProduction(
+      production,
+      { name: 'b', field: Field.IDENTIFIER },
+      'Color',
+      'blue',
+      true
+    );
 
-  it("multiple identical retractions do not trigger multiple subscriptions??? (not sure if this is correct or not)", () => {
+    rete.addProductionToSession(session, production)
+    let fireCount = 0
+    rete.subscribeToProduction(session, production, () => {
+      fireCount++
+    })
+    rete.insertFact(session, ["Bill", "Color", "blue"])
+    rete.fireRules(session)
+    rete.fireRules(session)
+    rete.fireRules(session)
+    expect(fireCount).toBe(1)
   });
 });
