@@ -2,7 +2,12 @@ import { edict } from '@edict/core';
 import * as Phaser from 'phaser';
 import { useLayoutEffect } from 'react';
 
-
+const WIDTH = 800
+const HEIGHT = 600
+const newDest = () => ({
+  destX: Math.floor(Math.random() * WIDTH),
+  destY: Math.floor(Math.random() * HEIGHT)
+})
 // Start an edict session
 const { insert, rule, fire, retract } = edict<{
   speed: number;
@@ -32,26 +37,13 @@ rule(
 });
 
 rule(
-  'When a new destination is set, add the destination to the circles',
-  ({ circle, destX, destY }) => ({
-    $npc: { circle },
-    newDestination: { destX, destY },
-  })
-).enact({
-  then: ({ newDestination, $npc }) => {
-    insert({
-      [$npc.id]: { destX: newDestination.destX, destY: newDestination.destY },
-    });
-  },
-  thenFinally: () => {
-    retract('newDestination', 'destX', 'destY');
-  },
-});
-
-rule(
-  'Arriving at their destination stops them',
+  'Arriving at their destination sets a new destination',
   ({ circle, destX, destY, dt }) => ({
-    $npc: { destX, destY, circle },
+    $npc: {
+      destX: {then: false},
+      destY: {then: false},
+      circle
+    },
     time: { dt }
   })
 ).enact({
@@ -59,8 +51,11 @@ rule(
     const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y);
     const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY);
     const distance = dest.distance(pos);
-    if (distance < 10) {
-      retract($npc.id, 'destX', 'destY');
+    if (distance < 20) {
+      insert({
+          [$npc.id]: newDest()
+      }
+      );
     }
   },
 });
@@ -68,27 +63,28 @@ rule(
 
 // Setup initial facts and input handlers
 const create = (scene: Phaser.Scene) => {
-  scene.input.on('pointerdown', (pointer: MouseEvent) => {
-    const { x, y } = pointer;
-    insert({ newDestination: { destX: x, destY: y } });
-  });
-  const playerCircle = scene.add.circle(0, 0, 50, 0x6666ff);
-  const enemy1Circle = scene.add.circle(100, 100, 100, 0x9966ff);
-  const enemy2Circle = scene.add.circle(200, 200, 20, 0xff6699);
-  insert({
-    player: {
-      speed: 1,
-      circle: playerCircle,
-    },
-    enemy1: {
-      speed: 0.2,
-      circle: enemy1Circle,
-    },
-    enemy2: {
-      speed: 0.5,
-      circle: enemy2Circle,
-    },
-  });
+
+  const colors = [
+    0x6666ff,
+    0x9966ff,
+    0xff6699,
+    0xaaff22,
+    0xfcdd11,
+    0x00ff00,
+    0xff0000,
+    0x0000ff
+  ]
+  for(let i = 0; i < 500; i++) {
+    const cIdx = i % colors.length
+    const circle = scene.add.circle(0, 0, 50, colors[cIdx])
+    insert({
+      [`c${i}`]: {
+        speed: Math.random() * 2,
+        ...newDest(),
+        circle
+      }
+    })
+  }
 };
 
 const update = (scene: Phaser.Scene, time: number, deltaTime: number) => {
@@ -98,12 +94,11 @@ const update = (scene: Phaser.Scene, time: number, deltaTime: number) => {
   });
   fire();
 };
-
 // Phaser and React tom-foolerly
 const config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: WIDTH,
+  height: HEIGHT,
   parent: 'game',
   physics: {
     default: 'arcade',
