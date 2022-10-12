@@ -29,8 +29,8 @@ const extractId = (id: string) => id.startsWith('$')
 
 
 
-export const edict = <SCHEMA>(autoFire = false): IEdict<SCHEMA> => {
-  const session = rete.initSession<SCHEMA>(autoFire);
+export const edict = <SCHEMA>(autoFire = false, debug = false): IEdict<SCHEMA> => {
+  const session = rete.initSession<SCHEMA>(autoFire, debug);
   const insert = (insertFacts: InsertEdictFact<SCHEMA>) => {
     // be dumb about this
     const factTuples = insertFactToFact(insertFacts);
@@ -148,7 +148,7 @@ export const edict = <SCHEMA>(autoFire = false): IEdict<SCHEMA> => {
     return { enact };
   };
 
-  const fire = () => rete.fireRules(session);
+  const fire = (recurisionLimit?: number) => rete.fireRules(session, recurisionLimit);
 
   return {
     insert,
