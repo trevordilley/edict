@@ -146,6 +146,7 @@ export interface Session<T> {
   triggeredSubscriptionQueue: Set<string>
   autoFire: boolean;
   initMatch: InitMatchFn<T>;
+  debug: boolean
 }
 
 export type ExecutedNodes<T> = Map<MemoryNode<T>, Set<MemoryNode<T>>>[];

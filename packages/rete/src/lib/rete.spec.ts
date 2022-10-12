@@ -835,4 +835,5 @@ describe('rete', () => {
     rete.fireRules(session)
     expect(fireCount).toBe(1)
   });
+
 });

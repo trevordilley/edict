@@ -153,8 +153,8 @@ const addProductionToSession = <T, U>(
   const memNodes: MemoryNode<T>[] = [];
   const joinNodes: JoinNode<T>[] = [];
   const last = production.conditions.length - 1;
-  const bindings = newSet<string>();
-  const joinedBindings = newSet<string>();
+  const bindings = new Set<string>();
+  const joinedBindings = new Set<string>();
   for (let i = 0; i <= last; i++) {
     const condition = production.conditions[i];
     const leafAlphaNode = addNodes(session, condition.nodes);
@@ -168,7 +168,7 @@ const addProductionToSession = <T, U>(
       oldIdAttrs: newSet(),
     };
     condition.vars.forEach((v) => {
-      if (bindings.contains(v.name)) {
+      if (bindings.has(v.name)) {
         joinedBindings.add(v.name);
         if (v.field === Field.IDENTIFIER) {
           joinNode.idName = v.name;
@@ -235,7 +235,7 @@ const addProductionToSession = <T, U>(
     const vars = node.condition.vars;
     for (let j = 0; j < vars.length; j++) {
       const v = vars[j];
-      if (v.field === Field.VALUE && joinedBindings.contains(v.name)) {
+      if (v.field === Field.VALUE && joinedBindings.has(v.name)) {
         node.disableFastUpdates = true;
         break;
       }
@@ -688,6 +688,9 @@ const fireRules = <T>(
           if (!match.vars) {
             throw new Error(`expected match ${match.id} to have vars??`);
           }
+          if(session.debug) {
+            console.log(node.ruleName, " running thenFn")
+          }
           node.nodeType?.thenFn?.(match.vars);
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds);
         }
@@ -697,6 +700,9 @@ const fireRules = <T>(
     // Execute `thenFinally` blocks
     thenFinallyQueue.forEach((node) => {
       session.triggeredNodeIds.clear();
+      if(session.debug) {
+        console.log(node.ruleName, " running thenFinallyFn")
+      }
       node.nodeType?.thenFinallyFn?.();
       add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds);
     });
@@ -711,7 +717,9 @@ const fireRules = <T>(
     })
   }
   session.triggeredSubscriptionQueue.clear()
-
+  if(session.debug) {
+    console.log("Finished fireRules()")
+  }
   return { executedNodes, session };
 };
 
@@ -842,7 +850,8 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
 const retractFactByIdAndAttr = <T>(
   session: Session<T>,
   id: string,
-  attr: keyof T
+  attr: keyof T,
+  autoFire?: boolean
 ) => {
   // TODO: this function is really simliar to the retractFact function, can we make things
   // DRYer?
@@ -860,16 +869,33 @@ const retractFactByIdAndAttr = <T>(
       console.warn('Missing fact during retraction?');
     }
   });
-  if (session.autoFire) {
+  if (autoFire ?? session.autoFire) {
     fireRules(session);
   }
 };
+
+// TODO, make fast....
+// const retractAllById = <T>(
+//   session: Session<T>,
+//   id: string,
+// ) => {
+//   // TODO: this function is really simliar to the retractFact function, can we make things
+//   // DRYer?
+//   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
+//   const idAttrNodes = session.idAttrNodes.keys().filter(([identifier]) => identifier === id);
+//   idAttrNodes.forEach(([identifier, attr]) => {
+//     retractFactByIdAndAttr(session, `${identifier}`, attr, false)
+//   })
+//   if(session.autoFire) {
+//     fireRules(session)
+//   }
+// };
 
 const defaultInitMatch = <T>() => {
   return new Map<string, FactFragment<T>>();
 };
 
-const initSession = <T>(autoFire = true): Session<T> => {
+const initSession = <T>(autoFire = true, debug = false): Session<T> => {
   const alphaNode: AlphaNode<T> = {
     facts: new Dictionary<
       FactFragment<T>,
@@ -906,6 +932,7 @@ const initSession = <T>(autoFire = true): Session<T> => {
     subscriptionsOnProductions: subscriptionQueue,
     triggeredSubscriptionQueue: new Set<string>(),
     autoFire,
+    debug
   };
 };
 
@@ -978,6 +1005,7 @@ export const rete = {
   fireRules,
   retractFact,
   retractFactByIdAndAttr,
+  // retractAllById,
   insertFact,
   contains,
   addProductionToSession,
