@@ -80,3 +80,22 @@ early mornings to keep on this work!
 * [@edict/core](packages/core/README.md) is the main library used by other applications
 * [@edict/rete](packages/rete/README.md) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
 * [examples](packages/examples) are where I keep my running versions of apps that use this library for testing. A little bare now but I plan to move one of my meatier Phaser games in there soon!
+
+
+## Contributing and setup
+
+Execute the following
+
+```
+# Use yarn as the package manager
+npm install --global yarn
+
+# Install stuff
+yarn
+
+# Now you can do things
+yarn test # runs all the tests
+yarn build # builds all the things
+yarn example:phaser # Run the phaser example
+yarn example:react # Run the react example!
+```

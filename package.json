@@ -4,6 +4,10 @@
   "license": "MIT",
   "scripts": {
     "core:test:watch": "nx test core --watch",
+    "example:phaser": "nx serve examples-phaser-game",
+    "example:react": "nx serve examples-react-todo",
+    "build": "nx run-many --all --target=build",
+    "test": "nx run-many --all --target=test",
     "nx": "nx"
   },
   "private": true,
