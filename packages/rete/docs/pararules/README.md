@@ -1,6 +1,6 @@
 Pararules is the first RETE-based rules engine made for games, having broad applicability to other kinds of programs as well. Rules engines have been around since the 70s, but for some reason, they haven't found their way into games yet. With pararules, you can store the entire state of your game and express the logic as a simple series of independent rules.
 
-On the surface, this bears a resemblence to ECSs (entity component systems), but a rules engine can be much more powerful. Rules are fundamentally *reactive* -- they fire when their data is updated, they can create derived facts that always remain up-to-date, and they can trigger other rules in turn.
+On the surface, this bears a resemblence to ECSs (entity component systems), but a rules engine can be much more powerful. Rules are fundamentally _reactive_ -- they fire when their data is updated, they can create derived facts that always remain up-to-date, and they can trigger other rules in turn.
 
 You can see it in action in the [parakeet](https://github.com/paranim/parakeet) example game and the other [paranim examples](https://github.com/paranim/paranim_examples). Also watch [the FOSDEM 2022 talk](https://www.youtube.com/watch?v=uYFEJUEOHPI).
 
@@ -49,7 +49,7 @@ schema Fact(Id, Attr):
   Y: float
 ```
 
-Underneath, this creates a new type called `Fact` which in Nim is called an *object variant* because it can store multiple types inside.
+Underneath, this creates a new type called `Fact` which in Nim is called an _object variant_ because it can store multiple types inside.
 
 ## Your first rule
 
@@ -69,7 +69,7 @@ var session = initSession(Fact)
 session.add(rule1)
 ```
 
-The most important part of a rule is the `what` block, which specifies what tuples must exist for the rule to fire. The key is that you can create a *binding* in the id or value column by supplying a symbol that starts with a lowercase letter, like `tt` above. When the rule fires, the `then` block is executed, which has access to the bindings you created.
+The most important part of a rule is the `what` block, which specifies what tuples must exist for the rule to fire. The key is that you can create a _binding_ in the id or value column by supplying a symbol that starts with a lowercase letter, like `tt` above. When the rule fires, the `then` block is executed, which has access to the bindings you created.
 
 In your game loop, you can then insert the time values:
 
@@ -96,7 +96,7 @@ var session = initSession(Fact)
 session.add(rule1)
 ```
 
-This may look weird, because `session` is defined *after* the rule, but somehow the rule can still use it. This is because `then` blocks have an implicit `session` variable, which refers to whatever session the rule is part of. You should always use this when updating the session from within a rule.
+This may look weird, because `session` is defined _after_ the rule, but somehow the rule can still use it. This is because `then` blocks have an implicit `session` variable, which refers to whatever session the rule is part of. You should always use this when updating the session from within a rule.
 
 ## Queries
 
@@ -110,7 +110,7 @@ let rule2 =
       (Player, Y, y)
 
 session.add(rule2)
-``` 
+```
 
 As you can see, rules don't need a `then` block if you're only using them to query from the outside. In this case, we'll query it in our game loop and we'll get back a tuple whose fields have the names you created as bindings:
 
@@ -228,7 +228,7 @@ rule stopPlayer(Fact):
       session.insert(Player, X, 0.0)
 ```
 
-Notice that we *don't* need `then = false` this time, because the condition is preventing the rule from re-firing (unless the `windowWidth` is 0, that is!).
+Notice that we _don't_ need `then = false` this time, because the condition is preventing the rule from re-firing (unless the `windowWidth` is 0, that is!).
 
 While the above code works, you can also put your condition in a special `cond` block:
 
@@ -396,7 +396,7 @@ You need to write `id != Player.ord` instead, because pararules transforms all i
 
 ## Derived facts
 
-Sometimes we want to make a rule that receives a *collection* of facts. This is done by creating facts that are derived from other facts.
+Sometimes we want to make a rule that receives a _collection_ of facts. This is done by creating facts that are derived from other facts.
 
 If you want to create a fact that contains all characters, one clever way to do it is to run a query in the `getCharacter` rule, and insert the result as a new fact:
 
@@ -415,7 +415,7 @@ rule printAllCharacters(Fact):
     echo "All characters: ", chars
 ```
 
-The special `this` symbol refers to the rule itself, so it's the same as running `session.queryAll(rules.getCharacter)`. Every time *any* character is updated, the query is run again and the derived fact is updated.
+The special `this` symbol refers to the rule itself, so it's the same as running `session.queryAll(rules.getCharacter)`. Every time _any_ character is updated, the query is run again and the derived fact is updated.
 
 For this to work, we need to add a few things to the types at the top:
 
@@ -472,7 +472,7 @@ rule getCharacter(Fact):
 
 A `thenFinally` block runs when a rule's matches are changed at all, including from retractions. This also means you won't have access to the bindings from the `what` block, so if you want to run code on each individual match, you need to use a normal `then` block before it.
 
-One last thing: it is *highly* recommended that you use reference types like `ref seq`, rather than value types like `seq`, unless you are sure they will be small. Many copies of facts are made inside the session, so this could be a significant performance problem if you store collections that copy by value.
+One last thing: it is _highly_ recommended that you use reference types like `ref seq`, rather than value types like `seq`, unless you are sure they will be small. Many copies of facts are made inside the session, so this could be a significant performance problem if you store collections that copy by value.
 
 The example above could be changed to declare the `Characters` type like this:
 
@@ -500,7 +500,7 @@ rule getCharacter(Fact):
 
 To save a session to the disk or send it over a network, we need to serialize it somehow. It wouldn't be a good idea to directly serialize the session. It would prevent you from updating your rules, or possibly even the version of this library, due to all the implementation details contained in the session after deserializing it.
 
-Instead, it makes more sense to just serialize the *facts*. There is an overload of `queryAll` that returns a sequence of all the individual facts that were inserted:
+Instead, it makes more sense to just serialize the _facts_. There is an overload of `queryAll` that returns a sequence of all the individual facts that were inserted:
 
 ```nim
 let facts = session.queryAll()
@@ -601,7 +601,7 @@ You may think that an additional downside is that you now must define all your r
 
 ### Using ref types
 
-As mentioned before, it is *highly* recommended that you use reference types like `ref seq`, rather than value types like `seq`, to store collections in the session. Many copies of facts are made inside the session, so this could be a significant performance problem if you store collections that copy by value.
+As mentioned before, it is _highly_ recommended that you use reference types like `ref seq`, rather than value types like `seq`, to store collections in the session. Many copies of facts are made inside the session, so this could be a significant performance problem if you store collections that copy by value.
 
 For example, to store a sequence of tuples as a fact, it might look like this:
 
@@ -719,15 +719,15 @@ I was inspired a lot by [Clara Rules](https://github.com/cerner/clara-rules), a 
 
 Advantages compared to Clara:
 
-* Pararules stores data in `(id, attribute, value)` tuples, whereas Clara uses Clojure records. I think storing each key-value pair as a separate fact leads to a much more flexible system. Technically you could make Clara work this way, but records tend to encourage you to combine data together.
-* Pararules has built-in support for updating facts. You don't even need to explicitly do it; simply inserting a fact with an existing id + attribute combo will cause the old fact to be removed. This is only possible because of the aforementioned use of tuples.
-* Pararules provides a simple `rule` macro that returns an object that can be added to any (or even multiple) sessions. Clara's `defrule` macro creates a global var that is implicitly added to a session. I tried to solve that particular problem with my [clarax](https://github.com/oakes/clarax) library but with pararules it's even cleaner because each rule is completely separate and can be added to a session independently.
-* Pararules makes no distinction between rules and queries — all rules are also queries. Clara has a separate `defquery` macro for making queries, which means potential duplication since queries can often be the same as the "left hand side" of a rule.
+- Pararules stores data in `(id, attribute, value)` tuples, whereas Clara uses Clojure records. I think storing each key-value pair as a separate fact leads to a much more flexible system. Technically you could make Clara work this way, but records tend to encourage you to combine data together.
+- Pararules has built-in support for updating facts. You don't even need to explicitly do it; simply inserting a fact with an existing id + attribute combo will cause the old fact to be removed. This is only possible because of the aforementioned use of tuples.
+- Pararules provides a simple `rule` macro that returns an object that can be added to any (or even multiple) sessions. Clara's `defrule` macro creates a global var that is implicitly added to a session. I tried to solve that particular problem with my [clarax](https://github.com/oakes/clarax) library but with pararules it's even cleaner because each rule is completely separate and can be added to a session independently.
+- Pararules makes no distinction between rules and queries — all rules are also queries. Clara has a separate `defquery` macro for making queries, which means potential duplication since queries can often be the same as the "left hand side" of a rule.
 
 Disadvantages compared to Clara:
 
-* Clara supports [truth maintenance](https://www.clara-rules.org/docs/truthmaint/), which can be a very useful feature in some domains. I don't plan on supporting this in pararules because I'm not convinced it's that useful for game dev.
-* Clara's sessions are completely immutable data structures. This makes it really simple to hold on to old versions of a session, in order to implement time rewinding or as a useful debugging tool. I want to implement this in pararules eventually.
+- Clara supports [truth maintenance](https://www.clara-rules.org/docs/truthmaint/), which can be a very useful feature in some domains. I don't plan on supporting this in pararules because I'm not convinced it's that useful for game dev.
+- Clara's sessions are completely immutable data structures. This makes it really simple to hold on to old versions of a session, in order to implement time rewinding or as a useful debugging tool. I want to implement this in pararules eventually.
 
 ## Acknowledgements
 

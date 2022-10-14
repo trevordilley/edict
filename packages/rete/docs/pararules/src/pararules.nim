@@ -166,8 +166,6 @@ proc parseWhat(name: string, dataType: NimNode, matchType: NimNode, attrs: Table
         let `matchFn` = proc (`v`: `matchType`): `tupleType` =
           `queryBody`
 
-  expandMacros:
-    echo "\n\n", repr(matchFnLet), "\n\n"
   let condFnLet =
     block:
       let v = genSym(nskParam, "v")
@@ -189,7 +187,6 @@ proc parseWhat(name: string, dataType: NimNode, matchType: NimNode, attrs: Table
     let usedVars = getUsedVars(vars, thenNode)
     var varNames: seq[string]
     for (varName, _) in usedVars.pairs:
-      echo varName
       varNames.add(varName)
     let varNode = destructureMatch(varNames, match)
     let thenFnSym = genSym(nskLet, "thenFn")

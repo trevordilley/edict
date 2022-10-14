@@ -185,12 +185,16 @@ proc add*[T, U, MatchT](session: Session[T, MatchT], production: Production[T, U
     joinNodes.add(joinNode)
     joinNode.child = memNode
   let leafMemNode = memNodes[memNodes.len - 1]
+  echo("leafMemNode is: ", leafMemNode.condition.vars)
   for node in memNodes:
+    echo("type: ", node.nodeType, " vars: ", node.condition.vars)
     node.leafNode = leafMemNode
   for node in joinNodes:
     # disable fast updates for facts whose value is part of a join
+    echo("vars ", node.condition.vars)
     for v in node.condition.vars:
       if v.field == Value and joinedBindings.contains(v.name):
+        echo("joining -- field: ", v.field, ", name: ", v.name)
         node.disableFastUpdates = true
         break
 
@@ -253,6 +257,7 @@ proc leftActivation[T, MatchT](session: var Session[T, MatchT], node: var Memory
   if isNew and (token.kind == Insert or token.kind == Update) and node.condition.shouldTrigger:
     when not defined(release):
       session.triggeredNodeIds[].incl(node.addr)
+    echo("triggering: ", node.condition.vars)
     node.leafNode.trigger = true
   # add or remove the match
   case token.kind:
@@ -299,6 +304,7 @@ proc rightActivation[T, MatchT](session: var Session[T, MatchT], node: JoinNode[
       if getVarsFromFact(newVars, node.condition, token.fact):
         var newIdAttrs = idAttrs
         newIdAttrs.add(idAttr)
+        echo("other node vars: ", node.condition.vars, " child: ", node.child.condition.vars, " idAttr: ", idAttr)
         session.leftActivation(node.child, newIdAttrs, newVars, token, true)
 
 proc rightActivation[T, MatchT](session: var Session[T, MatchT], node: var AlphaNode[T, MatchT], token: Token[T]) =
