@@ -19,15 +19,26 @@ interface NetworkGraph {
 }
 
 
-const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => ({
-  id: node.id,
-  attributes: `[color=green]`
-})
+const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
+  return {
+    id: node.id,
+    attributes: `[color=green]`
+  }
+}
 
-const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>):Node => ({
-  id: node.id,
-  attributes: `[color=blue]`
-})
+const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>):Node => {
+  let factLabel: string[] = []
+  node.facts.forEach((id, attrs) => {
+    attrs.forEach((attr, val) => {
+      factLabel.push(`${val}`)
+    })
+  })
+  const label = factLabel.join("\n")
+  return {
+    id: node.id,
+    attributes: `[color=blue, label="${label}"]`
+  }
+}
 
 const joinNode = <SCHEMA>(node: JoinNode<SCHEMA>):Node => ({
   id: node.id,
