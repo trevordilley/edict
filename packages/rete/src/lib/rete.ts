@@ -68,6 +68,7 @@ const addNodes = <T>(
   let result = session.alphaNode;
   nodes.forEach(([testField, testValue]) => {
     result = addNode(result, {
+      id: session.nextId(),
       testField: testField,
       testValue: testValue,
       successors: [],
@@ -161,6 +162,7 @@ const addProductionToSession = <T, U>(
     const parentMemNode =
       memNodes.length > 0 ? memNodes[memNodes.length - 1] : undefined;
     const joinNode: JoinNode<T> = {
+      id: session.nextId(),
       parent: parentMemNode,
       alphaNode: leafAlphaNode,
       condition,
@@ -183,6 +185,7 @@ const addProductionToSession = <T, U>(
     leafAlphaNode.successors.push(joinNode);
     leafAlphaNode.successors.sort((x, y) => (isAncestor(x, y) ? 1 : -1));
     const memNode: MemoryNode<T> = {
+      id: session.nextId(),
       parent: joinNode,
       type: i === last ? MEMORY_NODE_TYPE.LEAF : MEMORY_NODE_TYPE.PARTIAL,
       condition,
@@ -896,7 +899,10 @@ const defaultInitMatch = <T>() => {
 };
 
 const initSession = <T>(autoFire = true, debug = false): Session<T> => {
+  let nodeIdCounter = 0
+  const nextId = () => nodeIdCounter++
   const alphaNode: AlphaNode<T> = {
+    id: nodeIdCounter,
     facts: new Dictionary<
       FactFragment<T>,
       Dictionary<FactFragment<T>, Fact<T>>
@@ -904,7 +910,7 @@ const initSession = <T>(autoFire = true, debug = false): Session<T> => {
     successors: [],
     children: [],
   };
-
+  nextId()
   const leafNodes = newDict<string, MemoryNode<T>>();
 
   const idAttrNodes = newDict<IdAttr<T>, Set<AlphaNode<T>>>();
@@ -932,6 +938,7 @@ const initSession = <T>(autoFire = true, debug = false): Session<T> => {
     subscriptionsOnProductions: subscriptionQueue,
     triggeredSubscriptionQueue: new Set<string>(),
     autoFire,
+    nextId,
     debug
   };
 };

@@ -72,6 +72,7 @@ export type InitMatchFn<T> = () => MatchT<T>;
 
 /** Alpha Network **/
 export interface AlphaNode<T> {
+  id: number,
   testField?: Field;
   testValue?: keyof T | FactId;
 
@@ -86,6 +87,7 @@ export enum MEMORY_NODE_TYPE {
 }
 
 export interface MemoryNode<T> {
+  id: number,
   parent: JoinNode<T>;
   child?: JoinNode<T>;
   leafNode?: MemoryNode<T>;
@@ -106,6 +108,7 @@ export interface LeafNode<T> {
 }
 
 export interface JoinNode<T> {
+  id: number,
   parent?: MemoryNode<T>;
   child?: MemoryNode<T>;
   alphaNode: AlphaNode<T>;
@@ -146,6 +149,7 @@ export interface Session<T> {
   triggeredSubscriptionQueue: Set<string>
   autoFire: boolean;
   initMatch: InitMatchFn<T>;
+  nextId: () => number
   debug: boolean
 }
 

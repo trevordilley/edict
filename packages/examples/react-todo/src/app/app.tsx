@@ -29,7 +29,9 @@ const { subscribe, query } = rule("All Todos", ({title, isComplete}) => ({
     isComplete,
   }
 
-})).enact()
+})).enact({
+  thenFinally: () => console.log(viz)
+})
 
 // the `useEdict()` function exposes the api of the Edict library.
 // Here we're defining a rule which grabs all facts in the fact database
