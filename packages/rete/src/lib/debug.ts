@@ -1,5 +1,6 @@
-import {AlphaNode, JoinNode, MemoryNode, Session} from "@edict/rete";
+import {AlphaNode, Condition, JoinNode, MEMORY_NODE_TYPE, MemoryNode, Session} from "@edict/rete";
 
+const FIELD_TO_STR = ["Identifier", "Attribute", "Value"]
 
 interface Node {
   id: number,
@@ -18,38 +19,54 @@ interface NetworkGraph {
   edges: Edge[]
 }
 
+const conditionToString = <SCHEMA>(condition: Condition<SCHEMA>) =>
+  condition.vars.map(v => `${FIELD_TO_STR[v.field]} ${v.name}`).join("\n")
+
 
 const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
+  const fillColor = node.type === MEMORY_NODE_TYPE.LEAF ? ",fillcolor=green,style=filled": ""
+
+  const label = `${node.ruleName}\n${conditionToString(node.condition)}`
   return {
     id: node.id,
-    attributes: `[color=green]`
+    attributes: `[color=green${fillColor}, label="${label}"]`
   }
 }
 
 const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>):Node => {
+  const field = node.testField ? `${FIELD_TO_STR[node.testField]}` : ""
+
   let factLabel: string[] = []
   node.facts.forEach((id, attrs) => {
     attrs.forEach((attr, val) => {
       factLabel.push(`${val}`)
     })
   })
-  const label = factLabel.join("\n")
+
+
+  const label = `${field}\n${ factLabel.join("\n") }`
   return {
     id: node.id,
     attributes: `[color=blue, label="${label}"]`
   }
 }
 
-const joinNode = <SCHEMA>(node: JoinNode<SCHEMA>):Node => ({
-  id: node.id,
-  attributes: `[color=red]`
-})
+const joinNode = <SCHEMA>(node: JoinNode<SCHEMA>):Node => {
+  const cond = conditionToString(node.condition)
+  const idName = node.idName ?? ""
+  const disableFastUpdates = node.disableFastUpdates ?? false
+
+  const label = `${node.ruleName}\n${idName}\n${cond}\nDisable Fast Updates? ${disableFastUpdates}`
+
+  return {
+    id: node.id,
+    attributes: `[color=red, label="${label}"]`
+  }
+}
 const addMemoryNde = <SCHEMA>(node: MemoryNode<SCHEMA>, graph: NetworkGraph, source?: Node) => {
   const gNode = memoryNode(node)
   graph.nodes.set(gNode.id, gNode)
   if(source) graph.edges.push({sources: [source], sink: gNode})
-
-
   if(node.child) {
     addJoinNode(node.child, graph, gNode)
   }
@@ -86,10 +103,6 @@ const addAlphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>, graph: NetworkGraph, sour
 
 const graphNetwork = <SCHEMA>(node: AlphaNode<SCHEMA>, graph: NetworkGraph) => {
   addAlphaNode(node, graph)
-  // if(node.children.length === 0) return
-  // else {
-  //   node.children.forEach(n => graphNetwork(n, graph))
-  // }
   return graph
 }
 
@@ -99,11 +112,15 @@ const toDot = (graph: NetworkGraph) => {
   graph.nodes.forEach(n => {
     lines.push(`${n.id} ${n.attributes ?? ""}`)
   })
+
+  const edges = new Set<string>()
   graph.edges.forEach(e => {
     e.sources.forEach(src => {
-      lines.push(`${src.id} -> ${e.sink.id} ${e.attributes ?? ""}`)
+      edges.add(`${src.id} -> ${e.sink.id} ${e.attributes ?? ""}`)
     })
   })
+  edges.forEach(e => lines.push(e))
+
   lines.push("}")
   return lines.join("\n")
 }
