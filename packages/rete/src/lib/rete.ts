@@ -35,6 +35,12 @@ import {
 import { Dictionary, Set as TSet } from 'typescript-collections';
 import * as _ from 'lodash';
 
+declare const process: {
+  env: {
+    NODE_ENV: string
+  }
+}
+
 export const newSet = <T>() => new TSet<T>();
 export const newDict = <K, V>() => new Dictionary<K, V>();
 // NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
@@ -49,6 +55,9 @@ const addNode = <T>(
   node: AlphaNode<T>,
   newNode: AlphaNode<T>
 ): AlphaNode<T> => {
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("addNode_start")
+  }
   for (let i = 0; i < node.children.length; i++) {
     if (
       node.children[i].testField === newNode.testField &&
@@ -58,6 +67,10 @@ const addNode = <T>(
     }
   }
   node.children.push(newNode);
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("addNode_end")
+    performance.measure("addNode", "addNode_start", "addNode_end")
+  }
   return newNode;
 };
 
@@ -65,6 +78,9 @@ const addNodes = <T>(
   session: Session<T>,
   nodes: [Field, keyof T | FactId][]
 ): AlphaNode<T> => {
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("addNodes_start")
+  }
   let result = session.alphaNode;
   nodes.forEach(([testField, testValue]) => {
     result = addNode(result, {
@@ -76,6 +92,10 @@ const addNodes = <T>(
       facts: new Dictionary(),
     });
   });
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("addNodes_end")
+    performance.measure("addNodes", "addNodes_start", "addNodes_end")
+  }
   return result;
 };
 
@@ -93,6 +113,9 @@ const addConditionsToProduction = <T, U>(
   value: Var | any,
   then: boolean
 ) => {
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("addConditionsToProduction_start")
+  }
   const condition: Condition<T> = { shouldTrigger: then, nodes: [], vars: [] };
   const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE];
 
@@ -118,16 +141,31 @@ const addConditionsToProduction = <T, U>(
     }
   });
   production.conditions.push(condition);
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("addConditionsToProduction_end")
+    performance.measure("addConditionsToProduction", "addConditionsToProduction_start", "addConditionsToProduction_end")
+  }
 };
 
 const isAncestor = <T>(x: JoinNode<T>, y: JoinNode<T>): boolean => {
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("isAncestor_start")
+  }
   let node = y;
   while (node !== undefined && node.parent) {
     if (node.parent.parent === x) {
+      if(process.env.NODE_ENV === "development") {
+        performance.mark("isAncestor_end")
+        performance.measure("isAncestor", "isAncestor_start", "isAncestor_end")
+      }
       return true;
     } else {
       node = node.parent.parent;
     }
+  }
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("isAncestor_end")
+    performance.measure("isAncestor", "isAncestor_start", "isAncestor_end")
   }
   return false;
 };
@@ -138,6 +176,9 @@ const addProductionToSession = <T, U>(
   alreadyExistsBehaviour = PRODUCTION_ALREADY_EXISTS_BEHAVIOR.ERROR
 ) => {
 
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("addProductionToSession_start")
+  }
   if (session.leafNodes.containsKey(production.name)) {
     const message = `${production.name} already exists in session`
     if(alreadyExistsBehaviour === PRODUCTION_ALREADY_EXISTS_BEHAVIOR.QUIET) return
@@ -244,10 +285,17 @@ const addProductionToSession = <T, U>(
       }
     }
   }
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("addProductionToSession_end")
+    performance.measure("addProductionToSession", "addProductionToSession_start", "addProductionToSession_end")
+  }
 };
 
 
 const subscribeToProduction = <T, U>(session: Session<T>,  production: Production<T, U>, callback: (results: U[]) => void): () => void => {
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("subscribeToProduction_start")
+  }
   production.subscriptions.add(callback)
   if(!session.subscriptionsOnProductions.has(production.name))  {
     session.subscriptionsOnProductions.set(production.name, () => {
@@ -255,12 +303,17 @@ const subscribeToProduction = <T, U>(session: Session<T>,  production: Productio
       production.subscriptions.forEach(s => s(results))
     })
   }
-  return () => {
+  const ret = () => {
    production.subscriptions.delete(callback)
     if(production.subscriptions.size === 0 ) {
       session.subscriptionsOnProductions.delete(production.name)
     }
   }
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("subscribeToProduction_end")
+    performance.measure("subscribeToProduction", "subscribeToProduction_start", "subscribeToProduction_end")
+  }
+  return ret
 }
 
 // MatchT represents a mapping from condition key to a value
@@ -313,6 +366,10 @@ const leftActivationFromVars = <T>(
 ) => {
   const newVars: MatchT<T> = new Map(vars);
   if (getVarsFromFact(newVars, node.condition, alphaFact)) {
+
+    if(process.env.NODE_ENV === "development") {
+      performance.mark("leftActivationFromVars_start")
+    }
     const idAttr = getIdAttr<T>(alphaFact);
     const newIdAttrs = [...idAttrs];
     newIdAttrs.push(idAttr);
@@ -323,6 +380,10 @@ const leftActivationFromVars = <T>(
       console.error('Session', JSON.stringify(session));
       console.error(`Node ${node.idName}`, JSON.stringify(node));
       throw new Error('Expected node to have child!');
+    }
+    if(process.env.NODE_ENV === "development") {
+      performance.mark("leftActivationFromVars_end")
+      performance.measure("leftActivationFromVars", "leftActivationFromVars_start", "leftActivationFromVars_end")
     }
     leftActivationOnMemoryNode(
       session,
@@ -342,7 +403,6 @@ const leftActivationWithoutAlpha = <T>(
   vars: MatchT<T>,
   token: Token<T>
 ) => {
-  // Issue somehere here?? TODO
   if (node.idName && node.idName != '') {
     const id = vars.get(node.idName);
     if (id !== undefined && node.alphaNode.facts.containsKey(id)) {
@@ -376,6 +436,9 @@ const leftActivationOnMemoryNode = <T>(
 ) => {
   const idAttr = idAttrs[idAttrs.length - 1];
 
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("leftActivationOnMemoryNode_start")
+  }
   if (
     isNew &&
     (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) &&
@@ -430,9 +493,12 @@ const leftActivationOnMemoryNode = <T>(
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
     leftActivationWithoutAlpha(session, node.child, idAttrs, vars, token);
   }
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("leftActivationOnMemoryNode_end")
+    performance.measure("leftActivationOnMemoryNode", "leftActivationOnMemoryNode_start", "leftActivationOnMemoryNode_end")
+  }
 };
 
-// session: var Session[T, MatchT], node: JoinNode[T, MatchT], idAttr: IdAttr, token: Token[T]) =
 const rightActivationWithJoinNode = <T>(
   session: Session<T>,
   node: JoinNode<T>,
@@ -461,7 +527,6 @@ const rightActivationWithJoinNode = <T>(
       if (
         idName &&
         idName !== '' &&
-        // REALLY NOT SURE ABOUT THIS LINE!!!
         vars?.get(idName) != token.fact[0]
       ) {
         return;
@@ -489,7 +554,6 @@ const rightActivationWithJoinNode = <T>(
     });
   }
 };
-// (session: var Session[T, MatchT], node: var AlphaNode[T, MatchT], token: Token[T]) =
 
 const rightActivationWithAlphaNode = <T>(
   session: Session<T>,
@@ -514,12 +578,15 @@ const rightActivationWithAlphaNode = <T>(
       session.idAttrNodes.remove(idAttr);
     }
   } else if (token.kind === TokenKind.UPDATE) {
-    node.facts.getValue(id)!.setValue(attr, token.fact);
+    const idAttr = node.facts.getValue(id)
+    if(idAttr === undefined) throw new Error(`Expected fact id to exist ${id}`)
+    idAttr.setValue(attr, token.fact);
   }
   node.successors.forEach((child) => {
     if (token.kind === TokenKind.UPDATE && child.disableFastUpdates) {
+      if(token.oldFact === undefined) throw new Error(`Expected token ${token.fact} to have an oldFact`)
       rightActivationWithJoinNode(session, child, idAttr, {
-        fact: token.oldFact!,
+        fact: token.oldFact,
         kind: TokenKind.RETRACT,
       });
       rightActivationWithJoinNode(session, child, idAttr, {
@@ -611,6 +678,9 @@ const fireRules = <T>(
 ) => {
   if (session.insideRule) {
     return;
+  }
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("fireRules_start")
   }
   // Only for debugging purposes, should we remove for prod usage?
   const executedNodes: ExecutedNodes<T> = [];
@@ -723,6 +793,10 @@ const fireRules = <T>(
   if(session.debug) {
     console.log("Finished fireRules()")
   }
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("fireRules_end")
+    performance.measure("fireRules", "fireRules_start", "fireRules_end")
+  }
   return { executedNodes, session };
 };
 
@@ -734,9 +808,16 @@ const getAlphaNodesForFact = <T>(
   nodes: Set<AlphaNode<T>>
 ) => {
   if (root) {
+    if(process.env.NODE_ENV === "development") {
+      performance.mark("getAlphaNodesForFact_start")
+    }
     node.children.forEach((child) => {
       getAlphaNodesForFact(session, child, fact, false, nodes);
     });
+    if(process.env.NODE_ENV === "development") {
+      performance.mark("getAlphaNodesForFact_end")
+      performance.measure("getAlphaNodesForFact", "getAlphaNodesForFact_start", "getAlphaNodesForFact_end")
+    }
   } else {
     const val =
       node.testField === Field.IDENTIFIER
@@ -761,6 +842,9 @@ const upsertFact = <T>(
   fact: Fact<T>,
   nodes: Set<AlphaNode<T>>
 ) => {
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("upsertFact_start")
+  }
   const idAttr = getIdAttr<T>(fact);
   if (!session.idAttrNodes.containsKey(idAttr)) {
     nodes.forEach((n) => {
@@ -809,16 +893,16 @@ const upsertFact = <T>(
         });
       }
     });
+
+    if(process.env.NODE_ENV === "development") {
+      performance.mark("upsertFact_end")
+      performance.measure("upsertFact", "upsertFact_start", "upsertFact_end")
+    }
   }
 };
 
 const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const nodes = new Set<AlphaNode<T>>();
-  // Why do we do this mutation in-place function call?
-  // I'd really rather it was `const nodes = getAlphaNodesForFact(...)`
-  // perf reasons?
-  //
-  // TODO: Once we get all the tests passing lets refactor this little thing here
   getAlphaNodesForFact(session, session.alphaNode, fact, true, nodes);
   upsertFact(session, fact, nodes);
   if (session.autoFire) {
@@ -827,6 +911,9 @@ const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
 };
 
 const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("retractFact_start")
+  }
   const idAttr = getIdAttr(fact);
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set<AlphaNode<T>>();
@@ -844,6 +931,10 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
       kind: TokenKind.RETRACT,
     });
   });
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("retractFact_end")
+    performance.measure("retractFact", "retractFact_start", "retractFact_end")
+  }
 
   if (session.autoFire) {
     fireRules(session);
@@ -856,8 +947,9 @@ const retractFactByIdAndAttr = <T>(
   attr: keyof T,
   autoFire?: boolean
 ) => {
-  // TODO: this function is really simliar to the retractFact function, can we make things
-  // DRYer?
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("retractFactByIdAndAttr_start")
+  }
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set<AlphaNode<T>>();
   session.idAttrNodes.getValue([id, attr])?.forEach((i) => idAttrNodes.add(i));
@@ -872,27 +964,14 @@ const retractFactByIdAndAttr = <T>(
       console.warn('Missing fact during retraction?');
     }
   });
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("retractFactByIdAndAttr_end")
+    performance.measure("retractFactByIdAndAttr", "retractFactByIdAndAttr_start", "retractFactByIdAndAttr_end")
+  }
   if (autoFire ?? session.autoFire) {
     fireRules(session);
   }
 };
-
-// TODO, make fast....
-// const retractAllById = <T>(
-//   session: Session<T>,
-//   id: string,
-// ) => {
-//   // TODO: this function is really simliar to the retractFact function, can we make things
-//   // DRYer?
-//   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
-//   const idAttrNodes = session.idAttrNodes.keys().filter(([identifier]) => identifier === id);
-//   idAttrNodes.forEach(([identifier, attr]) => {
-//     retractFactByIdAndAttr(session, `${identifier}`, attr, false)
-//   })
-//   if(session.autoFire) {
-//     fireRules(session)
-//   }
-// };
 
 const defaultInitMatch = <T>() => {
   return new Map<string, FactFragment<T>>();
@@ -958,16 +1037,26 @@ const initProduction = <SCHEMA, U>(production: {
 };
 
 const queryAll = <T, U>(session: Session<T>, prod: Production<T, U>): U[] => {
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("queryAll_start")
+  }
   const result: U[] = [];
   session.leafNodes.getValue(prod.name)?.matches.forEach((_, match) => {
     if (match.enabled && match.vars) {
       result.push(prod.convertMatchFn(match.vars));
     }
   });
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("queryAll_end")
+    performance.measure("queryAll", "queryAll_start", "queryAll_end")
+  }
   return result;
 };
 
 const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("queryFullSession_start")
+  }
   const result: Fact<T>[] = [];
   session.idAttrNodes.forEach((idAttr, nodes) => {
     const nodesArr = new Array(...nodes);
@@ -980,6 +1069,11 @@ const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
       console.warn('Missing fact??');
     }
   });
+
+  if(process.env.NODE_ENV === "development") {
+    performance.mark("queryFullSession_end")
+    performance.measure("queryFullSession", "queryFullSession_start", "queryFullSession_end")
+  }
   return result;
 };
 
@@ -1012,7 +1106,6 @@ export const rete = {
   fireRules,
   retractFact,
   retractFactByIdAndAttr,
-  // retractAllById,
   insertFact,
   contains,
   addProductionToSession,

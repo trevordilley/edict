@@ -1,5 +1,5 @@
 import { rete } from './rete';
-import {FactFragment, Field, MatchT, viz} from '@edict/rete';
+import { FactFragment, Field, MatchT } from './types';
 
 type People = [id: number, color: string, leftOf: number, height: number][];
 enum Id {
@@ -306,13 +306,11 @@ describe('rete', () => {
   it('updating facts', () => {
     const session = rete.initSession<SmallSchema>(false);
     let zVal: FactFragment<SmallSchema> | undefined = undefined;
-    let thenCount = 0;
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'updatingFacts',
       convertMatchFn,
       thenFn: ({ vars }) => {
         zVal = vars.get('z');
-        thenCount++;
       },
     });
 
@@ -355,7 +353,7 @@ describe('rete', () => {
     expect(zVal).toBe(Id.Zach);
 
     rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Xavier]);
-    const executed = rete.fireRules(session);
+    rete.fireRules(session);
     const newResults = rete.queryAll(session, production);
     expect(newResults.length).toBe(1);
     //   expect(thenCount).toBe(2) // We have a bug where then isn't triggering again too reassign zVal to Xavier
@@ -448,8 +446,10 @@ describe('rete', () => {
     rete.addProductionToSession(session, rule2);
     rete.insertFact(session, [Id.Alice, 'LeftOf', Id.Zach]);
     rete.fireRules(session);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(alice).toBe(Id.Alice);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(zach).toBe(Id.Zach);
   });
@@ -578,7 +578,7 @@ describe('rete', () => {
     const rule1 = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
       convertMatchFn,
-      thenFn: ({ vars, session }) => {
+      thenFn: () => {
         count = count + 1;
       },
     });

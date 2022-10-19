@@ -1,4 +1,4 @@
-import {AlphaNode, Condition, JoinNode, MEMORY_NODE_TYPE, MemoryNode, Session} from "@edict/rete";
+import { AlphaNode, Condition, JoinNode, MEMORY_NODE_TYPE, MemoryNode, Session } from './types';
 
 const FIELD_TO_STR = ["Identifier", "Attribute", "Value"]
 
@@ -36,7 +36,7 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
 const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>):Node => {
   const field = node.testField ? `${FIELD_TO_STR[node.testField]}` : ""
 
-  let factLabel: string[] = []
+  const factLabel: string[] = []
   node.facts.forEach((id, attrs) => {
     attrs.forEach((attr, val) => {
       factLabel.push(`${val}`)
@@ -63,7 +63,7 @@ const joinNode = <SCHEMA>(node: JoinNode<SCHEMA>):Node => {
     attributes: `[color=red, label="${label}"]`
   }
 }
-const addMemoryNde = <SCHEMA>(node: MemoryNode<SCHEMA>, graph: NetworkGraph, source?: Node) => {
+const addMemoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>, graph: NetworkGraph, source?: Node) => {
   const gNode = memoryNode(node)
   graph.nodes.set(gNode.id, gNode)
   if(source) graph.edges.push({sources: [source], sink: gNode})
@@ -80,7 +80,7 @@ const addJoinNode = <SCHEMA>(node: JoinNode<SCHEMA>, graph: NetworkGraph, source
   graph.nodes.set(alpha.id, alpha)
   graph.edges.push({sources: [alpha], sink: gNode})
   if(node.child) {
-    addMemoryNde(node.child, graph, gNode)
+    addMemoryNode(node.child, graph, gNode)
   }
 }
 

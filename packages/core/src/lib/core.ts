@@ -1,7 +1,7 @@
 import {Condition, ConditionArgs, ConditionOptions, EnactArgs, EnactionArgs, IEdict, InsertEdictFact,} from './types';
 import * as _ from 'lodash';
 import {InternalFactRepresentation} from '@edict/types';
-import {ConvertMatchFn, Field, PRODUCTION_ALREADY_EXISTS_BEHAVIOR, rete} from '@edict/rete';
+import {ConvertMatchFn, Field, PRODUCTION_ALREADY_EXISTS_BEHAVIOR, rete, viz} from '@edict/rete';
 
 export const insertFactToFact = <S>(
   insertion: InsertEdictFact<S>
@@ -150,10 +150,34 @@ export const edict = <SCHEMA>(autoFire = false, debug = false): IEdict<SCHEMA> =
 
   const fire = (recurisionLimit?: number) => rete.fireRules(session, recurisionLimit);
 
+  const dotFile = () => viz(session)
+
+  const perf = () => {
+    const frames: PerformanceEntryList[]= []
+
+    const capture = () => {
+      const entries = performance.getEntriesByType("measure")
+      frames.push(entries)
+      performance.clearMeasures()
+      performance.clearMarks()
+      return entries
+    }
+
+    return {
+      frames,
+      capture
+    }
+  }
+
   return {
     insert,
     retract,
     fire,
     rule,
-  };
+    debug: {
+      dotFile,
+      perf
+    }
+
+  }
 };

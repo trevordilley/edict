@@ -54,4 +54,11 @@ export interface IEdict<SCHEMA> {
     conditions: (schema: Condition<SCHEMA>) => T,
     onAlreadyExistsBehaviour?: PRODUCTION_ALREADY_EXISTS_BEHAVIOR
   ) => {enact: Enact<SCHEMA, T>};
+  debug: {
+    dotFile: () => string
+    perf:() => {
+      frames: PerformanceEntryList[],
+      capture: () => PerformanceEntryList
+    }
+  }
 }
