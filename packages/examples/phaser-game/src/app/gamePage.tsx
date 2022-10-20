@@ -1,7 +1,6 @@
 import { edict } from '@edict/core';
 import * as Phaser from 'phaser';
 import { useLayoutEffect } from 'react';
-import {deepEqual} from "assert";
 
 const WIDTH = 800
 const HEIGHT = 600
