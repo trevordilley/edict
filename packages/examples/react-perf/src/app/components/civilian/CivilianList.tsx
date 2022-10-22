@@ -1,7 +1,7 @@
 import {Civilian} from "../../rules/rules";
 import {Table, TableCell, TableRow, TableHead, TableContainer, TableBody, Button} from "@mui/material";
 
-const CivilianList: React.FC<{civilians: Civilian[]}> = ({civilians}) => {
+export const CivilianList: React.FC<{civilians: (Civilian & {id: string})[]}> = ({civilians}) => {
 
   return (
     <div>
@@ -10,11 +10,11 @@ const CivilianList: React.FC<{civilians: Civilian[]}> = ({civilians}) => {
           <TableHead>
             <TableCell>First Name</TableCell>
             <TableCell>Last Name</TableCell>
-            <TableCell>Location</TableCell>
             <TableCell>Job</TableCell>
           </TableHead>
           <TableBody>
-            {civilians.map(({civilianFirstName, civilianLastName, civilianJob,civilianLocationId}) => (<TableRow>
+            {civilians.map(({id, civilianFirstName, civilianLastName, civilianJob,civilianLocationId}) => (
+              <TableRow key={id}>
               <TableCell>{civilianFirstName}</TableCell>
               <TableCell>{civilianLastName}</TableCell>
               <TableCell>{civilianJob}</TableCell>
