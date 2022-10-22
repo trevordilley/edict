@@ -12,6 +12,9 @@
   },
   "private": true,
   "dependencies": {
+    "@emotion/react": "^11.10.4",
+    "@emotion/styled": "^11.10.4",
+    "@mui/material": "^5.10.10",
     "core-js": "^3.6.5",
     "lodash": "^4.17.21",
     "object-hash": "^3.0.0",
@@ -27,6 +30,7 @@
   },
   "devDependencies": {
     "@babel/preset-react": "^7.16.7",
+    "@faker-js/faker": "^7.6.0",
     "@nrwl/cli": "14.1.5",
     "@nrwl/cypress": "14.1.5",
     "@nrwl/eslint-plugin-nx": "14.1.5",

@@ -36,7 +36,7 @@ export type EdictArgs = {
 export type EnactionArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
   then?: (args: EnactArgs<SCHEMA, T>) => void;
   when?: (args: EnactArgs<SCHEMA, T>) => boolean;
-  thenFinally?: () => void;
+  thenFinally?: (getResults: () => EnactArgs<SCHEMA, T>[]) => void;
 }
 
 export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> =

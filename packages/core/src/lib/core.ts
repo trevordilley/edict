@@ -85,10 +85,12 @@ export const edict = <SCHEMA>(autoFire = false, debug = false): IEdict<SCHEMA> =
         thenFn: (args) => {
           enaction?.then?.(args.vars);
         },
-        thenFinallyFn: enaction?.thenFinally,
         condFn: (args) => enaction?.when?.(convertMatchFn(args)) ?? true,
         convertMatchFn,
       });
+      if(enaction?.thenFinally !== undefined) {
+        production.thenFinallyFn = (session) => enaction?.thenFinally?.(() => rete.queryAll(session, production))
+      }
 
       // Cast to signal type info, not actually used
       // TODO: Do we need to do things this way?
