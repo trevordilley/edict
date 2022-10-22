@@ -12,7 +12,7 @@ const StyledApp = styled.div`
 export function App() {
   // const [buildingWorld, setBuildingWorld] = useState(false)
   const onBuildWorld = () => {
-    const world = newWorld(3, 5, 5)
+    const world = newWorld(3, 5, 100)
     insert(world.provinces)
     insert(world.locations)
     insert(world.civilians)
