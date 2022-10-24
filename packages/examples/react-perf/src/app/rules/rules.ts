@@ -129,7 +129,7 @@ rule(
   })
 ).enact({
   when: ({ $location: { locationPopulation } }) =>
-    locationPopulation > 10 && locationPopulation < 1000,
+    locationPopulation > 10 && locationPopulation < 100,
   then: ({ $location: { id } }) =>
     insert({
       [id]: { locationClassification: LocationClassification.VILLAGE },
@@ -141,7 +141,7 @@ rule('Cities have a large locationPopulation', ({ locationPopulation }) => ({
     locationPopulation,
   },
 })).enact({
-  when: ({ $location: { locationPopulation } }) => locationPopulation >= 1000,
+  when: ({ $location: { locationPopulation } }) => locationPopulation >= 100,
   then: ({ $location: { id } }) =>
     insert({ [id]: { locationClassification: LocationClassification.CITY } }),
 });
