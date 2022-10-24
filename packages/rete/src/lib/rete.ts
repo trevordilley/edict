@@ -1092,18 +1092,34 @@ const queryAll = <T, U>(
   session.leafNodes.getValue(prod.name)?.matches.forEach((_, match) => {
     const { enabled, vars } = match;
     if (enabled && vars) {
-      if (filter) {
-        for (const key of filter.keys()) {
-          const fVal = filter.get(key)!;
-          const mVal = vars.get(key);
-          for (const val of fVal) {
-            if (mVal === val) {
-              result.push(prod.convertMatchFn(vars));
+      if (!filter) {
+        result.push(prod.convertMatchFn(vars));
+      } else {
+        const filterKeys = filter.keys(); // All keys must be present to match the value
+        const varKeys = vars.keys(); // The superset of keys to check against
+        let hasAllFilterKeys = true;
+
+        for (const f of filterKeys) {
+          if (!hasAllFilterKeys) break;
+          let matchFound = false;
+          for (const v of varKeys) {
+            if (v === f) {
+              const fVal = filter.get(f);
+              const vVal = vars.get(v);
+
+              matchFound = (!!fVal && !!vVal && fVal.includes(vVal)) ?? false;
+              break;
             }
           }
+          if (!matchFound) {
+            hasAllFilterKeys = false;
+            break;
+          }
         }
-      } else {
-        result.push(prod.convertMatchFn(vars));
+
+        if (hasAllFilterKeys) {
+          result.push(prod.convertMatchFn(vars));
+        }
       }
     }
   });

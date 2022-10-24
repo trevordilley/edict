@@ -283,15 +283,15 @@ describe('edict...', () => {
       },
     });
     expect(
-      filterWithMultipleQueries.map(({ $person }) => $person.id)
-    ).toStrictEqual(['bob', 'jimmy', 'joe']);
+      filterWithMultipleQueries.map(({ $person }) => $person.id).sort()
+    ).toStrictEqual(['bob', 'jimmy', 'joe'].sort());
 
     const filterWhichMatchesEveryone = results.query({
       $person: {
         Color: ['blue', 'red', 'orange'],
       },
     });
-    expect(filterWhichMatchesEveryone.length).toBe(3);
+    expect(filterWhichMatchesEveryone.length).toBe(4);
     const filterWhichMatchesNoOne = results.query({
       $person: {
         Color: ['chair'],
