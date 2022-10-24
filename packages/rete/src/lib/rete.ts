@@ -26,6 +26,7 @@ import {
   MemoryNode,
   Production,
   PRODUCTION_ALREADY_EXISTS_BEHAVIOR,
+  QueryFilter,
   Session,
   ThenFinallyFn,
   ThenFn,
@@ -307,20 +308,23 @@ const addProductionToSession = <T, U>(
 const subscribeToProduction = <T, U>(
   session: Session<T>,
   production: Production<T, U>,
-  callback: (results: U[]) => void
+  callback: (results: U[]) => void,
+  filter?: QueryFilter<T>
 ): (() => void) => {
   if (process.env.NODE_ENV === 'development') {
     performance.mark('subscribeToProduction_start');
   }
-  production.subscriptions.add(callback);
+  const sub = { callback, filter };
+  production.subscriptions.add(sub);
   if (!session.subscriptionsOnProductions.has(production.name)) {
     session.subscriptionsOnProductions.set(production.name, () => {
-      const results = queryAll(session, production);
-      production.subscriptions.forEach((s) => s(results));
+      production.subscriptions.forEach(({ callback, filter }) =>
+        callback(queryAll(session, production, filter))
+      );
     });
   }
   const ret = () => {
-    production.subscriptions.delete(callback);
+    production.subscriptions.delete(sub);
     if (production.subscriptions.size === 0) {
       session.subscriptionsOnProductions.delete(production.name);
     }
@@ -1071,14 +1075,36 @@ const initProduction = <SCHEMA, U>(production: {
   };
 };
 
-const queryAll = <T, U>(session: Session<T>, prod: Production<T, U>): U[] => {
+const queryAll = <T, U>(
+  session: Session<T>,
+  prod: Production<T, U>,
+  filter?: QueryFilter<T>
+): U[] => {
   if (process.env.NODE_ENV === 'development') {
     performance.mark('queryAll_start');
   }
   const result: U[] = [];
+
+  // TODO: Optimize result access?
+  // I feel like we should cache the results of these matches until the next `fire()`
+  // then make it easy to query the data via key map paths or something. Iterating over all
+  // matches could become cumbersome for large data sets
   session.leafNodes.getValue(prod.name)?.matches.forEach((_, match) => {
-    if (match.enabled && match.vars) {
-      result.push(prod.convertMatchFn(match.vars));
+    const { enabled, vars } = match;
+    if (enabled && vars) {
+      if (filter) {
+        for (const key of filter.keys()) {
+          const fVal = filter.get(key)!;
+          const mVal = vars.get(key);
+          for (const val of fVal) {
+            if (mVal === val) {
+              result.push(prod.convertMatchFn(vars));
+            }
+          }
+        }
+      } else {
+        result.push(prod.convertMatchFn(vars));
+      }
     }
   });
   if (process.env.NODE_ENV === 'development') {
@@ -1133,10 +1159,56 @@ const get = <T, U>(
   return prod.convertMatchFn(vars);
 };
 
-/** TODO
- * Need to implement find(), with optional matching on params.
- * Ideally we find a way to make this respect subscriptions as well
- */
+// proc find*[I, T](session: Session, prod: Production, params: array[I, (string, T)]): int =
+// for match in session.leafNodes[prod.name].matches.values:
+// if match.enabled and matchesParams(match.vars, params):
+// return match.id
+//   -1
+//
+// proc find*(session: Session, prod: Production): int =
+// for match in session.leafNodes[prod.name].matches.values:
+// if match.enabled:
+// return match.id
+//   -1
+// proc matchesParams[I, T, MatchT](vars: MatchT, params: array[I, (string, T)]): bool =
+// for (varName, val) in params:
+//   if vars[varname] != val:
+// return false
+// true
+
+// const matchesParams = <I, T>(
+//   vars: MatchT<T> | undefined,
+//   params: [I, [string, T]]
+// ): boolean => {
+//   for (const p of params) {
+//     const [varName, val] = params;
+//     if (vars?.get(varName) != val[1]) {
+//       return false;
+//     }
+//   }
+//   return true;
+// };
+// const find = <I, T, U>(
+//   session: Session<T>,
+//   prod: Production<T, U>,
+//   params?: [I, [string, T]]
+// ) => {
+//   const matches =
+//     session.leafNodes.getValue(prod.name)?.leafNode?.matches.values() ?? [];
+//
+//   for (const m of matches) {
+//     if (m.enabled) {
+//       if (params) {
+//         if (matchesParams(m.vars, params)) {
+//           return m.id;
+//         }
+//       } else {
+//         return m.id;
+//       }
+//     }
+//   }
+//   return undefined;
+// };
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
   session.idAttrNodes.containsKey([id, attr]);

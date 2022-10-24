@@ -7,11 +7,12 @@ import { Dictionary, Set as TSet } from 'typescript-collections';
 export type ValueOf<T> = T[keyof T];
 export type FactFragment<SCHEMA> = FactId | keyof SCHEMA | ValueOf<SCHEMA>;
 export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>;
+export type QueryFilter<SCHEMA> = Map<string, FactFragment<SCHEMA>[]>;
 
 export enum PRODUCTION_ALREADY_EXISTS_BEHAVIOR {
   QUIET,
   WARN,
-  ERROR
+  ERROR,
 }
 
 export enum Field {
@@ -72,7 +73,7 @@ export type InitMatchFn<T> = () => MatchT<T>;
 
 /** Alpha Network **/
 export interface AlphaNode<T> {
-  id: number,
+  id: number;
   testField?: Field;
   testValue?: keyof T | FactId;
 
@@ -87,7 +88,7 @@ export enum MEMORY_NODE_TYPE {
 }
 
 export interface MemoryNode<T> {
-  id: number,
+  id: number;
   parent: JoinNode<T>;
   child?: JoinNode<T>;
   leafNode?: MemoryNode<T>;
@@ -108,7 +109,7 @@ export interface LeafNode<T> {
 }
 
 export interface JoinNode<T> {
-  id: number,
+  id: number;
   parent?: MemoryNode<T>;
   child?: MemoryNode<T>;
   alphaNode: AlphaNode<T>;
@@ -131,7 +132,10 @@ export interface Production<T, U> {
   name: string;
   conditions: Condition<T>[];
   convertMatchFn: ConvertMatchFn<T, U>;
-  subscriptions: Set<(results: U[]) => void>
+  subscriptions: Set<{
+    callback: (results: U[]) => void;
+    filter?: QueryFilter<T>;
+  }>;
   condFn?: CondFn<T>;
   thenFn?: ThenFn<T, U>;
   thenFinallyFn?: ThenFinallyFn<T, U>;
@@ -145,12 +149,12 @@ export interface Session<T> {
   thenQueue: Set<[node: MemoryNode<T>, idAttrs: IdAttrs<T>]>;
   thenFinallyQueue: Set<MemoryNode<T>>;
   triggeredNodeIds: Set<MemoryNode<T>>;
-  subscriptionsOnProductions: Map<string, () => void>
-  triggeredSubscriptionQueue: Set<string>
+  subscriptionsOnProductions: Map<string, () => void>;
+  triggeredSubscriptionQueue: Set<string>;
   autoFire: boolean;
   initMatch: InitMatchFn<T>;
-  nextId: () => number
-  debug: boolean
+  nextId: () => number;
+  debug: boolean;
 }
 
 export type ExecutedNodes<T> = Map<MemoryNode<T>, Set<MemoryNode<T>>>[];

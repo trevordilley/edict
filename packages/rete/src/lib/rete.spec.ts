@@ -33,7 +33,8 @@ describe('rete', () => {
   it('number of conditions != number of facts', () => {
     const session = rete.initSession<SmallSchema>(false);
 
-    let subResults: MatchT<SmallSchema>[] = []
+    let subResultsAllResults: MatchT<SmallSchema>[] = [];
+    let subResultsGeorgeAndThomas: MatchT<SmallSchema>[] = [];
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'numCondsAndFacts',
       convertMatchFn,
@@ -44,7 +45,17 @@ describe('rete', () => {
         expect(vars.get('z')).toBe(Id.Zach);
       },
     });
-    rete.subscribeToProduction(session, production, (results) => {subResults = results})
+    rete.subscribeToProduction(session, production, (results) => {
+      subResultsAllResults = results;
+    });
+    rete.subscribeToProduction(
+      session,
+      production,
+      (results) => {
+        subResultsGeorgeAndThomas = results;
+      },
+      new Map([['x', [Id.George, Id.Thomas]]])
+    );
     rete.addConditionsToProduction(
       production,
       `${Id.Bob}`,
@@ -90,9 +101,16 @@ describe('rete', () => {
     rete.insertFact(session, [Id.Thomas, 'Height', 72]);
     rete.insertFact(session, [Id.George, 'Height', 72]);
     rete.fireRules(session);
-    const results = rete.queryAll(session, production);
-    expect(results.length).toBe(3);
-    expect(subResults).toStrictEqual(results)
+    const unfilteredResults = rete.queryAll(session, production);
+    expect(unfilteredResults.length).toBe(3);
+    expect(subResultsAllResults).toStrictEqual(unfilteredResults);
+    expect(subResultsGeorgeAndThomas.length).toBe(2);
+    const justGeorge = rete.queryAll(
+      session,
+      production,
+      new Map([['x', [Id.George]]])
+    );
+    expect(justGeorge.length).toBe(1);
   });
 
   it('adding facts out of order', () => {
@@ -108,10 +126,10 @@ describe('rete', () => {
       },
     });
 
-    let subResults: MatchT<SmallSchema>[] = []
+    let subResults: MatchT<SmallSchema>[] = [];
     rete.subscribeToProduction(session, production, (results) => {
-      subResults = results
-    })
+      subResults = results;
+    });
 
     rete.addConditionsToProduction(
       production,
@@ -200,7 +218,7 @@ describe('rete', () => {
     rete.fireRules(session);
     const results = rete.queryAll(session, production);
     expect(results.length).toBe(1);
-    expect(subResults).toStrictEqual(results)
+    expect(subResults).toStrictEqual(results);
   });
 
   it('duplicate facts', () => {
@@ -209,10 +227,10 @@ describe('rete', () => {
       name: 'duplicateFacts',
       convertMatchFn,
     });
-    let subResults: MatchT<SmallSchema>[] = []
+    let subResults: MatchT<SmallSchema>[] = [];
     rete.subscribeToProduction(session, production, (results) => {
-      subResults = results
-    })
+      subResults = results;
+    });
     rete.addConditionsToProduction(
       production,
       { name: 'x', field: Field.IDENTIFIER },
@@ -605,7 +623,7 @@ describe('rete', () => {
     expect(count).toBe(1);
   });
 
-  it("subscriptions do not fire when inserting facts that are not related to the production", () => {
+  it('subscriptions do not fire when inserting facts that are not related to the production', () => {
     const session = rete.initSession<SmallSchema>(false);
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
@@ -619,25 +637,24 @@ describe('rete', () => {
       true
     );
 
-    rete.addProductionToSession(session, production)
-    let fired = false
+    rete.addProductionToSession(session, production);
+    let fired = false;
     rete.subscribeToProduction(session, production, () => {
-      fired = true
-    })
+      fired = true;
+    });
 
-    rete.insertFact(session, ["Bill", "LeftOf", "Bob"])
-    rete.fireRules(session)
+    rete.insertFact(session, ['Bill', 'LeftOf', 'Bob']);
+    rete.fireRules(session);
 
-    expect(fired).toBe(false)
+    expect(fired).toBe(false);
 
-    rete.insertFact(session, ["Bill", "Color", "blue"])
-    expect(fired).toBe(false)
-    rete.fireRules(session)
-    expect(fired).toBe(true)
-
+    rete.insertFact(session, ['Bill', 'Color', 'blue']);
+    expect(fired).toBe(false);
+    rete.fireRules(session);
+    expect(fired).toBe(true);
   });
 
-  it("subscribing, unsubscribing, resubscribing works", () => {
+  it('subscribing, unsubscribing, resubscribing works', () => {
     const session = rete.initSession<SmallSchema>(false);
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
@@ -651,34 +668,32 @@ describe('rete', () => {
       true
     );
 
-    rete.addProductionToSession(session, production)
-    let fireCount = 0
+    rete.addProductionToSession(session, production);
+    let fireCount = 0;
     const unsub = rete.subscribeToProduction(session, production, () => {
-      fireCount++
-    })
+      fireCount++;
+    });
 
-    rete.insertFact(session, ["Bob", "Color", "blue"])
-    rete.fireRules(session)
+    rete.insertFact(session, ['Bob', 'Color', 'blue']);
+    rete.fireRules(session);
 
-    expect(fireCount).toBe(1)
-    unsub()
-    rete.insertFact(session, ["Bill", "Color", "blue"])
-    expect(fireCount).toBe(1)
-    rete.fireRules(session)
-    expect(fireCount).toBe(1)
+    expect(fireCount).toBe(1);
+    unsub();
+    rete.insertFact(session, ['Bill', 'Color', 'blue']);
+    expect(fireCount).toBe(1);
+    rete.fireRules(session);
+    expect(fireCount).toBe(1);
 
     rete.subscribeToProduction(session, production, () => {
-      fireCount++
-    })
-    rete.insertFact(session, ["Hank", "Color", "blue"])
-    expect(fireCount).toBe(1)
-    rete.fireRules(session)
-    expect(fireCount).toBe(2)
-
+      fireCount++;
+    });
+    rete.insertFact(session, ['Hank', 'Color', 'blue']);
+    expect(fireCount).toBe(1);
+    rete.fireRules(session);
+    expect(fireCount).toBe(2);
   });
 
-  it("multiple subscriptions work", () => {
-
+  it('multiple subscriptions work', () => {
     const session = rete.initSession<SmallSchema>(true);
     const colorProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'color',
@@ -692,7 +707,7 @@ describe('rete', () => {
       true
     );
 
-    rete.addProductionToSession(session, colorProd)
+    rete.addProductionToSession(session, colorProd);
 
     const leftOfProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'leftOf',
@@ -706,7 +721,7 @@ describe('rete', () => {
       true
     );
 
-    rete.addProductionToSession(session, leftOfProd)
+    rete.addProductionToSession(session, leftOfProd);
 
     const rightOfProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rightOf',
@@ -720,67 +735,67 @@ describe('rete', () => {
       true
     );
 
-    rete.addProductionToSession(session, rightOfProd)
-    let colorFired = 0
-    let leftFired = 0
-    let rightFired = 0
+    rete.addProductionToSession(session, rightOfProd);
+    let colorFired = 0;
+    let leftFired = 0;
+    let rightFired = 0;
     const unsubColor = rete.subscribeToProduction(session, colorProd, () => {
-      colorFired++
-    })
+      colorFired++;
+    });
     const unsubLeft = rete.subscribeToProduction(session, leftOfProd, () => {
-      leftFired++
-    })
+      leftFired++;
+    });
     const unsubRight = rete.subscribeToProduction(session, rightOfProd, () => {
-      rightFired++
-    })
+      rightFired++;
+    });
 
-    rete.insertFact(session, ["Bob", "Color", "blue"])
-    expect(colorFired).toBe(1)
-    expect(leftFired).toBe(0)
-    expect(rightFired).toBe(0)
-    rete.insertFact(session, ["Bill", "LeftOf", "Bob"])
-    expect(colorFired).toBe(1)
-    expect(leftFired).toBe(1)
-    expect(rightFired).toBe(0)
-    rete.insertFact(session, ["Hank", "RightOf", "Bill"])
-    expect(colorFired).toBe(1)
-    expect(leftFired).toBe(1)
-    expect(rightFired).toBe(1)
-    unsubLeft()
-    unsubRight()
-    unsubColor()
-    rete.insertFact(session, ["Jill", "Color", "blue"])
-    rete.insertFact(session, ["George", "LeftOf", "Bob"])
-    rete.insertFact(session, ["Jerry", "RightOf", "Bill"])
-    expect(colorFired).toBe(1)
-    expect(leftFired).toBe(1)
-    expect(rightFired).toBe(1)
+    rete.insertFact(session, ['Bob', 'Color', 'blue']);
+    expect(colorFired).toBe(1);
+    expect(leftFired).toBe(0);
+    expect(rightFired).toBe(0);
+    rete.insertFact(session, ['Bill', 'LeftOf', 'Bob']);
+    expect(colorFired).toBe(1);
+    expect(leftFired).toBe(1);
+    expect(rightFired).toBe(0);
+    rete.insertFact(session, ['Hank', 'RightOf', 'Bill']);
+    expect(colorFired).toBe(1);
+    expect(leftFired).toBe(1);
+    expect(rightFired).toBe(1);
+    unsubLeft();
+    unsubRight();
+    unsubColor();
+    rete.insertFact(session, ['Jill', 'Color', 'blue']);
+    rete.insertFact(session, ['George', 'LeftOf', 'Bob']);
+    rete.insertFact(session, ['Jerry', 'RightOf', 'Bill']);
+    expect(colorFired).toBe(1);
+    expect(leftFired).toBe(1);
+    expect(rightFired).toBe(1);
 
     rete.subscribeToProduction(session, colorProd, () => {
-      colorFired++
-    })
+      colorFired++;
+    });
     rete.subscribeToProduction(session, leftOfProd, () => {
-      leftFired++
-    })
+      leftFired++;
+    });
     rete.subscribeToProduction(session, rightOfProd, () => {
-      rightFired++
-    })
+      rightFired++;
+    });
 
-    rete.insertFact(session, ["Tom", "Color", "blue"])
-    expect(colorFired).toBe(2)
-    expect(leftFired).toBe(1)
-    expect(rightFired).toBe(1)
-    rete.insertFact(session, ["Tilly", "LeftOf", "Bob"])
-    expect(colorFired).toBe(2)
-    expect(leftFired).toBe(2)
-    expect(rightFired).toBe(1)
-    rete.insertFact(session, ["Billy", "RightOf", "Bill"])
-    expect(colorFired).toBe(2)
-    expect(leftFired).toBe(2)
-    expect(rightFired).toBe(2)
+    rete.insertFact(session, ['Tom', 'Color', 'blue']);
+    expect(colorFired).toBe(2);
+    expect(leftFired).toBe(1);
+    expect(rightFired).toBe(1);
+    rete.insertFact(session, ['Tilly', 'LeftOf', 'Bob']);
+    expect(colorFired).toBe(2);
+    expect(leftFired).toBe(2);
+    expect(rightFired).toBe(1);
+    rete.insertFact(session, ['Billy', 'RightOf', 'Bill']);
+    expect(colorFired).toBe(2);
+    expect(leftFired).toBe(2);
+    expect(rightFired).toBe(2);
   });
 
-  it("retractions trigger subscriptions", () => {
+  it('retractions trigger subscriptions', () => {
     const session = rete.initSession<SmallSchema>(true);
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
@@ -794,23 +809,22 @@ describe('rete', () => {
       true
     );
 
-    rete.addProductionToSession(session, production)
-    let fireCount = 0
+    rete.addProductionToSession(session, production);
+    let fireCount = 0;
     rete.subscribeToProduction(session, production, () => {
-      fireCount++
-    })
-    rete.insertFact(session, ["Bill", "Color", "blue"])
+      fireCount++;
+    });
+    rete.insertFact(session, ['Bill', 'Color', 'blue']);
 
-    expect(fireCount).toBe(1)
+    expect(fireCount).toBe(1);
 
-    rete.insertFact(session, ["Bob", "Color", "blue"])
-    expect(fireCount).toBe(2)
-    rete.retractFact(session, ["Bob", "Color", "blue"])
-    expect(fireCount).toBe(3)
-
+    rete.insertFact(session, ['Bob', 'Color', 'blue']);
+    expect(fireCount).toBe(2);
+    rete.retractFact(session, ['Bob', 'Color', 'blue']);
+    expect(fireCount).toBe(3);
   });
 
-  it("Firing rules several times in a row does not trigger subscription", () => {
+  it('Firing rules several times in a row does not trigger subscription', () => {
     const session = rete.initSession<SmallSchema>();
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
@@ -824,16 +838,15 @@ describe('rete', () => {
       true
     );
 
-    rete.addProductionToSession(session, production)
-    let fireCount = 0
+    rete.addProductionToSession(session, production);
+    let fireCount = 0;
     rete.subscribeToProduction(session, production, () => {
-      fireCount++
-    })
-    rete.insertFact(session, ["Bill", "Color", "blue"])
-    rete.fireRules(session)
-    rete.fireRules(session)
-    rete.fireRules(session)
-    expect(fireCount).toBe(1)
+      fireCount++;
+    });
+    rete.insertFact(session, ['Bill', 'Color', 'blue']);
+    rete.fireRules(session);
+    rete.fireRules(session);
+    rete.fireRules(session);
+    expect(fireCount).toBe(1);
   });
-
 });

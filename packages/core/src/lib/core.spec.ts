@@ -185,30 +185,6 @@ describe('edict', () => {
     expect(results).toStrictEqual(expectedResults);
   });
 
-  it('Performs quickly with repeated updates', () => {
-    const { insert, fire, queries } = mkEdict();
-    // Initial insert
-    insert(playerFacts);
-    fire();
-
-    const diffs = [];
-    for (let i = 0; i < 10000; i++) {
-      const timeUpdate = {
-        player: { x: i },
-      };
-
-      const before = performance.now();
-      insert(timeUpdate);
-      fire();
-      const after = performance.now();
-      const diff = after - before;
-      diffs.push(diff);
-    }
-    const avgDiff = diffs.reduce((c, a) => c + a) / diffs.length;
-    const MAX_PERF = 0.2;
-    expect(avgDiff).toBeLessThanOrEqual(MAX_PERF);
-  });
-
   it('Missing fact will result in empty array', () => {
     // None of the players are dying, so if those are the only facts the
     // the is_dying rule should be empty

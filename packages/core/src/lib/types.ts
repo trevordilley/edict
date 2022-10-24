@@ -1,18 +1,16 @@
 // trick the type-system so we can use the schema like an object
 // TODO: If the new API works, maybe we don't need to do this?
 
-import {PRODUCTION_ALREADY_EXISTS_BEHAVIOR} from "@edict/rete";
+import { PRODUCTION_ALREADY_EXISTS_BEHAVIOR } from '@edict/rete';
 
 export type ATTR<SCHEMA> = { [attr in keyof SCHEMA]: SCHEMA[attr] };
-export type ConditionOptions<T> = { then?: boolean; match?: T,  join?: string};
+export type ConditionOptions<T> = { then?: boolean; match?: T; join?: string };
 export type Condition<SCHEMA> = {
   [ATTR in keyof SCHEMA]: ConditionOptions<SCHEMA[ATTR]>;
 };
 export type ConditionArgs<SCHEMA> = {
   [key: string]: {
-    [ATTR in keyof Partial<SCHEMA>]:
-      | ConditionOptions<SCHEMA[ATTR]>
-      | undefined;
+    [ATTR in keyof Partial<SCHEMA>]: ConditionOptions<SCHEMA[ATTR]> | undefined;
   };
 };
 
@@ -22,6 +20,14 @@ export type EnactArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
       ? SCHEMA[ATTR]
       : never;
   } & { id: string };
+};
+
+export type QueryArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
+  [Key in keyof T]?: {
+    [ATTR in keyof Partial<T[Key]>]: ATTR extends keyof SCHEMA
+      ? SCHEMA[ATTR][]
+      : never;
+  } & { ids?: string[] };
 };
 
 /// Wrap the entire what in a function that return something we can enact? Instead of one at a time?
@@ -37,13 +43,17 @@ export type EnactionArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
   then?: (args: EnactArgs<SCHEMA, T>) => void;
   when?: (args: EnactArgs<SCHEMA, T>) => boolean;
   thenFinally?: (getResults: () => EnactArgs<SCHEMA, T>[]) => void;
-}
+};
 
-export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> =
-   (enaction?: EnactionArgs<SCHEMA, T>) => {
-    query: () => EnactArgs<SCHEMA, T>[];
-    subscribe: (fn: (results: EnactArgs<SCHEMA, T>[]) => void) => (() => void)
-  };
+export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> = (
+  enaction?: EnactionArgs<SCHEMA, T>
+) => {
+  query: (filter?: QueryArgs<SCHEMA, T>) => EnactArgs<SCHEMA, T>[];
+  subscribe: (
+    fn: (results: EnactArgs<SCHEMA, T>[]) => void,
+    filter?: QueryArgs<SCHEMA, T>
+  ) => () => void;
+};
 
 export interface IEdict<SCHEMA> {
   insert: (args: InsertEdictFact<SCHEMA>) => void;
@@ -53,12 +63,12 @@ export interface IEdict<SCHEMA> {
     name: string,
     conditions: (schema: Condition<SCHEMA>) => T,
     onAlreadyExistsBehaviour?: PRODUCTION_ALREADY_EXISTS_BEHAVIOR
-  ) => {enact: Enact<SCHEMA, T>};
+  ) => { enact: Enact<SCHEMA, T> };
   debug: {
-    dotFile: () => string
-    perf:() => {
-      frames: PerformanceEntryList[],
-      capture: () => PerformanceEntryList
-    }
-  }
+    dotFile: () => string;
+    perf: () => {
+      frames: PerformanceEntryList[];
+      capture: () => PerformanceEntryList;
+    };
+  };
 }
