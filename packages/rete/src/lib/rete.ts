@@ -1096,24 +1096,20 @@ const queryAll = <T, U>(
         result.push(prod.convertMatchFn(vars));
       } else {
         const filterKeys = filter.keys(); // All keys must be present to match the value
-        const varKeys = vars.keys(); // The superset of keys to check against
         let hasAllFilterKeys = true;
 
         for (const f of filterKeys) {
           if (!hasAllFilterKeys) break;
-          let matchFound = false;
-          for (const v of varKeys) {
-            if (v === f) {
-              const fVal = filter.get(f);
-              const vVal = vars.get(v);
-
-              matchFound = (!!fVal && !!vVal && fVal.includes(vVal)) ?? false;
-              break;
-            }
-          }
-          if (!matchFound) {
+          if (!vars.has(f)) {
             hasAllFilterKeys = false;
             break;
+          } else {
+            const fVal = filter.get(f);
+            const vVal = vars.get(f);
+            if (!fVal || !vVal || !fVal.includes(vVal)) {
+              hasAllFilterKeys = false;
+              break;
+            }
           }
         }
 
