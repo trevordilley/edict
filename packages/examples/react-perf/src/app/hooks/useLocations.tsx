@@ -10,7 +10,6 @@ export const useLocations = (filter?: { id?: string; provinceId?: string }) => {
         },
       }
     : undefined;
-
   const [locationData, setLocationData] = useState(
     locations.query(filterQuery)
   );

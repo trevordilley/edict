@@ -314,6 +314,10 @@ export const locations = rule(
     locationCivics,
     locationHappiness,
     locationProvinceId,
+    locationIsHungry,
+    locationIsInDisrepair,
+    locationIsCrimeRidden,
+    locationClassification,
   }) => ({
     $location: {
       locationName,
@@ -324,6 +328,10 @@ export const locations = rule(
       locationCivics,
       locationHappiness,
       locationProvinceId,
+      locationClassification,
+      locationIsCrimeRidden,
+      locationIsInDisrepair,
+      locationIsHungry,
     },
   })
 ).enact();
