@@ -321,7 +321,7 @@ describe('rete', () => {
     expect(newResults.length).toBe(0);
   });
 
-  it('updating facts', () => {
+  it('updating facts', async () => {
     const session = rete.initSession<SmallSchema>(false);
     let zVal: FactFragment<SmallSchema> | undefined = undefined;
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
@@ -376,6 +376,81 @@ describe('rete', () => {
     expect(newResults.length).toBe(1);
     //   expect(thenCount).toBe(2) // We have a bug where then isn't triggering again too reassign zVal to Xavier
     expect(zVal).toBe(Id.Xavier);
+  });
+
+  it('updating facts asynchronously', async () => {
+    const session = rete.initSession<SmallSchema>(false);
+    let zVal: FactFragment<SmallSchema> | undefined = undefined;
+    let thenFinallyCount = 0;
+    const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+      name: 'updatingFacts',
+      convertMatchFn,
+      thenFn: async ({ vars }) => {
+        const p = await new Promise<FactFragment<SmallSchema> | undefined>(
+          (resolve) => resolve(vars.get('z'))
+        );
+        zVal = p;
+      },
+      thenFinallyFn: async () => {
+        await new Promise<void>((resolve) => {
+          thenFinallyCount++;
+          resolve();
+        });
+      },
+    });
+
+    rete.addConditionsToProduction(
+      production,
+      { name: 'b', field: Field.IDENTIFIER },
+      'Color',
+      'blue',
+      true
+    );
+    rete.addConditionsToProduction(
+      production,
+      { name: 'y', field: Field.IDENTIFIER },
+      'LeftOf',
+      { name: 'z', field: Field.VALUE },
+      true
+    );
+    rete.addConditionsToProduction(
+      production,
+      { name: 'a', field: Field.IDENTIFIER },
+      'Color',
+      'maize',
+      true
+    );
+    rete.addConditionsToProduction(
+      production,
+      { name: 'y', field: Field.IDENTIFIER },
+      'RightOf',
+      { name: 'b', field: Field.VALUE },
+      true
+    );
+    rete.addProductionToSession(session, production);
+    rete.insertFact(session, [Id.Bob, 'Color', 'blue']);
+    rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Zach]);
+    rete.insertFact(session, [Id.Alice, 'Color', 'maize']);
+    rete.insertFact(session, [Id.Yair, 'RightOf', Id.Bob]);
+    rete.fireRules(session);
+
+    // We need to skip a frame so the promise has a chance to resolve
+    await new Promise((r) => setTimeout(r, 0));
+    const results = rete.queryAll(session, production);
+    expect(results.length).toBe(1);
+    expect(zVal).toBe(Id.Zach);
+    expect(thenFinallyCount).toBe(1);
+
+    rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Xavier]);
+    rete.fireRules(session);
+
+    // Same here, the normal use-case for these async then and thenFinally statements is more appropriate for
+    // a long run application that's doing side-effecty thing, so it looks weird in a test
+    await new Promise((r) => setTimeout(r, 0));
+    const newResults = rete.queryAll(session, production);
+    expect(newResults.length).toBe(1);
+    expect(zVal).toBe(Id.Xavier);
+    expect(thenFinallyCount).toBe(2);
   });
 
   it('updating facts in different alpha nodes', () => {

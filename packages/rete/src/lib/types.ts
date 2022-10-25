@@ -60,13 +60,15 @@ export type ThenFn<T, U> = (then: {
   session: Session<T>;
   rule: Production<T, U>;
   vars: U;
-}) => void;
-export type WrappedThenFn<SCHEMA> = (vars: MatchT<SCHEMA>) => void;
+}) => Promise<void> | void;
+export type WrappedThenFn<SCHEMA> = (
+  vars: MatchT<SCHEMA>
+) => Promise<void> | void;
 export type ThenFinallyFn<T, U> = (
   session: Session<T>,
   rule: Production<T, U>
-) => void;
-export type WrappedThenFinallyFn = () => void;
+) => Promise<void> | void;
+export type WrappedThenFinallyFn = () => Promise<void> | void;
 export type ConvertMatchFn<T, U> = (vars: MatchT<T>) => U;
 export type CondFn<T> = (vars: MatchT<T>) => boolean;
 export type InitMatchFn<T> = () => MatchT<T>;
