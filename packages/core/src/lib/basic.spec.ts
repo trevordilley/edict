@@ -122,7 +122,9 @@ describe('edict...', () => {
       },
     })).enact({
       when: () => false,
-      then: () => (count += 1),
+      then: () => {
+        count += 1;
+      },
     });
 
     insert({
@@ -298,5 +300,79 @@ describe('edict...', () => {
       },
     });
     expect(filterWhichMatchesNoOne.length).toBe(0);
+  });
+
+  it('Async then and thenFinally work', async () => {
+    const { rule, insert, fire } = edict<Schema>();
+    let thenFinallyCount = 0;
+    rule('Filters work', ({ Color }) => ({
+      $person: {
+        Color,
+      },
+    })).enact({
+      then: async ({ $person: { id, Color } }) => {
+        await new Promise<void>((resolve) => {
+          if (Color === 'red') {
+            insert({
+              [id]: {
+                Height: 10,
+              },
+            });
+          } else if (Color === 'blue') {
+            insert({
+              [id]: {
+                Height: 20,
+              },
+            });
+          } else if (Color === 'orange') {
+            insert({
+              [id]: {
+                Height: 30,
+              },
+            });
+          }
+          resolve();
+        });
+      },
+      thenFinally: async () => {
+        await new Promise<void>((resolve) => {
+          thenFinallyCount++;
+          resolve();
+        });
+      },
+    });
+
+    const heightQuery = rule('Heights from Color', ({ Color, Height }) => ({
+      $person: {
+        Color,
+        Height,
+      },
+    })).enact();
+
+    insert({
+      bob: {
+        Color: 'blue',
+      },
+      joe: {
+        Color: 'red',
+      },
+      jimmy: {
+        Color: 'blue',
+      },
+      tom: {
+        Color: 'orange',
+      },
+    });
+
+    fire();
+    await new Promise((r) => setTimeout(r, 0));
+    const results = heightQuery.query();
+    expect(results.length).toBe(4);
+    results.forEach(({ $person: { Color, Height } }) => {
+      if (Color === 'red') expect(Height).toBe(10);
+      if (Color === 'blue') expect(Height).toBe(20);
+      if (Color === 'orange') expect(Height).toBe(30);
+    });
+    expect(thenFinallyCount).toBe(1);
   });
 });
