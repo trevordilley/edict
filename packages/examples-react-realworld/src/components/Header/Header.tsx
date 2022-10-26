@@ -1,11 +1,11 @@
 import { Fragment } from 'react';
 import { HashRouter, NavLink } from 'react-router-dom';
 import { User } from '../../types/user';
-import { useStore } from '../../state/storeHooks';
+import { useUser } from '../../hooks/useUser';
 
 export function Header() {
-  const { user } = useStore(({ app }) => app);
-
+  //const { user } = useStore(({ app }) => app);
+  const user = useUser();
   return (
     <nav className="navbar navbar-light">
       <div className="container">
@@ -15,11 +15,7 @@ export function Header() {
         <ul className="nav navbar-nav pull-xs-right">
           <HashRouter>
             <NavItem text="Home" href="/" />
-
-            {user.match({
-              none: () => <GuestLinks />,
-              some: (user: any) => <UserLinks user={user} />,
-            })}
+            {user ? <UserLinks user={user.User} /> : <GuestLinks />}
           </HashRouter>
         </ul>
       </div>

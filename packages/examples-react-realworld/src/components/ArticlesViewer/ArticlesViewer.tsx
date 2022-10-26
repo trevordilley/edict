@@ -25,10 +25,10 @@ export function ArticlesViewer({
   onPageChange?: (index: number) => void;
   onTabChange?: (tab: string) => void;
 }) {
-  const { articles, articlesCount, currentPage } = useStore(
+  const { articles, currentPage, articlesCount } = useStore(
     ({ articleViewer }) => articleViewer
   );
-
+  // const { articles, articleCount } = useArticles();
   return (
     <Fragment>
       <ArticlesTabSet

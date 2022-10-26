@@ -21,6 +21,18 @@ import {
   UserForRegistration,
   UserSettings,
 } from '../types/user';
+import {
+  insert,
+  insertAllTags,
+  insertArticle,
+  insertArticleCount,
+  insertComments,
+  insertError,
+  insertProfile,
+  insertUser,
+  retractArticle,
+  retractComment,
+} from '../rules/rules';
 
 axios.defaults.baseURL = settings.baseApiUrl;
 
@@ -32,13 +44,23 @@ export async function getArticles(
     offset: 0,
     ...filters,
   };
-  return guard(multipleArticlesDecoder)(
+
+  const decodedArticles = guard(multipleArticlesDecoder)(
     (await axios.get(`articles?${objectToQueryString(finalFilters)}`)).data
   );
+
+  decodedArticles.articles.forEach((a) => insertArticle(a));
+  insertArticleCount(decodedArticles.articlesCount);
+  return decodedArticles;
 }
 
 export async function getTags(): Promise<{ tags: string[] }> {
-  return guard(object({ tags: array(string) }))((await axios.get('tags')).data);
+  const tagsResults = guard(object({ tags: array(string) }))(
+    (await axios.get('tags')).data
+  );
+
+  insertAllTags(tagsResults.tags);
+  return tagsResults;
 }
 
 export async function login(
@@ -50,27 +72,46 @@ export async function login(
       user: { email, password },
     });
 
-    return Ok(guard(object({ user: userDecoder }))(data).user);
+    const userResult = guard(object({ user: userDecoder }))(data).user;
+
+    insertUser(userResult);
+
+    return Ok(userResult);
   } catch ({ response: { data } }) {
-    return Err(guard(object({ errors: genericErrorsDecoder }))(data).errors);
+    const error = guard(object({ errors: genericErrorsDecoder }))(data).errors;
+
+    insertError(error);
+
+    return Err(error);
   }
 }
 
 export async function getUser(): Promise<User> {
   const { data } = await axios.get('user');
-  return guard(object({ user: userDecoder }))(data).user;
+  const user = guard(object({ user: userDecoder }))(data).user;
+
+  insertUser(user);
+
+  return user;
 }
 
 export async function favoriteArticle(slug: string): Promise<Article> {
-  return guard(object({ article: articleDecoder }))(
+  const favoritedArticle = guard(object({ article: articleDecoder }))(
     (await axios.post(`articles/${slug}/favorite`)).data
   ).article;
+  insertArticle(favoritedArticle);
+
+  return favoritedArticle;
 }
 
 export async function unfavoriteArticle(slug: string): Promise<Article> {
-  return guard(object({ article: articleDecoder }))(
+  const unfavoritedArticle = guard(object({ article: articleDecoder }))(
     (await axios.delete(`articles/${slug}/favorite`)).data
   ).article;
+
+  insertArticle(unfavoritedArticle);
+
+  return unfavoritedArticle;
 }
 
 export async function updateSettings(
@@ -78,10 +119,15 @@ export async function updateSettings(
 ): Promise<Result<User, GenericErrors>> {
   try {
     const { data } = await axios.put('user', user);
+    const decoded = guard(object({ user: userDecoder }))(data).user;
 
-    return Ok(guard(object({ user: userDecoder }))(data).user);
+    insertUser(decoded);
+
+    return Ok(decoded);
   } catch ({ data }) {
-    return Err(guard(object({ errors: genericErrorsDecoder }))(data).errors);
+    const err = guard(object({ errors: genericErrorsDecoder }))(data).errors;
+    insertError(err);
+    return Err(err);
   }
 }
 
@@ -90,10 +136,17 @@ export async function signUp(
 ): Promise<Result<User, GenericErrors>> {
   try {
     const { data } = await axios.post('users', { user });
+    const decoded = guard(object({ user: userDecoder }))(data).user;
 
-    return Ok(guard(object({ user: userDecoder }))(data).user);
+    insertUser(decoded);
+
+    return Ok(decoded);
   } catch ({ response: { data } }) {
-    return Err(guard(object({ errors: genericErrorsDecoder }))(data).errors);
+    const err = guard(object({ errors: genericErrorsDecoder }))(data).errors;
+
+    insertError(err);
+
+    return Err(err);
   }
 }
 
@@ -102,16 +155,24 @@ export async function createArticle(
 ): Promise<Result<Article, GenericErrors>> {
   try {
     const { data } = await axios.post('articles', { article });
-
-    return Ok(guard(object({ article: articleDecoder }))(data).article);
+    const decoded = guard(object({ article: articleDecoder }))(data).article;
+    insertArticle(decoded);
+    return Ok(decoded);
   } catch ({ response: { data } }) {
-    return Err(guard(object({ errors: genericErrorsDecoder }))(data).errors);
+    const error = guard(object({ errors: genericErrorsDecoder }))(data).errors;
+    insertError(error);
+    return Err(error);
   }
 }
 
 export async function getArticle(slug: string): Promise<Article> {
   const { data } = await axios.get(`articles/${slug}`);
-  return guard(object({ article: articleDecoder }))(data).article;
+
+  const article = guard(object({ article: articleDecoder }))(data).article;
+
+  insertArticle(article);
+
+  return article;
 }
 
 export async function updateArticle(
@@ -120,26 +181,48 @@ export async function updateArticle(
 ): Promise<Result<Article, GenericErrors>> {
   try {
     const { data } = await axios.put(`articles/${slug}`, { article });
-
-    return Ok(guard(object({ article: articleDecoder }))(data).article);
+    const updatedArticle = guard(object({ article: articleDecoder }))(
+      data
+    ).article;
+    insertArticle(updatedArticle);
+    return Ok(updatedArticle);
   } catch ({ response: { data } }) {
-    return Err(guard(object({ errors: genericErrorsDecoder }))(data).errors);
+    const err = guard(object({ errors: genericErrorsDecoder }))(data).errors;
+    insertError(err);
+    return Err(err);
   }
 }
 
 export async function getProfile(username: string): Promise<Profile> {
   const { data } = await axios.get(`profiles/${username}`);
-  return guard(object({ profile: profileDecoder }))(data).profile;
+
+  const profileData = guard(object({ profile: profileDecoder }))(data).profile;
+
+  insert({
+    [username]: profileData,
+  });
+
+  return profileData;
 }
 
 export async function followUser(username: string): Promise<Profile> {
   const { data } = await axios.post(`profiles/${username}/follow`);
-  return guard(object({ profile: profileDecoder }))(data).profile;
+
+  const following = guard(object({ profile: profileDecoder }))(data).profile;
+
+  insertProfile(following);
+
+  return following;
 }
 
 export async function unfollowUser(username: string): Promise<Profile> {
   const { data } = await axios.delete(`profiles/${username}/follow`);
-  return guard(object({ profile: profileDecoder }))(data).profile;
+
+  const unfollowing = guard(object({ profile: profileDecoder }))(data).profile;
+
+  insertProfile(unfollowing);
+
+  return unfollowing;
 }
 
 export async function getFeed(
@@ -150,14 +233,24 @@ export async function getFeed(
     offset: 0,
     ...filters,
   };
-  return guard(multipleArticlesDecoder)(
+  const articles = guard(multipleArticlesDecoder)(
     (await axios.get(`articles/feed?${objectToQueryString(finalFilters)}`)).data
   );
+  articles.articles.forEach((a) => insertArticle(a));
+
+  return articles;
 }
 
 export async function getArticleComments(slug: string): Promise<Comment[]> {
   const { data } = await axios.get(`articles/${slug}/comments`);
-  return guard(object({ comments: array(commentDecoder) }))(data).comments;
+
+  const comments = guard(object({ comments: array(commentDecoder) }))(
+    data
+  ).comments;
+
+  insertComments(comments);
+
+  return comments;
 }
 
 export async function deleteComment(
@@ -165,6 +258,7 @@ export async function deleteComment(
   commentId: number
 ): Promise<void> {
   await axios.delete(`articles/${slug}/comments/${commentId}`);
+  retractComment(commentId);
 }
 
 export async function createComment(
@@ -174,9 +268,15 @@ export async function createComment(
   const { data } = await axios.post(`articles/${slug}/comments`, {
     comment: { body },
   });
-  return guard(object({ comment: commentDecoder }))(data).comment;
+
+  const comment = guard(object({ comment: commentDecoder }))(data).comment;
+
+  insertComments([comment]);
+
+  return comment;
 }
 
 export async function deleteArticle(slug: string): Promise<void> {
   await axios.delete(`articles/${slug}`);
+  retractArticle(slug);
 }

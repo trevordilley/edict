@@ -9,7 +9,6 @@ import {
   QueryArgs,
 } from './types';
 import * as _ from 'lodash';
-import { InternalFactRepresentation } from '@edict/types';
 import {
   ConvertMatchFn,
   Field,
@@ -18,23 +17,8 @@ import {
   rete,
   viz,
 } from '@edict/rete';
+import { insertFactToFact } from './utils';
 
-export const insertFactToFact = <S>(
-  insertion: InsertEdictFact<S>
-): InternalFactRepresentation<S> => {
-  // TODO: This is just weird, it doesn't like the type and I don't get why. I'm sure I'll find out when I really
-  // don't want to find out!
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  return _.keys(insertion)
-    .map((id: string) =>
-      _.keys(insertion[id]).map((attr: string) => {
-        const val = _.get(insertion, `${id}.${attr}`);
-        return [id, attr, val] as [string, string, any];
-      })
-    )
-    .flat();
-};
 const ID_PREFIX = 'id___';
 const VALUE_PREFIX = 'val___';
 const idPrefix = (i: string) => `${ID_PREFIX}${i}`;

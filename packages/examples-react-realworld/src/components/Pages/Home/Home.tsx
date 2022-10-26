@@ -4,20 +4,27 @@ import { store } from '../../../state/store';
 import { useStoreWithInitializer } from '../../../state/storeHooks';
 import { FeedFilters } from '../../../types/article';
 import { ArticlesViewer } from '../../ArticlesViewer/ArticlesViewer';
-import { changePage, loadArticles, startLoadingArticles } from '../../ArticlesViewer/ArticlesViewer.slice';
+import {
+  changePage,
+  loadArticles,
+  startLoadingArticles,
+} from '../../ArticlesViewer/ArticlesViewer.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
 import { changeTab, loadTags, startLoadingTags } from './Home.slice';
 
 export function Home() {
-  const { tags, selectedTab } = useStoreWithInitializer(({ home }) => home, load);
+  const { tags, selectedTab } = useStoreWithInitializer(
+    ({ home }) => home,
+    load
+  );
 
   return (
-    <div className='home-page'>
+    <div className="home-page">
       {renderBanner()}
       <ContainerPage>
-        <div className='col-md-9'>
+        <div className="col-md-9">
           <ArticlesViewer
-            toggleClassName='feed-toggle'
+            toggleClassName="feed-toggle"
             selectedTab={selectedTab}
             tabs={buildTabsNames(selectedTab)}
             onPageChange={onPageChange}
@@ -25,7 +32,7 @@ export function Home() {
           />
         </div>
 
-        <div className='col-md-3'>
+        <div className="col-md-3">
           <HomeSidebar tags={tags} />
         </div>
       </ContainerPage>
@@ -50,9 +57,9 @@ async function load() {
 
 function renderBanner() {
   return (
-    <div className='banner'>
-      <div className='container'>
-        <h1 className='logo-font'>conduit</h1>
+    <div className="banner">
+      <div className="container">
+        <h1 className="logo-font">conduit</h1>
         <p>A place to share your knowledge.</p>
       </div>
     </div>
@@ -62,13 +69,21 @@ function renderBanner() {
 function buildTabsNames(selectedTab: string) {
   const { user } = store.getState().app;
 
-  return Array.from(new Set([...(user.isSome() ? ['Your Feed'] : []), 'Global Feed', selectedTab]));
+  return Array.from(
+    new Set([
+      ...(user.isSome() ? ['Your Feed'] : []),
+      'Global Feed',
+      selectedTab,
+    ])
+  );
 }
 
 async function onPageChange(index: number) {
   store.dispatch(changePage(index));
 
-  const multipleArticles = await getFeedOrGlobalArticles({ offset: (index - 1) * 10 });
+  const multipleArticles = await getFeedOrGlobalArticles({
+    offset: (index - 1) * 10,
+  });
   store.dispatch(loadArticles(multipleArticles));
 }
 
@@ -94,16 +109,21 @@ async function getFeedOrGlobalArticles(filters: FeedFilters = {}) {
 
 function HomeSidebar({ tags }: { tags: Option<string[]> }) {
   return (
-    <div className='sidebar'>
+    <div className="sidebar">
       <p>Popular Tags</p>
 
       {tags.match({
         none: () => <span>Loading tags...</span>,
         some: (tags) => (
-          <div className='tag-list'>
+          <div className="tag-list">
             {' '}
             {tags.map((tag) => (
-              <a key={tag} href='#' className='tag-pill tag-default' onClick={() => onTabChange(`# ${tag}`)}>
+              <a
+                key={tag}
+                href="#"
+                className="tag-pill tag-default"
+                onClick={() => onTabChange(`# ${tag}`)}
+              >
                 {tag}
               </a>
             ))}{' '}

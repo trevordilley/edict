@@ -1,12 +1,4 @@
-import styled from 'styled-components';
-
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  RouteProps,
-  Routes,
-} from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Footer } from '../components/Footer/Footer';
 import { Home } from '../components/Pages/Home/Home';
 import { ArticlePage } from '../components/Pages/ArticlePage/ArticlePage';
@@ -16,10 +8,13 @@ import { useStoreWithInitializer } from '../state/storeHooks';
 import { store } from '../state/store';
 import { endLoad, loadUser } from '../components/App/App.slice';
 import { getUser } from '../services/conduit';
-
-const StyledApp = styled.div`
-  // Your style here
-`;
+import { Login } from '../components/Pages/Login/Login';
+import { Register } from '../components/Pages/Register/Register';
+import { Settings } from '../components/Pages/Settings/Settings';
+import { NewArticle } from '../components/Pages/NewArticle/NewArticle';
+import { EditArticle } from '../components/Pages/EditArticle/EditArticle';
+import { ProfilePage } from '../components/Pages/ProfilePage/ProfilePage';
+import { FC, PropsWithChildren } from 'react';
 
 export function App() {
   const { loading, user } = useStoreWithInitializer(({ app }) => app, load);
@@ -30,31 +25,40 @@ export function App() {
       {!loading && (
         <>
           <Header />
-          <BrowserRouter>
+          <HashRouter>
             <Routes>
-              {/*<GuestOnlyRoute path="/login" userIsLogged={userIsLogged}>*/}
-              {/*  <Login />*/}
-              {/*</GuestOnlyRoute>*/}
-              {/*<GuestOnlyRoute path="/register" userIsLogged={userIsLogged}>*/}
-              {/*  <Register />*/}
-              {/*</GuestOnlyRoute>*/}
-              {/*<UserOnlyRoute path="/settings" userIsLogged={userIsLogged}>*/}
-              {/*  <Settings />*/}
-              {/*</UserOnlyRoute>*/}
-              {/*<UserOnlyRoute path="/editor" userIsLogged={userIsLogged}>*/}
-              {/*  <NewArticle />*/}
-              {/*</UserOnlyRoute>*/}
-              {/*<UserOnlyRoute path="/editor/:slug" userIsLogged={userIsLogged}>*/}
-              {/*  <EditArticle />*/}
-              {/*</UserOnlyRoute>*/}
-              {/*<Route path="/profile/:username">*/}
-              {/*  <ProfilePage />*/}
-              {/*</Route>*/}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route
+                path="/settings"
+                element={
+                  <UserOnlyRoute userIsLogged={userIsLogged}>
+                    <Settings />
+                  </UserOnlyRoute>
+                }
+              />
+              <Route
+                path="/editor"
+                element={
+                  <UserOnlyRoute userIsLogged={userIsLogged}>
+                    <NewArticle />
+                  </UserOnlyRoute>
+                }
+              />
+              <Route
+                path="/editor/:slug"
+                element={
+                  <UserOnlyRoute userIsLogged={userIsLogged}>
+                    <EditArticle />
+                  </UserOnlyRoute>
+                }
+              />
+              <Route path="/profile/:username" element={<ProfilePage />} />
               <Route path="/article/:slug" element={<ArticlePage />} />
               <Route path="/" element={<Home />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
-          </BrowserRouter>
+          </HashRouter>
           <Footer />
         </>
       )}
@@ -77,34 +81,10 @@ async function load() {
   }
 }
 
-function GuestOnlyRoute({
-  children,
+const UserOnlyRoute: FC<PropsWithChildren<{ userIsLogged: boolean }>> = ({
   userIsLogged,
-  ...rest
-}: {
-  children: JSX.Element | JSX.Element[];
-  userIsLogged: boolean;
-} & RouteProps) {
-  return (
-    <Route {...rest}>
-      {children}
-      {userIsLogged && <Navigate to="/" />}
-    </Route>
-  );
-}
-
-function UserOnlyRoute({
   children,
-  userIsLogged,
-  ...rest
-}: {
-  children: JSX.Element | JSX.Element[];
-  userIsLogged: boolean;
-} & RouteProps) {
-  return (
-    <Route {...rest}>
-      {children}
-      {!userIsLogged && <Navigate to="/" />}
-    </Route>
-  );
-}
+}) => {
+  if (!userIsLogged) return <Navigate to={'/'} />;
+  else return <>{children}</>;
+};
