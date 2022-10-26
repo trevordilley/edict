@@ -5,7 +5,7 @@ import { Profile } from '../types/profile';
 import { Comment } from '../types/comment';
 
 interface Error {
-  error: { [key: string]: string[] };
+  errors: { [key: string]: string[] };
 }
 
 type Schema = Article &
@@ -33,6 +33,7 @@ export const insertArticleCount = (articleCount: number) => {
   });
 };
 
+// TODO: Handle undefined state for login/logout/etc. so we can enforce rules based on login state
 export const insertUser = (user: User) => {
   insert({ User: { ...user } });
 };
@@ -41,8 +42,9 @@ export const insertProfile = (profile: Profile) => {
   insert({ [profile.username]: { ...profile } });
 };
 
-export const insertError = (error: { [key: string]: string[] }) => {
-  insert({ Error: error });
+// TODO: Types didn't save us here... hmm....
+export const insertError = (errorObj: { [key: string]: string[] }) => {
+  insert({ Error: { errors: errorObj } });
 };
 
 export const insertAllTags = (tags: string[]) => {
@@ -141,3 +143,15 @@ export const publicUserRule = rule(
     },
   })
 ).enact();
+
+export const errorRule = rule('Errors', ({ errors }) => ({
+  Error: {
+    errors,
+  },
+})).enact();
+
+insert({
+  Error: {
+    errors: {},
+  },
+});

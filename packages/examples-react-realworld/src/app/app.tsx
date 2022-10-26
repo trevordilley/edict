@@ -15,11 +15,12 @@ import { NewArticle } from '../components/Pages/NewArticle/NewArticle';
 import { EditArticle } from '../components/Pages/EditArticle/EditArticle';
 import { ProfilePage } from '../components/Pages/ProfilePage/ProfilePage';
 import { FC, PropsWithChildren } from 'react';
+import { useUser } from '../hooks/useUser';
 
 export function App() {
-  const { loading, user } = useStoreWithInitializer(({ app }) => app, load);
-  const userIsLogged = user.isSome();
-
+  const { loading } = useStoreWithInitializer(({ app }) => app, load);
+  const user = useUser();
+  const userIsLogged = user !== undefined;
   return (
     <>
       {!loading && (

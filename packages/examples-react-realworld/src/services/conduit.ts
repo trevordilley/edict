@@ -160,6 +160,7 @@ export async function createArticle(
     return Ok(decoded);
   } catch ({ response: { data } }) {
     const error = guard(object({ errors: genericErrorsDecoder }))(data).errors;
+    console.log('err here', error);
     insertError(error);
     return Err(error);
   }

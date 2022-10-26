@@ -13,13 +13,16 @@ import {
   updateField,
 } from './Login.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
+import { useErrors } from '../../../hooks/useErrors';
 
 export function Login() {
-  const { errors, loginIn, user } = useStoreWithInitializer(
+  const { loginIn, user } = useStoreWithInitializer(
     ({ login }) => login,
     dispatchOnCall(initializeLogin())
   );
-
+  const {
+    Error: { errors },
+  } = useErrors();
   return (
     <div className="auth-page">
       <ContainerPage>

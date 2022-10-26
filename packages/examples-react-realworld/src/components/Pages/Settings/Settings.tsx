@@ -14,6 +14,7 @@ import {
   updateField,
 } from './Settings.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
+import { useErrors } from '../../../hooks/useErrors';
 
 export interface SettingsField {
   name: keyof UserSettings;
@@ -23,8 +24,10 @@ export interface SettingsField {
 }
 
 export function Settings() {
-  const { user, errors, updating } = useStore(({ settings }) => settings);
-
+  const { user, updating } = useStore(({ settings }) => settings);
+  const {
+    Error: { errors },
+  } = useErrors();
   return (
     <div className="settings-page">
       <ContainerPage>

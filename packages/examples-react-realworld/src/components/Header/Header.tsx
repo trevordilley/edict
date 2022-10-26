@@ -5,7 +5,7 @@ import { useUser } from '../../hooks/useUser';
 
 export function Header() {
   //const { user } = useStore(({ app }) => app);
-  const user = useUser();
+  const { User: user } = useUser();
   return (
     <nav className="navbar navbar-light">
       <div className="container">
@@ -15,7 +15,7 @@ export function Header() {
         <ul className="nav navbar-nav pull-xs-right">
           <HashRouter>
             <NavItem text="Home" href="/" />
-            {user ? <UserLinks user={user.User} /> : <GuestLinks />}
+            {user ? <UserLinks user={user} /> : <GuestLinks />}
           </HashRouter>
         </ul>
       </div>

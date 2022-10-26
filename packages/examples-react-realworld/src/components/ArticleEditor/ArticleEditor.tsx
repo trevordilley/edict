@@ -4,27 +4,48 @@ import { useStore } from '../../state/storeHooks';
 import { buildGenericFormField } from '../../types/genericFormField';
 import { ContainerPage } from '../ContainerPage/ContainerPage';
 import { GenericForm } from '../GenericForm/GenericForm';
-import { addTag, EditorState, removeTag, updateField } from './ArticleEditor.slice';
+import {
+  addTag,
+  EditorState,
+  removeTag,
+  updateField,
+} from './ArticleEditor.slice';
+import { useErrors } from '../../hooks/useErrors';
 
-export function ArticleEditor({ onSubmit }: { onSubmit: (ev: React.FormEvent) => void }) {
-  const { article, submitting, tag, errors } = useStore(({ editor }) => editor);
-
+export function ArticleEditor({
+  onSubmit,
+}: {
+  onSubmit: (ev: React.FormEvent) => void;
+}) {
+  const { article, submitting, tag } = useStore(({ editor }) => editor);
+  const {
+    Error: { errors },
+  } = useErrors();
   return (
-    <div className='editor-page'>
+    <div className="editor-page">
       <ContainerPage>
-        <div className='col-md-10 offset-md-1 col-xs-12'>
+        <div className="col-md-10 offset-md-1 col-xs-12">
           <GenericForm
-            formObject={{ ...article, tag } as unknown as Record<string, string | null>}
+            formObject={
+              { ...article, tag } as unknown as Record<string, string | null>
+            }
             disabled={submitting}
             errors={errors}
             onChange={onUpdateField}
             onSubmit={onSubmit}
-            submitButtonText='Publish Article'
+            submitButtonText="Publish Article"
             onAddItemToList={onAddTag}
             onRemoveListItem={onRemoveTag}
             fields={[
-              buildGenericFormField({ name: 'title', placeholder: 'Article Title' }),
-              buildGenericFormField({ name: 'description', placeholder: "What's this article about?", lg: false }),
+              buildGenericFormField({
+                name: 'title',
+                placeholder: 'Article Title',
+              }),
+              buildGenericFormField({
+                name: 'description',
+                placeholder: "What's this article about?",
+                lg: false,
+              }),
               buildGenericFormField({
                 name: 'body',
                 placeholder: 'Write your article (in markdown)',
@@ -48,7 +69,9 @@ export function ArticleEditor({ onSubmit }: { onSubmit: (ev: React.FormEvent) =>
 }
 
 function onUpdateField(name: string, value: string) {
-  store.dispatch(updateField({ name: name as keyof EditorState['article'], value }));
+  store.dispatch(
+    updateField({ name: name as keyof EditorState['article'], value })
+  );
 }
 
 function onAddTag() {

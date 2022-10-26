@@ -12,12 +12,17 @@ import {
 import { loadUserIntoApp, UserForRegistration } from '../../../types/user';
 import { signUp } from '../../../services/conduit';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
+import { useErrors } from '../../../hooks/useErrors';
 
 export function Register() {
-  const { errors, signingUp, user } = useStoreWithInitializer(
+  const { signingUp, user } = useStoreWithInitializer(
     ({ register }) => register,
     dispatchOnCall(initializeRegister())
   );
+
+  const {
+    Error: { errors },
+  } = useErrors();
 
   return (
     <div className="auth-page">

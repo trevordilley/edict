@@ -11,6 +11,7 @@ import {
 } from '../../ArticlesViewer/ArticlesViewer.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
 import { changeTab, loadTags, startLoadingTags } from './Home.slice';
+import { userRule } from '../../../rules/rules';
 
 export function Home() {
   const { tags, selectedTab } = useStoreWithInitializer(
@@ -44,7 +45,8 @@ async function load() {
   store.dispatch(startLoadingArticles());
   store.dispatch(startLoadingTags());
 
-  if (store.getState().app.user.isSome()) {
+  const user = userRule.query()[0];
+  if (user !== undefined) {
     store.dispatch(changeTab('Your Feed'));
   }
 

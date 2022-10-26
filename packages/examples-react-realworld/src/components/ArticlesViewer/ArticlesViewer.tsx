@@ -11,6 +11,7 @@ import {
   endSubmittingFavorite,
   startSubmittingFavorite,
 } from './ArticlesViewer.slice';
+import { userRule } from '../../rules/rules';
 
 export function ArticlesViewer({
   toggleClassName,
@@ -132,10 +133,8 @@ function ArticleList({
 
 function onFavoriteToggle(index: number, { slug, favorited }: Article) {
   return async () => {
-    // Todo: Fix
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    if (store.getState().app.user.isNone()) {
+    const user = userRule.query()[0];
+    if (user === undefined) {
       window.location.hash = '#/login';
       return;
     }
