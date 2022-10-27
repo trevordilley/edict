@@ -87,15 +87,12 @@ early mornings to keep on this work!
 Execute the following
 
 ```
-# Use yarn as the package manager
-npm install --global yarn
-
-# Install stuff
-yarn
+# Install the things from root
+npm ij
 
 # Now you can do things
-yarn test # runs all the tests
-yarn build # builds all the things
-yarn example:phaser # Run the phaser example
-yarn example:react # Run the react example!
+npm run test # runs all the tests
+npm run  build # builds all the things
+npm run example:phaser # Run the phaser example
+npm run example:react # Run the react example!
 ```
