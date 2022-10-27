@@ -3,7 +3,6 @@
 
 import { PRODUCTION_ALREADY_EXISTS_BEHAVIOR } from '@edict/rete';
 
-export type ATTR<SCHEMA> = { [attr in keyof SCHEMA]: SCHEMA[attr] };
 export type ConditionOptions<T> = { then?: boolean; match?: T; join?: string };
 export type Condition<SCHEMA> = {
   [ATTR in keyof SCHEMA]: ConditionOptions<SCHEMA[ATTR]>;
@@ -61,6 +60,9 @@ export interface IEdict<SCHEMA> {
   insert: (args: InsertEdictFact<SCHEMA>) => void;
   retract: (id: string, ...attrs: (keyof SCHEMA)[]) => void;
   fire: (recursionLimit?: number) => void;
+  conditions: <T extends ConditionArgs<SCHEMA>>(
+    conds: (schema: Condition<SCHEMA>) => T
+  ) => T;
   rule: <T extends ConditionArgs<SCHEMA>>(
     name: string,
     conditions: (schema: Condition<SCHEMA>) => T,

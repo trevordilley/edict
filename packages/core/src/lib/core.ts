@@ -53,6 +53,13 @@ export const edict = <SCHEMA>(
     });
   };
 
+  const conditions = <T extends ConditionArgs<SCHEMA>>(
+    conds: (schema: Condition<SCHEMA>) => T
+  ): T => {
+    const schema = {} as unknown as SCHEMA;
+    return conds(schema);
+  };
+
   const rule = <T extends ConditionArgs<SCHEMA>>(
     name: string,
     conditions: (schema: Condition<SCHEMA>) => T,
@@ -227,6 +234,7 @@ export const edict = <SCHEMA>(
     insert,
     retract,
     fire,
+    conditions,
     rule,
     debug: {
       dotFile,
