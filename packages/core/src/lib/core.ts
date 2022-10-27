@@ -53,7 +53,13 @@ export const edict = <SCHEMA>(
     });
   };
 
-  const conditions = <T extends ConditionArgs<SCHEMA>>(
+  const conditions = <
+    T extends {
+      [ATTR in keyof Partial<SCHEMA>]:
+        | ConditionOptions<SCHEMA[ATTR]>
+        | undefined;
+    }
+  >(
     conds: (schema: Condition<SCHEMA>) => T
   ): T => {
     const schema = {} as unknown as SCHEMA;

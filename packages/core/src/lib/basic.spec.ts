@@ -380,80 +380,111 @@ describe('edict...', () => {
 it('Reusable conditions with conditions()', () => {
   const { rule, insert, fire, conditions } = edict<Schema>();
 
-  const personConds = conditions(({Color, Height}) => ({
-    Color, Height
-  }))
+  const personConds = conditions(({ Color, Height }) => ({
+    Color,
+    Height,
+  }));
 
-  const results = rule('Filters work', ({ Color }) => ({
+  const redAre70 = rule('red color folks are 70 years old', () => ({
     $person: {
-      Color,
-      Height,
+      ...personConds,
+    },
+  })).enact({
+    when: ({ $person: { Color } }) => Color === 'red',
+    then: ({ $person: { id } }) => {
+      insert({
+        [id]: {
+          Age: 70,
+        },
+      });
+    },
+  });
 
+  const blueAre50 = rule('blue color  are 50 years old', () => ({
+    $person: {
+      ...personConds,
+    },
+  })).enact({
+    when: ({ $person: { Color } }) => Color === 'blue',
+    then: ({ $person: { id } }) => {
+      insert({
+        [id]: {
+          Age: 50,
+        },
+      });
+    },
+  });
+
+  const orangeAre30 = rule('orange color  are 30 years old', () => ({
+    $person: {
+      ...personConds,
+    },
+  })).enact({
+    when: ({ $person: { Color } }) => Color === 'orange',
+    then: ({ $person: { id } }) => {
+      insert({
+        [id]: {
+          Age: 30,
+        },
+      });
+    },
+  });
+
+  const people = rule('People', ({ Age }) => ({
+    $person: {
+      ...personConds,
+      Age,
     },
   })).enact();
 
   insert({
     bob: {
       Color: 'blue',
+      Height: 88,
     },
     joe: {
       Color: 'red',
+      Height: 33,
     },
     jimmy: {
       Color: 'blue',
+      Height: 45,
     },
     tom: {
       Color: 'orange',
+      Height: 34,
     },
   });
 
   fire();
-  expect(results.query().length).toBe(4);
+  expect(people.query().length).toBe(4);
 
-  const filteredById = results.query({
-    $person: {
-      ids: ['bob'],
-    },
-  });
-  expect(filteredById[0].$person.id).toBe('bob');
-  const filteredByAttribute = results.query({
+  const red = people.query({
     $person: {
       Color: ['red'],
     },
   });
-  expect(filteredByAttribute[0].$person.id).toBe('joe');
+  red.forEach((r) => {
+    expect(r.$person.Age).toBe(70);
+  });
 
-  /// Oi...I feel like the useful thing to do is to treat these as an AND instead of an OR
-  /// currently this is an OR....
-  const filteredByIdAndAttr = results.query({
+  const blue = people.query({
     $person: {
-      ids: ['jimmy'],
       Color: ['blue'],
     },
   });
-  expect(filteredByIdAndAttr[0].$person.id).toBe('jimmy');
+  blue.map((b) => {
+    expect(b.$person.Age).toBe(50);
+  });
 
-  const filterWithMultipleQueries = results.query({
+  const orange = people.query({
     $person: {
-      Color: ['blue', 'red'],
+      Color: ['orange'],
     },
   });
-  expect(
-    filterWithMultipleQueries.map(({ $person }) => $person.id).sort()
-  ).toStrictEqual(['bob', 'jimmy', 'joe'].sort());
-
-  const filterWhichMatchesEveryone = results.query({
-    $person: {
-      Color: ['blue', 'red', 'orange'],
-    },
+  orange.map((o) => {
+    expect(o.$person.Age).toBe(30);
   });
-  expect(filterWhichMatchesEveryone.length).toBe(4);
-  const filterWhichMatchesNoOne = results.query({
-    $person: {
-      Color: ['chair'],
-    },
-  });
-  expect(filterWhichMatchesNoOne.length).toBe(0);
 });
 
 it('Async then and thenFinally work', async () => {
@@ -528,5 +559,4 @@ it('Async then and thenFinally work', async () => {
     if (Color === 'orange') expect(Height).toBe(30);
   });
   expect(thenFinallyCount).toBe(1);
-});
 });

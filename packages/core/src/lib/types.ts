@@ -60,7 +60,13 @@ export interface IEdict<SCHEMA> {
   insert: (args: InsertEdictFact<SCHEMA>) => void;
   retract: (id: string, ...attrs: (keyof SCHEMA)[]) => void;
   fire: (recursionLimit?: number) => void;
-  conditions: <T extends ConditionArgs<SCHEMA>>(
+  conditions: <
+    T extends {
+      [ATTR in keyof Partial<SCHEMA>]:
+        | ConditionOptions<SCHEMA[ATTR]>
+        | undefined;
+    }
+  >(
     conds: (schema: Condition<SCHEMA>) => T
   ) => T;
   rule: <T extends ConditionArgs<SCHEMA>>(
