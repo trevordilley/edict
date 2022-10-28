@@ -385,7 +385,7 @@ it('Reusable conditions with conditions()', () => {
     Height,
   }));
 
-  const redAre70 = rule('red color folks are 70 years old', () => ({
+  rule('red color folks are 70 years old', () => ({
     $person: {
       ...personConds,
     },
@@ -400,7 +400,7 @@ it('Reusable conditions with conditions()', () => {
     },
   });
 
-  const blueAre50 = rule('blue color  are 50 years old', () => ({
+  rule('blue color  are 50 years old', () => ({
     $person: {
       ...personConds,
     },
@@ -415,7 +415,7 @@ it('Reusable conditions with conditions()', () => {
     },
   });
 
-  const orangeAre30 = rule('orange color  are 30 years old', () => ({
+  rule('orange color  are 30 years old', () => ({
     $person: {
       ...personConds,
     },
