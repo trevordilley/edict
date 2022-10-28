@@ -59,12 +59,6 @@ const slice = createSlice({
   },
 });
 
-export const {
-  startLoadingArticles,
-  loadArticles,
-  startSubmittingFavorite,
-  endSubmittingFavorite,
-  changePage,
-} = slice.actions;
+export const { startLoadingArticles, loadArticles, changePage } = slice.actions;
 
 export default slice.reducer;

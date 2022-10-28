@@ -4,7 +4,8 @@ import { homePageRule } from './home';
 export const useHome = () => {
   const [
     {
-      HomePage: { selectedTab, tabNames, currentPage },
+      HomePage: { selectedTab, tabNames },
+      ArticleList: { currentPage },
       Tags: { tagList },
     },
     setHome,

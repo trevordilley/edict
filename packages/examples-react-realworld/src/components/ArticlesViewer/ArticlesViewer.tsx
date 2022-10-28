@@ -1,19 +1,13 @@
 import { Fragment } from 'react';
-import { favoriteArticle, unfavoriteArticle } from '../../services/conduit';
-import { store } from '../../state/store';
 import { Article } from '../../types/article';
 import { classObjectToClassName } from '../../types/style';
 import { ArticlePreview } from '../ArticlePreview/ArticlePreview';
 import { Pagination } from '../Pagination/Pagination';
-import {
-  ArticleViewerState,
-  endSubmittingFavorite,
-  startSubmittingFavorite,
-} from './ArticlesViewer.slice';
-import { userRule } from '../../rules/user/user';
+import { ArticleViewerState } from './ArticlesViewer.slice';
 import { useArticles } from '../../rules/article/useArticle';
 import { None, Some } from '@hqoss/monads';
 import { useHome } from '../../rules/home/useHome';
+import { session } from '../../rules/session';
 
 export function ArticlesViewer({
   toggleClassName,
@@ -28,7 +22,6 @@ export function ArticlesViewer({
   onPageChange?: (index: number) => void;
   onTabChange?: (tab: string) => void;
 }) {
-  // const { currentPage } = useStore(({ articleViewer }) => articleViewer);
   const { articles, articleCount } = useArticles();
   const { currentPage } = useHome();
   return (
@@ -122,9 +115,7 @@ function ArticleList({
             key={article.slug}
             article={article}
             isSubmitting={isSubmitting}
-            onFavoriteToggle={
-              isSubmitting ? undefined : onFavoriteToggle(index, article)
-            }
+            onFavoriteToggle={() => onFavoriteToggle(index, article)}
           />
         ))}
       </Fragment>
@@ -133,17 +124,11 @@ function ArticleList({
 }
 
 function onFavoriteToggle(index: number, { slug, favorited }: Article) {
-  return async () => {
-    const user = userRule.query()[0];
-    if (user === undefined) {
-      window.location.hash = '#/login';
-      return;
-    }
-    store.dispatch(startSubmittingFavorite(index));
-
-    const article = await (favorited
-      ? unfavoriteArticle(slug)
-      : favoriteArticle(slug));
-    store.dispatch(endSubmittingFavorite({ index, article }));
-  };
+  session.insert({
+    [slug]: {
+      slug,
+      favorited,
+      isFavoriting: true,
+    },
+  });
 }

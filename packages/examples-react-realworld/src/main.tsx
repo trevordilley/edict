@@ -9,18 +9,21 @@ import { DEFAULT_FEED_LIMIT, INITIAL_FEED_OFFSET } from './services/conduit';
 insert({
   HomePage: {
     selectedTab: HOME_TAB.GLOBAL_FEED,
+  },
+  ArticleList: {
     limit: DEFAULT_FEED_LIMIT,
     offset: INITIAL_FEED_OFFSET,
     currentPage: 1,
+    filterByAuthor: undefined,
+    tag: undefined,
+    favorited: undefined,
+    articleCount: 0,
   },
   Tags: {
     tagList: [],
   },
   Error: {
     errors: {},
-  },
-  ArticleList: {
-    articleCount: 0,
   },
 });
 const root = ReactDOM.createRoot(

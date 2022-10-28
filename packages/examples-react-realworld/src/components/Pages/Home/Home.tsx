@@ -45,7 +45,7 @@ async function load() {
   }
 
   session.insert({
-    HomePage: {
+    ArticleList: {
       currentPage: 1,
     },
   });
@@ -66,7 +66,7 @@ function renderBanner() {
 
 async function onPageChange(index: number) {
   session.insert({
-    HomePage: {
+    ArticleList: {
       currentPage: index,
     },
   });

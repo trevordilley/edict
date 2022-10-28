@@ -24,7 +24,12 @@ interface HomePage {
   limit: number;
 }
 
-export type Schema = Article & { isSubmitting: boolean } & User &
+export type Schema = Article & {
+  isSubmitting: boolean;
+  isFavoriting: boolean;
+  tag: string;
+  filterByAuthor: string;
+} & User &
   Error &
   Profile &
   UserSettings &

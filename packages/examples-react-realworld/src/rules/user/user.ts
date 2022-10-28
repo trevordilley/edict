@@ -19,6 +19,10 @@ export const insertUser = (user: User) => {
   insert({ User: { ...user } });
 };
 
+export const logoutUser = () => {
+  retractByConditions('User', userConditions);
+};
+
 export const userRule = rule('User', () => ({
   User: userConditions,
 })).enact();
