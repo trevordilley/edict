@@ -10,7 +10,7 @@ import {
   removeTag,
   updateField,
 } from './ArticleEditor.slice';
-import { useErrors } from '../../hooks/useErrors';
+import { useErrors } from '../../rules/error/useErrors';
 
 export function ArticleEditor({
   onSubmit,

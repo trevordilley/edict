@@ -13,7 +13,7 @@ import {
   updateField,
 } from './Login.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
-import { useErrors } from '../../../hooks/useErrors';
+import { useErrors } from '../../../rules/error/useErrors';
 
 export function Login() {
   const { loginIn, user } = useStoreWithInitializer(

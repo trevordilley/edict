@@ -15,7 +15,7 @@ import { NewArticle } from '../components/Pages/NewArticle/NewArticle';
 import { EditArticle } from '../components/Pages/EditArticle/EditArticle';
 import { ProfilePage } from '../components/Pages/ProfilePage/ProfilePage';
 import { FC, PropsWithChildren } from 'react';
-import { useUser } from '../hooks/useUser';
+import { useUser } from '../rules/user/useUser';
 
 export function App() {
   const { loading } = useStoreWithInitializer(({ app }) => app, load);

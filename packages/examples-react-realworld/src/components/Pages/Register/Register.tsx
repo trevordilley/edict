@@ -12,7 +12,7 @@ import {
 import { loadUserIntoApp, UserForRegistration } from '../../../types/user';
 import { signUp } from '../../../services/conduit';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
-import { useErrors } from '../../../hooks/useErrors';
+import { useErrors } from '../../../rules/error/useErrors';
 
 export function Register() {
   const { signingUp, user } = useStoreWithInitializer(

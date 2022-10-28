@@ -1,4 +1,4 @@
-import { None, Option, Some } from '@hqoss/monads';
+import { None, Option } from '@hqoss/monads';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export interface HomeState {
@@ -16,15 +16,12 @@ const slice = createSlice({
   initialState,
   reducers: {
     startLoadingTags: () => initialState,
-    loadTags: (state, { payload: tags }: PayloadAction<string[]>) => {
-      state.tags = Some(tags);
-    },
     changeTab: (state, { payload: tab }: PayloadAction<string>) => {
       state.selectedTab = tab;
     },
   },
 });
 
-export const { startLoadingTags, loadTags, changeTab } = slice.actions;
+export const { startLoadingTags, changeTab } = slice.actions;
 
 export default slice.reducer;

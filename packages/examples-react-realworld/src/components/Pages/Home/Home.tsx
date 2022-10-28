@@ -1,23 +1,20 @@
-import { Option } from '@hqoss/monads';
-import { getArticles, getFeed, getTags } from '../../../services/conduit';
-import { store } from '../../../state/store';
-import { useStoreWithInitializer } from '../../../state/storeHooks';
-import { FeedFilters } from '../../../types/article';
+import { Option, Some } from '@hqoss/monads';
+import { getTags } from '../../../services/conduit';
 import { ArticlesViewer } from '../../ArticlesViewer/ArticlesViewer';
-import {
-  changePage,
-  loadArticles,
-  startLoadingArticles,
-} from '../../ArticlesViewer/ArticlesViewer.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
-import { changeTab, loadTags, startLoadingTags } from './Home.slice';
-import { userRule } from '../../../rules/rules';
+import { useHome } from '../../../rules/home/useHome';
+import { getUser } from '../../../rules/user/user';
+import { changeHomeTab } from '../../../rules/home/home';
+import { HOME_TAB } from '../../../rules/schema';
+import { session } from '../../../rules/session';
+import { useEffect } from 'react';
 
 export function Home() {
-  const { tags, selectedTab } = useStoreWithInitializer(
-    ({ home }) => home,
-    load
-  );
+  useEffect(() => {
+    load();
+  }, []);
+
+  const { tagList: tags, selectedTab, tabNames } = useHome();
 
   return (
     <div className="home-page">
@@ -27,14 +24,14 @@ export function Home() {
           <ArticlesViewer
             toggleClassName="feed-toggle"
             selectedTab={selectedTab}
-            tabs={buildTabsNames(selectedTab)}
+            tabs={tabNames}
             onPageChange={onPageChange}
-            onTabChange={onTabChange}
+            onTabChange={changeHomeTab}
           />
         </div>
 
         <div className="col-md-3">
-          <HomeSidebar tags={tags} />
+          <HomeSidebar tags={Some(tags)} />
         </div>
       </ContainerPage>
     </div>
@@ -42,19 +39,18 @@ export function Home() {
 }
 
 async function load() {
-  store.dispatch(startLoadingArticles());
-  store.dispatch(startLoadingTags());
-
-  const user = userRule.query()[0];
+  const user = getUser();
   if (user !== undefined) {
-    store.dispatch(changeTab('Your Feed'));
+    changeHomeTab(HOME_TAB.YOUR_FEED);
   }
 
-  const multipleArticles = await getFeedOrGlobalArticles();
-  store.dispatch(loadArticles(multipleArticles));
+  session.insert({
+    HomePage: {
+      currentPage: 1,
+    },
+  });
 
-  const tagsResult = await getTags();
-  store.dispatch(loadTags(tagsResult.tags));
+  await getTags();
 }
 
 function renderBanner() {
@@ -68,45 +64,12 @@ function renderBanner() {
   );
 }
 
-function buildTabsNames(selectedTab: string) {
-  const { user } = store.getState().app;
-
-  return Array.from(
-    new Set([
-      ...(user.isSome() ? ['Your Feed'] : []),
-      'Global Feed',
-      selectedTab,
-    ])
-  );
-}
-
 async function onPageChange(index: number) {
-  store.dispatch(changePage(index));
-
-  const multipleArticles = await getFeedOrGlobalArticles({
-    offset: (index - 1) * 10,
+  session.insert({
+    HomePage: {
+      currentPage: index,
+    },
   });
-  store.dispatch(loadArticles(multipleArticles));
-}
-
-async function onTabChange(tab: string) {
-  store.dispatch(changeTab(tab));
-  store.dispatch(startLoadingArticles());
-
-  const multipleArticles = await getFeedOrGlobalArticles();
-  store.dispatch(loadArticles(multipleArticles));
-}
-
-async function getFeedOrGlobalArticles(filters: FeedFilters = {}) {
-  const { selectedTab } = store.getState().home;
-  const finalFilters = {
-    ...filters,
-    tag: selectedTab.slice(2),
-  };
-
-  return await (selectedTab === 'Your Feed' ? getFeed : getArticles)(
-    !selectedTab.startsWith('#') ? filters : finalFilters
-  );
 }
 
 function HomeSidebar({ tags }: { tags: Option<string[]> }) {
@@ -124,7 +87,7 @@ function HomeSidebar({ tags }: { tags: Option<string[]> }) {
                 key={tag}
                 href="#"
                 className="tag-pill tag-default"
-                onClick={() => onTabChange(`# ${tag}`)}
+                onClick={() => changeHomeTab(`# ${tag}`)}
               >
                 {tag}
               </a>

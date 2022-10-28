@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { HashRouter, NavLink } from 'react-router-dom';
 import { User } from '../../types/user';
-import { useUser } from '../../hooks/useUser';
+import { useUser } from '../../rules/user/useUser';
 
 export function Header() {
   //const { user } = useStore(({ app }) => app);

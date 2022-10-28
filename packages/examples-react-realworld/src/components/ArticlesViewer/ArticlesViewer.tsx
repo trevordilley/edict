@@ -1,7 +1,6 @@
 import { Fragment } from 'react';
 import { favoriteArticle, unfavoriteArticle } from '../../services/conduit';
 import { store } from '../../state/store';
-import { useStore } from '../../state/storeHooks';
 import { Article } from '../../types/article';
 import { classObjectToClassName } from '../../types/style';
 import { ArticlePreview } from '../ArticlePreview/ArticlePreview';
@@ -11,7 +10,10 @@ import {
   endSubmittingFavorite,
   startSubmittingFavorite,
 } from './ArticlesViewer.slice';
-import { userRule } from '../../rules/rules';
+import { userRule } from '../../rules/user/user';
+import { useArticles } from '../../rules/article/useArticle';
+import { None, Some } from '@hqoss/monads';
+import { useHome } from '../../rules/home/useHome';
 
 export function ArticlesViewer({
   toggleClassName,
@@ -26,19 +28,18 @@ export function ArticlesViewer({
   onPageChange?: (index: number) => void;
   onTabChange?: (tab: string) => void;
 }) {
-  const { articles, currentPage, articlesCount } = useStore(
-    ({ articleViewer }) => articleViewer
-  );
-  // const { articles, articleCount } = useArticles();
+  // const { currentPage } = useStore(({ articleViewer }) => articleViewer);
+  const { articles, articleCount } = useArticles();
+  const { currentPage } = useHome();
   return (
     <Fragment>
       <ArticlesTabSet
         {...{ tabs, selectedTab, toggleClassName, onTabChange }}
       />
-      <ArticleList articles={articles} />
+      <ArticleList articles={articles.length > 0 ? Some(articles) : None} />
       <Pagination
         currentPage={currentPage}
-        count={articlesCount}
+        count={articleCount}
         itemsPerPage={10}
         onPageChange={onPageChange}
       />

@@ -14,7 +14,7 @@ import {
   updateField,
 } from './Settings.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
-import { useErrors } from '../../../hooks/useErrors';
+import { useErrors } from '../../../rules/error/useErrors';
 
 export interface SettingsField {
   name: keyof UserSettings;

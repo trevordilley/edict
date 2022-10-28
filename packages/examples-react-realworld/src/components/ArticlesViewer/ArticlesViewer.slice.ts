@@ -2,8 +2,6 @@ import { None, Option, Some } from '@hqoss/monads';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Article, MultipleArticles } from '../../types/article';
 import * as R from 'ramda';
-import { useEffect, useState } from 'react';
-import { articleCountRule, articleRules } from '../../rules/rules';
 
 export interface ArticleViewerArticle {
   article: Article;
@@ -20,20 +18,6 @@ const initialState: ArticleViewerState = {
   articles: None,
   currentPage: 1,
   articlesCount: 0,
-};
-
-export const useArticles = () => {
-  const [articles, setArticles] = useState(articleRules.query());
-  const [articleCount, setArticleCount] = useState(articleCountRule.query()[0]);
-
-  useEffect(() => {
-    return articleRules.subscribe((a) => setArticles(a));
-  });
-  useEffect(() => {
-    return articleCountRule.subscribe((c) => setArticleCount(c[0]));
-  });
-
-  return { articles, articleCount };
 };
 
 const slice = createSlice({

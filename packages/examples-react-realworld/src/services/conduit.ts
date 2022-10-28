@@ -2,6 +2,7 @@ import { Err, Ok, Result } from '@hqoss/monads';
 import axios from 'axios';
 import { array, guard, object, string } from 'decoders';
 import settings from '../config/settings';
+import { session } from '../rules/session';
 import {
   Article,
   articleDecoder,
@@ -22,26 +23,27 @@ import {
   UserSettings,
 } from '../types/user';
 import {
-  insert,
-  insertAllTags,
   insertArticle,
   insertArticleCount,
-  insertComments,
-  insertError,
-  insertProfile,
-  insertUser,
   retractArticle,
-  retractComment,
-} from '../rules/rules';
+} from '../rules/article/article';
+import { insertAllTags } from '../rules/tag/tag';
+import { insertUser } from '../rules/user/user';
+import { insertError } from '../rules/error/error';
+import { insertProfile } from '../rules/profile/profile';
+import { insertComments, retractComment } from '../rules/comment/comment';
+
+const { insert } = session;
 
 axios.defaults.baseURL = settings.baseApiUrl;
-
+export const DEFAULT_FEED_LIMIT = 10;
+export const INITIAL_FEED_OFFSET = 0;
 export async function getArticles(
   filters: ArticlesFilters = {}
 ): Promise<MultipleArticles> {
   const finalFilters: ArticlesFilters = {
-    limit: 10,
-    offset: 0,
+    limit: DEFAULT_FEED_LIMIT,
+    offset: INITIAL_FEED_OFFSET,
     ...filters,
   };
 

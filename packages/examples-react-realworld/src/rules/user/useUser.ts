@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { userRule } from '../rules/rules';
+import { userRule } from './user';
 
 export const useUser = () => {
   const [user, setUser] = useState(userRule.query()[0]);
