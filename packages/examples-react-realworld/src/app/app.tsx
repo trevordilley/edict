@@ -1,4 +1,3 @@
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Footer } from '../components/Footer/Footer';
 import { Home } from '../components/Pages/Home/Home';
 import { ArticlePage } from '../components/Pages/ArticlePage/ArticlePage';
@@ -16,6 +15,7 @@ import { EditArticle } from '../components/Pages/EditArticle/EditArticle';
 import { ProfilePage } from '../components/Pages/ProfilePage/ProfilePage';
 import { FC, PropsWithChildren } from 'react';
 import { useUser } from '../rules/user/useUser';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 export function App() {
   const { loading } = useStoreWithInitializer(({ app }) => app, load);
@@ -26,40 +26,38 @@ export function App() {
       {!loading && (
         <>
           <Header />
-          <HashRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route
-                path="/settings"
-                element={
-                  <UserOnlyRoute userIsLogged={userIsLogged}>
-                    <Settings />
-                  </UserOnlyRoute>
-                }
-              />
-              <Route
-                path="/editor"
-                element={
-                  <UserOnlyRoute userIsLogged={userIsLogged}>
-                    <NewArticle />
-                  </UserOnlyRoute>
-                }
-              />
-              <Route
-                path="/editor/:slug"
-                element={
-                  <UserOnlyRoute userIsLogged={userIsLogged}>
-                    <EditArticle />
-                  </UserOnlyRoute>
-                }
-              />
-              <Route path="/profile/:username" element={<ProfilePage />} />
-              <Route path="/article/:slug" element={<ArticlePage />} />
-              <Route path="/" element={<Home />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </HashRouter>
+          <Routes>
+            <Route path="login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="settings"
+              element={
+                <UserOnlyRoute userIsLogged={userIsLogged}>
+                  <Settings />
+                </UserOnlyRoute>
+              }
+            />
+            <Route
+              path="/editor"
+              element={
+                <UserOnlyRoute userIsLogged={userIsLogged}>
+                  <NewArticle />
+                </UserOnlyRoute>
+              }
+            />
+            <Route
+              path="/editor/:slug"
+              element={
+                <UserOnlyRoute userIsLogged={userIsLogged}>
+                  <EditArticle />
+                </UserOnlyRoute>
+              }
+            />
+            <Route path="/profile/:username" element={<ProfilePage />} />
+            <Route path="/article/:slug" element={<ArticlePage />} />
+            <Route path="/" element={<Home />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
           <Footer />
         </>
       )}

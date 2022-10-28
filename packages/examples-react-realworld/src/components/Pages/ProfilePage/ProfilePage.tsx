@@ -30,7 +30,7 @@ export function ProfilePage() {
     if (!username) return;
     onLoad(username, favorites);
   }, [username]);
-
+  console.log('rendering profile page');
   const { profile, submitting } = useStore(({ profile }) => profile);
 
   // tODO: Handle unknown usernaes from querystring

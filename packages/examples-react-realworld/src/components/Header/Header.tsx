@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { HashRouter, NavLink } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { User } from '../../types/user';
 import { useUser } from '../../rules/user/useUser';
 
@@ -13,12 +13,11 @@ export function Header() {
           conduit
         </a>
         <ul className="nav navbar-nav pull-xs-right">
-          <HashRouter>
-            <NavItem text="Home" href="/" />
-            {user ? <UserLinks user={user} /> : <GuestLinks />}
-          </HashRouter>
+          <NavItem text="Home" href="/" />
+          {user ? <UserLinks user={user} /> : <GuestLinks />}
         </ul>
       </div>
+      <Outlet />
     </nav>
   );
 }
