@@ -17,7 +17,8 @@ type Schema = Article &
 
 const session = edict<Schema>(true);
 
-export const { insert, retract, debug } = session;
+export const { insert, retract, retractByConditions, conditions, debug } =
+  session;
 
 export const insertArticle = (article: Article) => {
   insert({
@@ -67,20 +68,34 @@ export const retractComment = (commentId: number) => {
   retract(`comment${commentId}`, 'createdAt', 'updatedAt', 'body', 'author');
 };
 
-export const retractArticle = (slug: string) => {
-  retract(
+const articleConditions = conditions(
+  ({
     slug,
-    'slug',
-    'title',
-    'description',
-    'body',
-    'tagList',
-    'createdAt',
-    'updatedAt',
-    'favorited',
-    'favoritesCount',
-    'author'
-  );
+    title,
+    body,
+    description,
+    tagList,
+    createdAt,
+    updatedAt,
+    favorited,
+    favoritesCount,
+    author,
+  }) => ({
+    slug,
+    title,
+    body,
+    description,
+    tagList,
+    createdAt,
+    updatedAt,
+    favorited,
+    favoritesCount,
+    author,
+  })
+);
+
+export const retractArticle = (slug: string) => {
+  retractByConditions(slug, articleConditions);
 };
 const { rule } = session;
 

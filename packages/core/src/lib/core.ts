@@ -53,6 +53,13 @@ export const edict = <SCHEMA>(
     });
   };
 
+  const retractByConditions = (
+    id: string,
+    conditions: { [key in keyof SCHEMA]?: any }
+  ) => {
+    retract(id, ...(Object.keys(conditions) as (keyof SCHEMA)[]));
+  };
+
   const conditions = <
     T extends {
       [ATTR in keyof Partial<SCHEMA>]:
@@ -239,6 +246,7 @@ export const edict = <SCHEMA>(
   return {
     insert,
     retract,
+    retractByConditions,
     fire,
     conditions,
     rule,

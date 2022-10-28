@@ -59,6 +59,10 @@ export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> = (
 export interface IEdict<SCHEMA> {
   insert: (args: InsertEdictFact<SCHEMA>) => void;
   retract: (id: string, ...attrs: (keyof SCHEMA)[]) => void;
+  retractByConditions: (
+    id: string,
+    conditions: { [key in keyof SCHEMA]?: any }
+  ) => void;
   fire: (recursionLimit?: number) => void;
   conditions: <
     T extends {

@@ -487,6 +487,53 @@ it('Reusable conditions with conditions()', () => {
   });
 });
 
+it('Reusable conditions can be used to retract', () => {
+  const { rule, insert, fire, retractByConditions, conditions } =
+    edict<Schema>();
+
+  const personConds = conditions(({ Color, Height }) => ({
+    Color,
+    Height,
+  }));
+
+  const people = rule('People', () => ({
+    $person: personConds,
+  })).enact();
+
+  insert({
+    bob: {
+      Color: 'blue',
+      Height: 88,
+    },
+    joe: {
+      Color: 'red',
+      Height: 33,
+    },
+    jimmy: {
+      Color: 'blue',
+      Height: 45,
+    },
+    tom: {
+      Color: 'orange',
+      Height: 34,
+    },
+  });
+
+  fire();
+  expect(people.query().length).toBe(4);
+  const tom = () =>
+    people.query({
+      $person: {
+        ids: ['tom'],
+      },
+    });
+  expect(tom().length).toBe(1);
+  retractByConditions('tom', personConds);
+  fire();
+  expect(tom().length).toBe(0);
+  expect(people.query().length).toBe(3);
+});
+
 it('Async then and thenFinally work', async () => {
   const { rule, insert, fire } = edict<Schema>();
   let thenFinallyCount = 0;
