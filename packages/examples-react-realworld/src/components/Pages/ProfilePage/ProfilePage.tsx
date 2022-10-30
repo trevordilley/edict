@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import {
   followUser,
@@ -6,52 +6,58 @@ import {
   getProfile,
   unfollowUser,
 } from '../../../services/conduit';
-import { store } from '../../../state/store';
 import { useStore } from '../../../state/storeHooks';
 import { redirect } from '../../../types/location';
 import { Profile } from '../../../types/profile';
 import { ArticlesViewer } from '../../ArticlesViewer/ArticlesViewer';
-import {
-  changePage,
-  loadArticles,
-  startLoadingArticles,
-} from '../../ArticlesViewer/ArticlesViewer.slice';
 import { UserInfo } from '../../UserInfo/UserInfo';
+import { userProfileRule, userRule } from '../../../rules/user/user';
 import {
-  initializeProfile,
-  loadProfile,
-  startSubmitting,
-} from './ProfilePage.slice';
+  articleListRule,
+  changeArticlesPage,
+  resetArticles,
+} from '../../../rules/article/article';
+
+const useProfile = (username?: string) => {
+  const q = {
+    $userProfile: {
+      ids: [username ?? ''],
+    },
+  };
+  const [profile, setProfile] = useState(userProfileRule.query(q));
+  useEffect(() => {
+    return userProfileRule.subscribe((p) => setProfile(p), q);
+  });
+
+  return profile.map((p) => p.$userProfile)[0];
+};
 
 export function ProfilePage() {
   const { username } = useParams<{ username: string }>();
+  const profile = useProfile(username);
   const favorites = useLocation().pathname.endsWith('favorites');
   useEffect(() => {
     if (!username) return;
     onLoad(username, favorites);
   }, [username]);
   console.log('rendering profile page');
-  const { profile, submitting } = useStore(({ profile }) => profile);
+  const { submitting } = useStore(({ profile }) => profile);
 
-  // tODO: Handle unknown usernaes from querystring
   if (!username) return <></>;
   return (
     <div className="profile-page">
-      {profile.match({
-        none: () => (
-          <div className="article-preview" key={1}>
-            Loading profile...
-          </div>
-        ),
-        some: (profile) => (
-          <UserInfo
-            user={profile}
-            disabled={submitting}
-            onFollowToggle={onFollowToggle(profile)}
-            onEditSettings={() => redirect('settings')}
-          />
-        ),
-      })}
+      {profile ? (
+        <UserInfo
+          user={profile}
+          disabled={submitting}
+          onFollowToggle={onFollowToggle(profile)}
+          onEditSettings={() => redirect('settings')}
+        />
+      ) : (
+        <div className="article-preview" key={1}>
+          Loading profile...
+        </div>
+      )}
 
       <div className="container">
         <div className="row">
@@ -71,22 +77,18 @@ export function ProfilePage() {
 }
 
 async function onLoad(username: string, favorites: boolean) {
-  store.dispatch(initializeProfile());
-  store.dispatch(startLoadingArticles());
-
   try {
-    const profile = await getProfile(username);
-    store.dispatch(loadProfile(profile));
-
-    const articles = await getArticlesByType(username, favorites);
-    store.dispatch(loadArticles(articles));
+    await getProfile(username);
+    await getArticlesByType(username, favorites);
   } catch {
     window.location.href = '#/';
   }
 }
 
 async function getArticlesByType(username: string, favorites: boolean) {
-  const { currentPage } = store.getState().articleViewer;
+  const {
+    ArticleList: { currentPage },
+  } = articleListRule.query()[0];
   return await getArticles({
     [favorites ? 'favorited' : 'author']: username,
     offset: (currentPage - 1) * 10,
@@ -95,18 +97,18 @@ async function getArticlesByType(username: string, favorites: boolean) {
 
 function onFollowToggle(profile: Profile): () => void {
   return async () => {
-    const { user } = store.getState().app;
-    if (user.isNone()) {
+    const { User: user } = userRule.query()[0];
+
+    if (!user) {
       redirect('register');
       return;
     }
 
-    store.dispatch(startSubmitting());
-
-    const newProfile = await (profile.following ? unfollowUser : followUser)(
-      profile.username
-    );
-    store.dispatch(loadProfile(newProfile));
+    if (profile.following) {
+      await unfollowUser(profile.username);
+    } else {
+      await followUser(profile.username);
+    }
   };
 }
 
@@ -116,8 +118,8 @@ function onTabChange(username: string): (page: string) => void {
     window.location.hash = `#/profile/${username}${
       !favorited ? '' : '/favorites'
     }`;
-    store.dispatch(startLoadingArticles());
-    store.dispatch(loadArticles(await getArticlesByType(username, favorited)));
+    resetArticles();
+    await getArticlesByType(username, favorited);
   };
 }
 
@@ -126,7 +128,7 @@ function onPageChange(
   favorited: boolean
 ): (index: number) => void {
   return async (index) => {
-    store.dispatch(changePage(index));
-    store.dispatch(loadArticles(await getArticlesByType(username, favorited)));
+    changeArticlesPage(index);
+    await getArticlesByType(username, favorited);
   };
 }

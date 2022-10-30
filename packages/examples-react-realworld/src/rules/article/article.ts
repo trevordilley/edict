@@ -80,7 +80,7 @@ rule(
 ).enact({
   then: ({ ArticleList: { currentPage, limit } }) => {
     insert({
-      HomePage: {
+      ArticleList: {
         offset: (currentPage - 1) * limit,
       },
     });
@@ -137,11 +137,15 @@ export const articleRules = rule('Articles', () => ({
   $article: articleConditions,
 })).enact();
 
-export const articleCountRule = rule('Article Count', ({ articleCount }) => ({
-  ArticleList: {
-    articleCount,
-  },
-})).enact();
+export const articleListRule = rule(
+  'Article List',
+  ({ articleCount, currentPage }) => ({
+    ArticleList: {
+      articleCount,
+      currentPage,
+    },
+  })
+).enact();
 
 // =================== \\
 // Insert/Retracts     \\
@@ -155,6 +159,14 @@ export const insertArticleCount = (articleCount: number) => {
   insert({
     ArticleList: {
       articleCount,
+    },
+  });
+};
+
+export const changeArticlesPage = (currentPage: number) => {
+  insert({
+    ArticleList: {
+      currentPage,
     },
   });
 };

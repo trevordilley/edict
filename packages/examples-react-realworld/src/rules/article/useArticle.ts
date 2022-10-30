@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { articleCountRule, articleRules } from './article';
+import { articleListRule, articleRules } from './article';
 
 export const useArticles = () => {
   const [articles, setArticles] = useState(articleRules.query());
-  const [articleCount, setArticleCount] = useState(articleCountRule.query()[0]);
+  const [articleCount, setArticleCount] = useState(articleListRule.query()[0]);
 
   useEffect(() => {
     return articleRules.subscribe((a) => setArticles(a));
   });
   useEffect(() => {
-    return articleCountRule.subscribe((c) => setArticleCount(c[0]));
+    return articleListRule.subscribe((c) => setArticleCount(c[0]));
   });
 
   return {
