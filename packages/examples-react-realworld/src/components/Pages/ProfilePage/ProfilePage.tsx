@@ -6,7 +6,6 @@ import {
   getProfile,
   unfollowUser,
 } from '../../../services/conduit';
-import { useStore } from '../../../state/storeHooks';
 import { redirect } from '../../../types/location';
 import { Profile } from '../../../types/profile';
 import { ArticlesViewer } from '../../ArticlesViewer/ArticlesViewer';
@@ -40,8 +39,6 @@ export function ProfilePage() {
     if (!username) return;
     onLoad(username, favorites);
   }, [username]);
-  console.log('rendering profile page');
-  const { submitting } = useStore(({ profile }) => profile);
 
   if (!username) return <></>;
   return (
@@ -49,7 +46,8 @@ export function ProfilePage() {
       {profile ? (
         <UserInfo
           user={profile}
-          disabled={submitting}
+          // disabled={submitting}
+          disabled={false}
           onFollowToggle={onFollowToggle(profile)}
           onEditSettings={() => redirect('settings')}
         />
