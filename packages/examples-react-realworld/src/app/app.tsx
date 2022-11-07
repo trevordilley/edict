@@ -53,7 +53,9 @@ export function App() {
                 </UserOnlyRoute>
               }
             />
-            <Route path="/profile/:username" element={<ProfilePage />} />
+            <Route path="/profile/:username" element={<ProfilePage />}>
+              <Route path={'favorites'} element={<ProfilePage />} />
+            </Route>
             <Route path="/article/:slug" element={<ArticlePage />} />
             <Route path="/" element={<Home />} />
             <Route path="*" element={<Navigate to="/" />} />

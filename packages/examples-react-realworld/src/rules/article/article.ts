@@ -50,13 +50,13 @@ rule(
       favoritesCount,
       isFavoriting: { match: FetchState.QUEUED },
     },
-    User: {
+    $user: {
       token,
     },
   })
 ).enact({
-  then: ({ $article: { id, favorited, slug, favoritesCount }, User }) => {
-    if (!User.token) {
+  then: ({ $article: { id, favorited, slug, favoritesCount }, $user }) => {
+    if (!$user.token) {
       window.location.hash = '#/login';
       return;
     }

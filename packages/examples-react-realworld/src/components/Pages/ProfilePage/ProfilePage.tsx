@@ -113,9 +113,9 @@ function onFollowToggle(profile: Profile): () => void {
 function onTabChange(username: string): (page: string) => void {
   return async (page) => {
     const favorited = page === 'Favorited Articles';
-    window.location.hash = `#/profile/${username}${
-      !favorited ? '' : '/favorites'
-    }`;
+    const navTo = `#/profile/${username}${!favorited ? '' : '/favorites'}`;
+    console.log(navTo);
+    window.location.hash = navTo;
     resetArticles();
     await getArticlesByType(username, favorited);
   };
