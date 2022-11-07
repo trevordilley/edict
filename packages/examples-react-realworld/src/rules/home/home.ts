@@ -8,7 +8,7 @@ const { insert, rule } = session;
 rule(
   'Derive available tabs based on selection and login state',
   ({ token, selectedTab }) => ({
-    User: {
+    $user: {
       token,
     },
     HomePage: {
@@ -16,7 +16,7 @@ rule(
     },
   })
 ).enact({
-  then: ({ User: { token }, HomePage: { selectedTab } }) => {
+  then: ({ $user: { token }, HomePage: { selectedTab } }) => {
     const tabNames = Array.from(
       new Set([...(token ? ['Your Feed'] : []), 'Global Feed', selectedTab])
     );

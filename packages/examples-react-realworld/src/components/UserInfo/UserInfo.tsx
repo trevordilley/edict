@@ -1,5 +1,5 @@
-import { useStore } from '../../state/storeHooks';
 import { Profile } from '../../types/profile';
+import { useUser } from '../../rules/user/useUser';
 
 export function UserInfo({
   user: { image, username, bio, following },
@@ -12,19 +12,18 @@ export function UserInfo({
   onFollowToggle?: () => void;
   onEditSettings?: () => void;
 }) {
-  const { user } = useStore(({ app }) => app);
-  const sessionUsername = user.map((x) => x.username).unwrapOr('');
+  const sessionUser = useUser();
 
   return (
-    <div className='user-info'>
-      <div className='container'>
-        <div className='row'>
-          <div className='col-xs-12 col-md-10 offset-md-1'>
-            <img src={image || undefined} className='user-img' />
+    <div className="user-info">
+      <div className="container">
+        <div className="row">
+          <div className="col-xs-12 col-md-10 offset-md-1">
+            <img src={image || undefined} className="user-img" />
             <h4>{username}</h4>
             <p>{bio}</p>
 
-            {sessionUsername === username ? (
+            {sessionUser?.username === username ? (
               <EditProfileButton onClick={onEditSettings} disabled={disabled} />
             ) : (
               <ToggleFollowButton
@@ -53,18 +52,32 @@ function ToggleFollowButton({
   onClick?: () => void;
 }) {
   return (
-    <button className='btn btn-sm btn-outline-secondary action-btn' onClick={onClick} disabled={disabled}>
-      <i className='ion-plus-round'></i>
+    <button
+      className="btn btn-sm btn-outline-secondary action-btn"
+      onClick={onClick}
+      disabled={disabled}
+    >
+      <i className="ion-plus-round"></i>
       &nbsp;
       {following ? ' Unfollow' : ' Follow'} {username}
     </button>
   );
 }
 
-function EditProfileButton({ disabled, onClick }: { disabled: boolean; onClick?: () => void }) {
+function EditProfileButton({
+  disabled,
+  onClick,
+}: {
+  disabled: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <button className='btn btn-sm btn-outline-secondary action-btn' onClick={onClick} disabled={disabled}>
-      <i className='ion-gear-a'></i>&nbsp; Edit Profile Settings
+    <button
+      className="btn btn-sm btn-outline-secondary action-btn"
+      onClick={onClick}
+      disabled={disabled}
+    >
+      <i className="ion-gear-a"></i>&nbsp; Edit Profile Settings
     </button>
   );
 }

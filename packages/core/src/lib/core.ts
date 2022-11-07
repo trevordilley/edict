@@ -7,6 +7,7 @@ import {
   IEdict,
   InsertEdictFact,
   QueryArgs,
+  QueryOneOptions,
 } from './types';
 import * as _ from 'lodash';
 import {
@@ -199,21 +200,61 @@ export const edict = <SCHEMA>(
         return filters;
       };
 
+      const query = (filter?: QueryArgs<SCHEMA, T>) => {
+        if (!filter) return rete.queryAll(session, production);
+        return rete.queryAll(session, production, convertFilterArgs(filter));
+      };
+
+      const queryOne = (
+        filter?: QueryArgs<SCHEMA, T>,
+        options?: QueryOneOptions
+      ) => {
+        const result = query(filter);
+        if (result.length > 1 && options?.shouldThrowExceptionOnMoreThanOne) {
+          throw new Error('queryOne returned more than one result!');
+        }
+
+        return result.pop();
+      };
+      const subscribe = (
+        fn: (results: EnactArgs<SCHEMA, T>[]) => void,
+        filter?: QueryArgs<SCHEMA, T>
+      ) =>
+        rete.subscribeToProduction(
+          session,
+          production,
+          fn,
+          filter !== undefined ? convertFilterArgs(filter) : undefined
+        );
+      const subscribeOne = (
+        fn: (results: EnactArgs<SCHEMA, T> | undefined) => void,
+        filter?: QueryArgs<SCHEMA, T>,
+        options?: QueryOneOptions
+      ) =>
+        rete.subscribeToProduction(
+          session,
+          production,
+          (results) => {
+            if (
+              results.length > 1 &&
+              options?.shouldThrowExceptionOnMoreThanOne
+            ) {
+              throw new Error(
+                `subscribeOne received more than one result! ${results.length} received!`
+              );
+            }
+
+            const item = results.pop();
+            fn(item);
+          },
+          filter !== undefined ? convertFilterArgs(filter) : undefined
+        );
+
       return {
-        query: (filter?: QueryArgs<SCHEMA, T>) => {
-          if (!filter) return rete.queryAll(session, production);
-          return rete.queryAll(session, production, convertFilterArgs(filter));
-        },
-        subscribe: (
-          fn: (results: EnactArgs<SCHEMA, T>[]) => void,
-          filter?: QueryArgs<SCHEMA, T>
-        ) =>
-          rete.subscribeToProduction(
-            session,
-            production,
-            fn,
-            filter !== undefined ? convertFilterArgs(filter) : undefined
-          ),
+        query,
+        queryOne,
+        subscribe,
+        subscribeOne,
         rule: production,
       };
     };

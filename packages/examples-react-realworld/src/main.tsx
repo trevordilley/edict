@@ -3,13 +3,14 @@ import * as ReactDOM from 'react-dom/client';
 import './index.css';
 import { App } from './app/app';
 import { insert } from './rules/session';
-import { HOME_TAB } from './rules/schema';
+import { FetchState, HOME_TAB } from './rules/schema';
 import { DEFAULT_FEED_LIMIT, INITIAL_FEED_OFFSET } from './services/conduit';
 import { HashRouter } from 'react-router-dom';
 
 insert({
   HomePage: {
     selectedTab: HOME_TAB.GLOBAL_FEED,
+    tabNames: [],
   },
   ArticleList: {
     limit: DEFAULT_FEED_LIMIT,
@@ -19,6 +20,10 @@ insert({
     tag: undefined,
     favorited: undefined,
     articleCount: 0,
+  },
+  CurrentComment: {
+    commentBody: '',
+    submittingComment: FetchState.DONE,
   },
   Tags: {
     tagList: [],

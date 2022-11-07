@@ -12,7 +12,7 @@ import {
   MultipleArticles,
   multipleArticlesDecoder,
 } from '../types/article';
-import { Comment, commentDecoder } from '../types/comment';
+import { ArticleComment, Comment, commentDecoder } from '../types/comment';
 import { GenericErrors, genericErrorsDecoder } from '../types/error';
 import { objectToQueryString } from '../types/object';
 import { Profile, profileDecoder } from '../types/profile';
@@ -77,6 +77,7 @@ export async function login(
     const userResult = guard(object({ user: userDecoder }))(data).user;
 
     insertUser(userResult);
+    insert({});
 
     return Ok(userResult);
   } catch ({ response: { data } }) {
@@ -172,7 +173,6 @@ export async function getArticle(slug: string): Promise<Article> {
   const { data } = await axios.get(`articles/${slug}`);
 
   const article = guard(object({ article: articleDecoder }))(data).article;
-
   insertArticle(article);
 
   return article;
@@ -244,13 +244,14 @@ export async function getFeed(
   return articles;
 }
 
-export async function getArticleComments(slug: string): Promise<Comment[]> {
+export async function getArticleComments(
+  slug: string
+): Promise<ArticleComment[]> {
   const { data } = await axios.get(`articles/${slug}/comments`);
 
   const comments = guard(object({ comments: array(commentDecoder) }))(
     data
-  ).comments;
-
+  ).comments.map((c) => ({ ...c, slug }));
   insertComments(comments);
 
   return comments;
@@ -274,7 +275,7 @@ export async function createComment(
 
   const comment = guard(object({ comment: commentDecoder }))(data).comment;
 
-  insertComments([comment]);
+  insertComments([{ ...comment, slug }]);
 
   return comment;
 }

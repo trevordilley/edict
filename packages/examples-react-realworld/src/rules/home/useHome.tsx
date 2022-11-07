@@ -2,16 +2,14 @@ import { useEffect, useState } from 'react';
 import { homePageRule } from './home';
 
 export const useHome = () => {
-  const [
-    {
-      HomePage: { selectedTab, tabNames },
-      ArticleList: { currentPage },
-      Tags: { tagList },
-    },
-    setHome,
-  ] = useState(homePageRule.query()[0]);
+  const [home, setHome] = useState(homePageRule.queryOne());
   useEffect(() => {
-    return homePageRule.subscribe((h) => setHome(h[0]));
+    return homePageRule.subscribeOne((h) => setHome(h));
   });
-  return { selectedTab, tagList, tabNames, currentPage };
+  return {
+    selectedTab: home?.HomePage.selectedTab,
+    tagList: home?.Tags.tagList,
+    tabNames: home?.HomePage.tabNames,
+    currentPage: home?.ArticleList.currentPage,
+  };
 };

@@ -1,11 +1,10 @@
 import { Option, Some } from '@hqoss/monads';
-import { getTags } from '../../../services/conduit';
 import { ArticlesViewer } from '../../ArticlesViewer/ArticlesViewer';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
 import { useHome } from '../../../rules/home/useHome';
 import { getUser } from '../../../rules/user/user';
 import { changeHomeTab } from '../../../rules/home/home';
-import { HOME_TAB } from '../../../rules/schema';
+import { FetchState, HOME_TAB } from '../../../rules/schema';
 import { session } from '../../../rules/session';
 import { useEffect } from 'react';
 
@@ -23,8 +22,8 @@ export function Home() {
         <div className="col-md-9">
           <ArticlesViewer
             toggleClassName="feed-toggle"
-            selectedTab={selectedTab}
-            tabs={tabNames}
+            selectedTab={selectedTab!}
+            tabs={tabNames ?? []}
             onPageChange={onPageChange}
             onTabChange={changeHomeTab}
           />
@@ -48,9 +47,10 @@ async function load() {
     ArticleList: {
       currentPage: 1,
     },
+    Tags: {
+      fetchState: FetchState.QUEUED,
+    },
   });
-
-  await getTags();
 }
 
 function renderBanner() {

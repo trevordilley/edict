@@ -4,8 +4,8 @@ import { User } from '../../types/user';
 import { useUser } from '../../rules/user/useUser';
 
 export function Header() {
-  //const { user } = useStore(({ app }) => app);
-  const { User: user } = useUser();
+  const user = useUser();
+
   return (
     <nav className="navbar navbar-light">
       <div className="container">

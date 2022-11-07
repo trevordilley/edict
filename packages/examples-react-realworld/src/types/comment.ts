@@ -8,7 +8,9 @@ export interface Comment {
   body: string;
   author: Profile;
 }
-
+export interface ArticleComment extends Comment {
+  slug: string;
+}
 export const commentDecoder: Decoder<Comment> = object({
   id: number,
   createdAt: iso8601,

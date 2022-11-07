@@ -1,6 +1,7 @@
 import { Article } from '../types/article';
 import { User, UserSettings } from '../types/user';
 import { Profile } from '../types/profile';
+import { Comment } from '../types/comment';
 
 export const ID = {
   ARTICLE: (article: Article) => article.slug,
@@ -27,14 +28,32 @@ interface ArticleList {
   limit: number;
 }
 
+export enum FetchState {
+  QUEUED = 'QUEUED',
+  SENT = 'SENT',
+  DONE = 'DONE',
+  CANCELED = 'CANCELED',
+}
+
+export interface Fetch {
+  fetchState: FetchState;
+}
+
 export type Schema = Article &
   ArticleList & {
     isSubmitting: boolean;
-    isFavoriting: boolean;
+    submittingFavorite: FetchState;
+    submittingFollow: FetchState;
+    deletingArticle: FetchState;
+    isFavoriting: FetchState;
+    commentBody: string;
+    submittingComment: FetchState;
     tag: string;
     filterByAuthor: string;
-  } & User &
-  Error &
+  } & Fetch &
+  User & {
+    isLoggingIn: FetchState;
+  } & Error &
   Profile &
   UserSettings &
   Comment & { articleCount: number } & HomePage;

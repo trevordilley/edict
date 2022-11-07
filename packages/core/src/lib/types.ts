@@ -46,13 +46,27 @@ export type EnactionArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
   ) => Promise<void> | void;
 };
 
+export interface QueryOneOptions {
+  shouldThrowExceptionOnMoreThanOne?: boolean;
+}
+
 export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> = (
   enaction?: EnactionArgs<SCHEMA, T>
 ) => {
   query: (filter?: QueryArgs<SCHEMA, T>) => EnactArgs<SCHEMA, T>[];
+  queryOne: (
+    filter?: QueryArgs<SCHEMA, T>,
+    options?: QueryOneOptions
+  ) => EnactArgs<SCHEMA, T> | undefined;
   subscribe: (
     fn: (results: EnactArgs<SCHEMA, T>[]) => void,
     filter?: QueryArgs<SCHEMA, T>
+  ) => () => void;
+
+  subscribeOne: (
+    fn: (results: EnactArgs<SCHEMA, T> | undefined) => void,
+    filter?: QueryArgs<SCHEMA, T>,
+    options?: QueryOneOptions
   ) => () => void;
 };
 

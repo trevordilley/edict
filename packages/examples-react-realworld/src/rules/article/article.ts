@@ -1,6 +1,6 @@
 import { Article } from '../../types/article';
 import { session } from '../session';
-import { ID } from '../schema';
+import { FetchState, ID } from '../schema';
 import {
   favoriteArticle,
   getArticles,
@@ -43,29 +43,41 @@ const articleConditions = conditions(
 
 rule(
   'Changing the favorite-ness of an article updates the db',
-  ({ favorited, slug, token, isSubmitting }) => ({
+  ({ favorited, slug, token, favoritesCount }) => ({
     $article: {
       favorited,
       slug,
-      isFavoriting: { then: false },
-      isSubmitting,
+      favoritesCount,
+      isFavoriting: { match: FetchState.QUEUED },
     },
     User: {
       token,
     },
   })
 ).enact({
-  when: ({ $article: { isSubmitting } }) => !isSubmitting,
-  then: ({ $article: { id, favorited, slug }, User }) => {
-    retract(id, 'isFavoriting');
-
+  then: ({ $article: { id, favorited, slug, favoritesCount }, User }) => {
     if (!User.token) {
       window.location.hash = '#/login';
       return;
     }
-
-    if (favorited) unfavoriteArticle(slug);
-    else favoriteArticle(slug);
+    console.log('Favoriting?');
+    insert({
+      [slug]: {
+        isFavoriting: FetchState.SENT,
+        favorited: !favorited,
+        favoritesCount: favorited ? favoritesCount - 1 : favoritesCount + 1,
+      },
+    });
+    const result = favorited ? unfavoriteArticle(slug) : favoriteArticle(slug);
+    result.then((r) => {
+      insert({
+        [slug]: {
+          isFavoriting: FetchState.DONE,
+          favorited: r.favorited,
+          favoritesCount: r.favoritesCount,
+        },
+      });
+    });
   },
 });
 
@@ -136,6 +148,18 @@ rule(
 export const articleRules = rule('Articles', () => ({
   $article: articleConditions,
 })).enact();
+
+export const articleMetaRule = rule(
+  'Article Meta',
+  ({ slug, submittingFavorite, submittingFollow, deletingArticle }) => ({
+    $articleMeta: {
+      slug,
+      submittingFavorite,
+      submittingFollow,
+      deletingArticle,
+    },
+  })
+).enact();
 
 export const articleListRule = rule(
   'Article List',

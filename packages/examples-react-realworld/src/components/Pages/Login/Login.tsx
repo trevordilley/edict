@@ -1,19 +1,19 @@
-import React from 'react';
+import React, { FormEvent } from 'react';
 import { login } from '../../../services/conduit';
 import { dispatchOnCall, store } from '../../../state/store';
 import { useStoreWithInitializer } from '../../../state/storeHooks';
-import { loadUserIntoApp } from '../../../types/user';
 import { buildGenericFormField } from '../../../types/genericFormField';
 import { GenericForm } from '../../GenericForm/GenericForm';
 import {
   initializeLogin,
   LoginState,
   startLoginIn,
-  updateErrors,
   updateField,
 } from './Login.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
 import { useErrors } from '../../../rules/error/useErrors';
+import { insert, retract } from '../../../rules/session';
+import { FetchState } from '../../../rules/schema';
 
 export function Login() {
   const { loginIn, user } = useStoreWithInitializer(
@@ -38,7 +38,11 @@ export function Login() {
             submitButtonText="Sign in"
             errors={errors}
             onChange={onUpdateField}
-            onSubmit={signIn}
+            onSubmit={(ev) =>
+              signIn(
+                ev as unknown as FormEvent<{ email: string; password: string }>
+              )
+            }
             fields={[
               buildGenericFormField({ name: 'email', placeholder: 'Email' }),
               buildGenericFormField({
@@ -60,22 +64,32 @@ function onUpdateField(name: string, value: string) {
   );
 }
 
-async function signIn(ev: React.FormEvent) {
+async function signIn(
+  ev: React.FormEvent<{ email: string; password: string }>
+) {
   ev.preventDefault();
-
+  const { email, password } = ev.currentTarget;
   if (store.getState().login.loginIn) return;
   store.dispatch(startLoginIn());
-
-  const { email, password } = store.getState().login.user;
-  const result = await login(email, password);
-
-  result.match({
-    ok: (user) => {
-      window.location.hash = '#/';
-      loadUserIntoApp(user);
+  insert({
+    User: {
+      isLoggingIn: FetchState.QUEUED,
     },
-    err: (e) => {
-      store.dispatch(updateErrors(e));
-    },
+  });
+  login(email, password).then((result) => {
+    retract('User', 'isLoggingIn');
+    result.match({
+      ok: (user) => {
+        insert({
+          User: user,
+        });
+        window.location.hash = '#/';
+      },
+      err: (e) => {
+        insert({
+          Errors: e,
+        });
+      },
+    });
   });
 }

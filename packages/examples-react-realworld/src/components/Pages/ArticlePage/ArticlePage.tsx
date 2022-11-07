@@ -3,87 +3,110 @@ import { format } from 'date-fns';
 import React, { Fragment, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  createComment,
   deleteArticle,
   deleteComment,
-  favoriteArticle,
-  followUser,
   getArticle,
   getArticleComments,
-  unfavoriteArticle,
-  unfollowUser,
 } from '../../../services/conduit';
-import { store } from '../../../state/store';
-import { useStore } from '../../../state/storeHooks';
 import { Article } from '../../../types/article';
 import { Comment } from '../../../types/comment';
 import { redirect } from '../../../types/location';
 import { classObjectToClassName } from '../../../types/style';
 import { User } from '../../../types/user';
 import { TagList } from '../../ArticlePreview/ArticlePreview';
+import { session } from '../../../rules/session';
+import { FetchState } from '../../../rules/schema';
+import { userRule } from '../../../rules/user/user';
+import { useArticle, useArticleMeta } from '../../../rules/article/useArticle';
+import { useCommentSection } from '../../../rules/comment/useComments';
+import { useUser } from '../../../rules/user/useUser';
 import {
-  CommentSectionState,
-  initializeArticlePage,
-  loadArticle,
-  loadComments,
-  MetaSectionState,
-  startDeletingArticle,
-  startSubmittingComment,
-  startSubmittingFavorite,
-  startSubmittingFollow,
-  updateAuthor,
-  updateCommentBody,
-} from './ArticlePage.slice';
+  onPostCurrentComment,
+  updateCurrentCommentBody,
+} from '../../../rules/comment/comment';
 
-export function ArticlePage() {
+export interface CommentSectionState {
+  comments?: Comment[];
+  commentBody: string;
+  submittingComment: FetchState;
+}
+
+export interface MetaSectionState {
+  submittingFavorite?: FetchState;
+  submittingFollow?: FetchState;
+  deletingArticle?: FetchState;
+}
+
+export interface ArticlePageState {
+  article: Option<Article>;
+  commentSection: CommentSectionState;
+  metaSection: MetaSectionState;
+}
+
+const useArticlePage = () => {
   const { slug } = useParams<{ slug: string }>();
-
-  const {
-    articlePage: { article, commentSection, metaSection },
-    app: { user },
-  } = useStore(({ articlePage, app }) => ({
-    articlePage,
-    app,
-  }));
+  const a = useArticle(slug ?? '');
+  const c = useCommentSection(slug ?? '');
+  const m = useArticleMeta(slug ?? '');
+  const u = useUser();
 
   useEffect(() => {
     onLoad(slug ?? '');
   }, [slug]);
 
-  return article.match({
-    none: () => <div>Loading article...</div>,
-    some: (article: any) => (
-      <div className="article-page">
-        <ArticlePageBanner {...{ article, metaSection, user }} />
+  const metaSection = m;
+  const user = u;
+  const commentSection = {
+    comments: c.comments,
+    commentBody: c.currentComment?.commentBody ?? '',
+    submittingComment: c.currentComment?.submittingComment ?? FetchState.DONE,
+  };
+  const article = a?.$article;
+  if (!commentSection || !article) {
+    return undefined;
+  } else {
+    return {
+      user,
+      metaSection,
+      commentSection,
+      article,
+    };
+  }
+};
 
-        <div className="container page">
-          <div className="row article-content">
-            <div className="col-md-12">{article.body}</div>
-            <TagList tagList={article.tagList} />
-          </div>
+export function ArticlePage() {
+  const page = useArticlePage();
+  if (!page) return <div>Loading...</div>;
 
-          <hr />
+  const { article, user, metaSection, commentSection } = page;
+  return article ? (
+    <div className="article-page">
+      <ArticlePageBanner {...{ article, metaSection, user }} />
 
-          <div className="article-actions">
-            <ArticleMeta {...{ article, metaSection, user }} />
-          </div>
-
-          <CommentSection {...{ user, commentSection, article }} />
+      <div className="container page">
+        <div className="row article-content">
+          <div className="col-md-12">{article.body}</div>
+          <TagList tagList={article.tagList} />
         </div>
+
+        <hr />
+
+        <div className="article-actions">
+          <ArticleMeta {...{ article, metaSection, user }} />
+        </div>
+
+        <CommentSection {...{ user, commentSection, article }} />
       </div>
-    ),
-  });
+    </div>
+  ) : (
+    <div>Loading article...</div>
+  );
 }
 
 async function onLoad(slug: string) {
-  store.dispatch(initializeArticlePage());
-
   try {
-    const article = await getArticle(slug);
-    store.dispatch(loadArticle(article));
-
-    const comments = await getArticleComments(slug);
-    store.dispatch(loadComments(comments));
+    await getArticle(slug);
+    await getArticleComments(slug);
   } catch {
     redirect('');
   }
@@ -91,8 +114,8 @@ async function onLoad(slug: string) {
 
 function ArticlePageBanner(props: {
   article: Article;
-  metaSection: MetaSectionState;
-  user: Option<User>;
+  metaSection?: MetaSectionState;
+  user?: User;
 }) {
   return (
     <div className="banner">
@@ -107,27 +130,29 @@ function ArticlePageBanner(props: {
 
 function ArticleMeta({
   article,
-  metaSection: { submittingFavorite, submittingFollow, deletingArticle },
+  metaSection,
   user,
 }: {
   article: Article;
-  metaSection: MetaSectionState;
-  user: Option<User>;
+  metaSection?: MetaSectionState;
+  user?: User;
 }) {
   return (
     <div className="article-meta">
       <ArticleAuthorInfo article={article} />
 
-      {user.isSome() && user.unwrap().username === article.author.username ? (
+      {user?.username === article.author.username ? (
         <OwnerArticleMetaActions
           article={article}
-          deletingArticle={deletingArticle}
+          deletingArticle={metaSection?.deletingArticle ?? FetchState.DONE}
         />
       ) : (
         <NonOwnerArticleMetaActions
           article={article}
-          submittingFavorite={submittingFavorite}
-          submittingFollow={submittingFollow}
+          submittingFavorite={
+            metaSection?.submittingFavorite ?? FetchState.DONE
+          }
+          submittingFollow={metaSection?.submittingFollow ?? FetchState.DONE}
         />
       )}
     </div>
@@ -168,8 +193,8 @@ function NonOwnerArticleMetaActions({
   submittingFollow,
 }: {
   article: Article;
-  submittingFavorite: boolean;
-  submittingFollow: boolean;
+  submittingFavorite: FetchState;
+  submittingFollow: FetchState;
 }) {
   return (
     <Fragment>
@@ -180,7 +205,7 @@ function NonOwnerArticleMetaActions({
           'btn-outline-secondary': !following,
           'btn-secondary': following,
         })}
-        disabled={submittingFollow}
+        disabled={submittingFollow === FetchState.QUEUED}
         onClick={() => onFollow(username, following)}
       >
         <i className="ion-plus-round"></i>
@@ -194,7 +219,7 @@ function NonOwnerArticleMetaActions({
           'btn-outline-primary': !favorited,
           'btn-primary': favorited,
         })}
-        disabled={submittingFavorite}
+        disabled={submittingFavorite === FetchState.QUEUED}
         onClick={() => onFavorite(slug, favorited)}
       >
         <i className="ion-heart"></i>
@@ -206,27 +231,34 @@ function NonOwnerArticleMetaActions({
 }
 
 async function onFollow(username: string, following: boolean) {
-  if (store.getState().app.user.isNone()) {
+  const user = userRule.queryOne();
+
+  if (!user) {
     redirect('register');
     return;
   }
 
-  store.dispatch(startSubmittingFollow());
-
-  const author = await (following ? unfollowUser : followUser)(username);
-  store.dispatch(updateAuthor(author));
+  session.insert({
+    [username]: {
+      following,
+      fetchState: FetchState.SENT,
+    },
+  });
 }
 
 async function onFavorite(slug: string, favorited: boolean) {
-  if (store.getState().app.user.isNone()) {
+  const user = userRule.queryOne();
+  if (!user) {
     redirect('register');
     return;
   }
 
-  store.dispatch(startSubmittingFavorite());
-
-  const article = await (favorited ? unfavoriteArticle : favoriteArticle)(slug);
-  store.dispatch(loadArticle(article));
+  session.insert({
+    [slug]: {
+      favorited,
+      isFavoriting: FetchState.QUEUED,
+    },
+  });
 }
 
 function OwnerArticleMetaActions({
@@ -234,7 +266,7 @@ function OwnerArticleMetaActions({
   deletingArticle,
 }: {
   article: Article;
-  deletingArticle: boolean;
+  deletingArticle: FetchState;
 }) {
   return (
     <Fragment>
@@ -248,7 +280,7 @@ function OwnerArticleMetaActions({
       &nbsp;
       <button
         className="btn btn-outline-danger btn-sm"
-        disabled={deletingArticle}
+        disabled={deletingArticle === FetchState.QUEUED}
         onClick={() => onDeleteArticle(slug)}
       >
         <i className="ion-heart"></i>
@@ -259,7 +291,6 @@ function OwnerArticleMetaActions({
 }
 
 async function onDeleteArticle(slug: string) {
-  store.dispatch(startDeletingArticle());
   await deleteArticle(slug);
   redirect('');
 }
@@ -269,47 +300,42 @@ function CommentSection({
   article,
   commentSection: { submittingComment, commentBody, comments },
 }: {
-  user: Option<User>;
+  user?: User;
   article: Article;
   commentSection: CommentSectionState;
 }) {
   return (
     <div className="row">
       <div className="col-xs-12 col-md-8 offset-md-2">
-        {user.match({
-          none: () => (
-            <p style={{ display: 'inherit' }}>
-              <Link to="/login">Sign in</Link> or{' '}
-              <Link to="/register">sign up</Link> to add comments on this
-              article.
-            </p>
-          ),
-          some: (user) => (
-            <CommentForm
-              user={user}
-              slug={article.slug}
-              submittingComment={submittingComment}
-              commentBody={commentBody}
-            />
-          ),
-        })}
+        {user ? (
+          <CommentForm
+            user={user}
+            slug={article.slug}
+            submittingComment={submittingComment}
+            commentBody={commentBody}
+          />
+        ) : (
+          <p style={{ display: 'inherit' }}>
+            <Link to="/login">Sign in</Link> or{' '}
+            <Link to="/register">sign up</Link> to add comments on this article.
+          </p>
+        )}
 
-        {comments.match({
-          none: () => <div>Loading comments...</div>,
-          some: (comments) => (
-            <Fragment>
-              {comments.map((comment, index) => (
-                <ArticleComment
-                  key={comment.id}
-                  comment={comment}
-                  slug={article.slug}
-                  user={user}
-                  index={index}
-                />
-              ))}
-            </Fragment>
-          ),
-        })}
+        {comments ? (
+          <Fragment>
+            {comments.map((comment, index) => (
+              <ArticleComment
+                key={comment.id}
+                comment={comment}
+                slug={article.slug}
+                user={user}
+                index={index}
+              />
+            ))}
+          </Fragment>
+        ) : (
+          <div>Loading comments...</div>
+        )}
       </div>
     </div>
   );
@@ -324,7 +350,7 @@ function CommentForm({
   user: User;
   commentBody: string;
   slug: string;
-  submittingComment: boolean;
+  submittingComment: FetchState;
 }) {
   return (
     <form
@@ -342,7 +368,10 @@ function CommentForm({
       </div>
       <div className="card-footer">
         <img src={image || undefined} className="comment-author-img" />
-        <button className="btn btn-sm btn-primary" disabled={submittingComment}>
+        <button
+          className="btn btn-sm btn-primary"
+          disabled={submittingComment === FetchState.QUEUED}
+        >
           Post Comment
         </button>
       </div>
@@ -351,7 +380,7 @@ function CommentForm({
 }
 
 function onCommentChange(ev: React.ChangeEvent<HTMLTextAreaElement>) {
-  store.dispatch(updateCommentBody(ev.target.value));
+  updateCurrentCommentBody(ev.target.value);
 }
 
 function onPostComment(
@@ -360,11 +389,7 @@ function onPostComment(
 ): (ev: React.FormEvent) => void {
   return async (ev) => {
     ev.preventDefault();
-
-    store.dispatch(startSubmittingComment());
-    await createComment(slug, body);
-
-    store.dispatch(loadComments(await getArticleComments(slug)));
+    onPostCurrentComment(slug, body);
   };
 }
 
@@ -382,7 +407,7 @@ function ArticleComment({
   comment: Comment;
   slug: string;
   index: number;
-  user: Option<User>;
+  user?: User;
 }) {
   return (
     <div className="card">
@@ -398,7 +423,7 @@ function ArticleComment({
           {username}
         </Link>
         <span className="date-posted">{format(createdAt, 'PP')}</span>
-        {user.isSome() && user.unwrap().username === username && (
+        {user?.username === username && (
           <span className="mod-options">
             <i
               className="ion-trash-a"
@@ -414,5 +439,5 @@ function ArticleComment({
 
 async function onDeleteComment(slug: string, id: number) {
   await deleteComment(slug, id);
-  store.dispatch(loadComments(await getArticleComments(slug)));
+  await getArticleComments(slug);
 }

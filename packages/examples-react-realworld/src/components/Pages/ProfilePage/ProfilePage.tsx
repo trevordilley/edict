@@ -23,17 +23,18 @@ const useProfile = (username?: string) => {
       ids: [username ?? ''],
     },
   };
-  const [profile, setProfile] = useState(userProfileRule.query(q));
+  const [profile, setProfile] = useState(userProfileRule.queryOne(q));
   useEffect(() => {
-    return userProfileRule.subscribe((p) => setProfile(p), q);
+    return userProfileRule.subscribeOne((p) => setProfile(p), q);
   });
 
-  return profile.map((p) => p.$userProfile)[0];
+  return profile?.$userProfile;
 };
 
 export function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const profile = useProfile(username);
+  console.log(username, profile);
   const favorites = useLocation().pathname.endsWith('favorites');
   useEffect(() => {
     if (!username) return;
@@ -46,8 +47,7 @@ export function ProfilePage() {
       {profile ? (
         <UserInfo
           user={profile}
-          // disabled={submitting}
-          disabled={false}
+          disabled={profile.isSubmitting}
           onFollowToggle={onFollowToggle(profile)}
           onEditSettings={() => redirect('settings')}
         />
@@ -95,7 +95,7 @@ async function getArticlesByType(username: string, favorites: boolean) {
 
 function onFollowToggle(profile: Profile): () => void {
   return async () => {
-    const { User: user } = userRule.query()[0];
+    const user = userRule.queryOne();
 
     if (!user) {
       redirect('register');

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { userRule } from './user';
 
 export const useUser = () => {
-  const [user, setUser] = useState(userRule.query()[0]);
+  const [user, setUser] = useState(userRule.queryOne()?.$user);
   useEffect(() => {
-    return userRule.subscribe((u) => setUser(u[0]));
+    return userRule.subscribeOne((u) => setUser(u?.$user));
   });
 
   return user;
