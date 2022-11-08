@@ -2,7 +2,6 @@ import { Action, configureStore } from '@reduxjs/toolkit';
 import app from '../components/App/App.slice';
 import login from '../components/Pages/Login/Login.slice';
 import settings from '../components/Pages/Settings/Settings.slice';
-import register from '../components/Pages/Register/Register.slice';
 import editor from '../components/ArticleEditor/ArticleEditor.slice';
 
 const middlewareConfiguration = { serializableCheck: false };
@@ -12,7 +11,6 @@ export const store = configureStore({
     app,
     login,
     settings,
-    register,
     editor,
   },
   devTools: {
