@@ -1,28 +1,27 @@
-import { dispatchOnCall, store } from '../../../state/store';
-import { useStoreWithInitializer } from '../../../state/storeHooks';
 import { buildGenericFormField } from '../../../types/genericFormField';
 import { GenericForm } from '../../GenericForm/GenericForm';
-import {
-  initializeRegister,
-  RegisterState,
-  startSigningUp,
-  updateErrors,
-  updateField,
-} from './Register.slice';
-import { loadUserIntoApp, UserForRegistration } from '../../../types/user';
-import { signUp } from '../../../services/conduit';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
 import { useErrors } from '../../../rules/error/useErrors';
+import { FormEvent, useEffect, useState } from 'react';
+import { insert } from '../../../rules/session';
+import { startRegistrationRule } from '../../../rules/user/user';
 
-export function Register() {
-  const { signingUp, user } = useStoreWithInitializer(
-    ({ register }) => register,
-    dispatchOnCall(initializeRegister())
+const useRegistration = () => {
+  const [registration, setRegistration] = useState(
+    startRegistrationRule.queryOne()
   );
-
+  useEffect(() =>
+    startRegistrationRule.subscribeOne((r) => setRegistration(r))
+  );
   const {
     Error: { errors },
   } = useErrors();
+
+  return { registration, errors };
+};
+
+export function Register() {
+  const { registration, errors } = useRegistration();
 
   return (
     <div className="auth-page">
@@ -34,12 +33,11 @@ export function Register() {
           </p>
 
           <GenericForm
-            disabled={signingUp}
-            formObject={user as unknown as Record<string, string>}
+            disabled={!!registration}
+            formObject={{ username: '', password: '', email: '' }}
             submitButtonText="Sign up"
             errors={errors}
-            onChange={onUpdateField}
-            onSubmit={onSignUp(user)}
+            onSubmit={onSubmit}
             fields={[
               buildGenericFormField({
                 name: 'username',
@@ -59,24 +57,21 @@ export function Register() {
   );
 }
 
-function onUpdateField(name: string, value: string) {
-  store.dispatch(
-    updateField({ name: name as keyof RegisterState['user'], value })
-  );
-}
-
-function onSignUp(user: UserForRegistration) {
-  return async (ev: React.FormEvent) => {
-    ev.preventDefault();
-    store.dispatch(startSigningUp());
-    const result = await signUp(user);
-
-    result.match({
-      err: (e) => store.dispatch(updateErrors(e)),
-      ok: (user) => {
-        window.location.hash = '#/';
-        loadUserIntoApp(user);
-      },
-    });
+function onSubmit(ev: FormEvent) {
+  ev.preventDefault();
+  const target = ev.currentTarget;
+  // Todo: Clean this up.
+  const formValues = target as typeof target & {
+    username: { value: string };
+    password: { value: string };
+    email: { value: string };
   };
+
+  insert({
+    StartRegistration: {
+      username: formValues.username.value,
+      email: formValues.email.value,
+      password: formValues.password.value,
+    },
+  });
 }

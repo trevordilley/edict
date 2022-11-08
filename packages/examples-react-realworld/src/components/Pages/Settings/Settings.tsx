@@ -1,20 +1,15 @@
 import axios from 'axios';
 import React from 'react';
-import { updateSettings } from '../../../services/conduit';
 import { store } from '../../../state/store';
 import { useStore } from '../../../state/storeHooks';
 import { UserSettings } from '../../../types/user';
 import { buildGenericFormField } from '../../../types/genericFormField';
-import { loadUser, logout } from '../../App/App.slice';
+import { logout } from '../../App/App.slice';
 import { GenericForm } from '../../GenericForm/GenericForm';
-import {
-  SettingsState,
-  startUpdate,
-  updateErrors,
-  updateField,
-} from './Settings.slice';
+import { startUpdate } from './Settings.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
 import { useErrors } from '../../../rules/error/useErrors';
+import { useUser } from '../../../rules/user/useUser';
 
 export interface SettingsField {
   name: keyof UserSettings;
@@ -24,7 +19,8 @@ export interface SettingsField {
 }
 
 export function Settings() {
-  const { user, updating } = useStore(({ settings }) => settings);
+  const { updating } = useStore(({ settings }) => settings);
+  const user = useUser();
   const {
     Error: { errors },
   } = useErrors();
@@ -39,8 +35,7 @@ export function Settings() {
             formObject={{ ...user }}
             submitButtonText="Update Settings"
             errors={errors}
-            onChange={onUpdateField}
-            onSubmit={onUpdateSettings(user)}
+            onSubmit={onSubmit}
             fields={[
               buildGenericFormField({
                 name: 'image',
@@ -75,26 +70,33 @@ export function Settings() {
   );
 }
 
-function onUpdateField(name: string, value: string) {
-  store.dispatch(
-    updateField({ name: name as keyof SettingsState['user'], value })
-  );
-}
+function onSubmit(ev: React.FormEvent) {
+  ev.preventDefault();
+  store.dispatch(startUpdate());
 
-function onUpdateSettings(user: UserSettings) {
-  return async (ev: React.FormEvent) => {
-    ev.preventDefault();
-    store.dispatch(startUpdate());
-    const result = await updateSettings(user);
-
-    result.match({
-      err: (e) => store.dispatch(updateErrors(e)),
-      ok: (user) => {
-        store.dispatch(loadUser(user));
-        window.location.hash = '/';
-      },
-    });
+  const target = ev.currentTarget;
+  // Todo: Clean this up.
+  const formValues = target as typeof target & {
+    username: { value: string };
+    password: { value: string };
+    image: { value: string };
+    bio: { value: string };
   };
+
+  console.log(
+    formValues.username.value,
+    formValues.bio.value,
+    formValues.password.value,
+    formValues.image.value
+  );
+
+  // result.match({
+  //   err: (e) => store.dispatch(updateErrors(e)),
+  //   ok: (user) => {
+  //     store.dispatch(loadUser(user));
+  //     window.location.hash = '/';
+  //   },
+  // });
 }
 
 function _logout() {

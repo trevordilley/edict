@@ -1,90 +1,104 @@
 import React from 'react';
 
 export function FormGroup({
+  name,
   type,
   placeholder,
   disabled,
-  value,
-  onChange,
   lg,
 }: {
+  name: string;
   type: string;
   placeholder: string;
   disabled: boolean;
-  value: string;
   lg: boolean;
-  onChange: (ev: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
-    <fieldset className='form-group'>
+    <fieldset className="form-group">
       <input
+        name={name}
         className={`form-control${!lg ? '' : ' form-control-lg'}`}
-        {...{ type, placeholder, disabled, value, onChange }}
+        {...{
+          type,
+          placeholder,
+          disabled,
+        }}
       />
     </fieldset>
   );
 }
 
 export function TextAreaFormGroup({
+  name,
   type,
   placeholder,
   disabled,
-  value,
   rows,
-  onChange,
   lg,
 }: {
+  name: string;
   type: string;
   placeholder: string;
   disabled: boolean;
   rows: number;
-  value: string;
   lg: boolean;
-  onChange: (ev: React.ChangeEvent<HTMLTextAreaElement>) => void;
 }) {
   return (
-    <fieldset className='form-group'>
+    <fieldset className="form-group">
       <textarea
+        name={name}
         className={`form-control${!lg ? '' : ' form-control-lg'}`}
-        {...{ type, placeholder, disabled, value, onChange, rows }}
+        {...{
+          type,
+          placeholder,
+          disabled,
+          rows,
+        }}
       ></textarea>
     </fieldset>
   );
 }
 
 export function ListFormGroup({
+  name,
   type,
   placeholder,
   disabled,
-  value,
   listValue,
   lg,
-  onChange,
   onEnter,
   onRemoveItem,
 }: {
+  name: string;
   type: string;
   placeholder: string;
   disabled: boolean;
-  value: string;
   listValue: string[];
   lg: boolean;
-  onChange: (ev: React.ChangeEvent<HTMLInputElement>) => void;
   onEnter: () => void;
   onRemoveItem: (index: number) => void;
 }) {
   return (
-    <fieldset className='form-group'>
+    <fieldset className="form-group">
       <input
+        name={name}
         className={`form-control${!lg ? '' : ' form-control-lg'}`}
-        {...{ type, placeholder, disabled, value, onChange }}
+        {...{
+          type,
+          placeholder,
+          disabled,
+        }}
         onKeyDown={(ev) => ev.key === 'Enter' && ev.preventDefault()}
         onKeyUp={onListFieldKeyUp(onEnter)}
       />
-      <div className='tag-list'>
+      <div className="tag-list">
         {listValue.map((value, index) => (
-          <span key={value} className='tag-default tag-pill' onClick={() => onRemoveItem(index)}>
-            <i className='ion-close-round'></i>
+          <span
+            key={value}
+            className="tag-default tag-pill"
+            onClick={() => onRemoveItem(index)}
+          >
+            <i className="ion-close-round"></i>
             {value}
           </span>
         ))}
@@ -93,7 +107,9 @@ export function ListFormGroup({
   );
 }
 
-export function onListFieldKeyUp(onEnter: () => void): (ev: React.KeyboardEvent) => void {
+export function onListFieldKeyUp(
+  onEnter: () => void
+): (ev: React.KeyboardEvent) => void {
   return (ev) => {
     if (ev.key === 'Enter') {
       ev.preventDefault();

@@ -140,15 +140,9 @@ export async function signUp(
   try {
     const { data } = await axios.post('users', { user });
     const decoded = guard(object({ user: userDecoder }))(data).user;
-
-    insertUser(decoded);
-
     return Ok(decoded);
   } catch ({ response: { data } }) {
     const err = guard(object({ errors: genericErrorsDecoder }))(data).errors;
-
-    insertError(err);
-
     return Err(err);
   }
 }

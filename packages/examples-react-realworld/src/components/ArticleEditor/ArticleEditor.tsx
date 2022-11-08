@@ -18,6 +18,7 @@ export function ArticleEditor({
   onSubmit: (ev: React.FormEvent) => void;
 }) {
   const { article, submitting, tag } = useStore(({ editor }) => editor);
+
   const {
     Error: { errors },
   } = useErrors();
@@ -31,7 +32,6 @@ export function ArticleEditor({
             }
             disabled={submitting}
             errors={errors}
-            onChange={onUpdateField}
             onSubmit={onSubmit}
             submitButtonText="Publish Article"
             onAddItemToList={onAddTag}

@@ -1,7 +1,9 @@
 import { User } from '../../types/user';
 import { session } from '../session';
 import { FetchState } from '../schema';
-import { followUser, unfollowUser } from '../../services/conduit';
+import { followUser, signUp, unfollowUser } from '../../services/conduit';
+import axios from 'axios';
+import { insertError } from '../error/error';
 
 const { insert, rule, conditions, retract, retractByConditions } = session;
 
@@ -9,6 +11,12 @@ const publicUserConditions = conditions(({ username, image, bio }) => ({
   username,
   image,
   bio,
+}));
+
+export const userSettingsConditions = conditions(({ email, password }) => ({
+  ...publicUserConditions,
+  email,
+  password,
 }));
 
 const userConditions = conditions(({ email, token }) => ({
@@ -61,6 +69,54 @@ rule('Update following status', ({ following, fetchState, username }) => ({
           fetchState: FetchState.DONE,
         },
       });
+    });
+  },
+});
+
+export const startRegistrationRule = rule(
+  'Starting registration',
+  ({ email, password, username }) => ({
+    StartRegistration: {
+      email,
+      password,
+      username,
+    },
+  })
+).enact({
+  then: ({ StartRegistration: { email, password, username } }) => {
+    signUp({
+      username,
+      email,
+      password: password ?? '',
+    }).then((result) => {
+      retract('StartRegistration', 'email', 'password', 'username');
+      result.match({
+        err: (e) => {
+          insertError(e);
+        },
+        ok: (user) => {
+          //TODO: I guess there currently isn't email validation?
+          window.location.hash = '#/';
+          insert({
+            LoadUser: user,
+          });
+        },
+      });
+    });
+  },
+});
+
+rule('Load user', () => ({
+  LoadUser: {
+    ...userConditions,
+  },
+})).enact({
+  then: ({ LoadUser }) => {
+    localStorage.setItem('token', LoadUser.token);
+    axios.defaults.headers.Authorization = `Token ${LoadUser.token}`;
+    const { id, ...user } = LoadUser;
+    insert({
+      [user.username]: user,
     });
   },
 });

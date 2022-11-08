@@ -1,25 +1,13 @@
 import React, { FormEvent } from 'react';
 import { login } from '../../../services/conduit';
-import { dispatchOnCall, store } from '../../../state/store';
-import { useStoreWithInitializer } from '../../../state/storeHooks';
 import { buildGenericFormField } from '../../../types/genericFormField';
 import { GenericForm } from '../../GenericForm/GenericForm';
-import {
-  initializeLogin,
-  LoginState,
-  startLoginIn,
-  updateField,
-} from './Login.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
 import { useErrors } from '../../../rules/error/useErrors';
 import { insert, retract } from '../../../rules/session';
 import { FetchState } from '../../../rules/schema';
 
 export function Login() {
-  const { loginIn, user } = useStoreWithInitializer(
-    ({ login }) => login,
-    dispatchOnCall(initializeLogin())
-  );
   const {
     Error: { errors },
   } = useErrors();
@@ -33,16 +21,13 @@ export function Login() {
           </p>
 
           <GenericForm
-            disabled={loginIn}
-            formObject={user}
+            disabled={false}
+            formObject={{ email: '', password: '' }}
             submitButtonText="Sign in"
             errors={errors}
-            onChange={onUpdateField}
-            onSubmit={(ev) =>
-              signIn(
-                ev as unknown as FormEvent<{ email: string; password: string }>
-              )
-            }
+            onSubmit={(ev) => {
+              signIn(ev);
+            }}
             fields={[
               buildGenericFormField({ name: 'email', placeholder: 'Email' }),
               buildGenericFormField({
@@ -58,19 +43,17 @@ export function Login() {
   );
 }
 
-function onUpdateField(name: string, value: string) {
-  store.dispatch(
-    updateField({ name: name as keyof LoginState['user'], value })
-  );
-}
-
-async function signIn(
-  ev: React.FormEvent<{ email: string; password: string }>
-) {
+async function signIn(ev: FormEvent) {
   ev.preventDefault();
-  const { email, password } = ev.currentTarget;
-  if (store.getState().login.loginIn) return;
-  store.dispatch(startLoginIn());
+  const target = ev.currentTarget;
+  // Todo: Clean this up.
+  const formValues = target as typeof target & {
+    email: { value: string };
+    password: { value: string };
+  };
+  const email = formValues.email.value;
+  const password = formValues.password.value;
+
   insert({
     User: {
       isLoggingIn: FetchState.QUEUED,
