@@ -1,7 +1,12 @@
 import { User } from '../../types/user';
 import { session } from '../session';
 import { FetchState } from '../schema';
-import { followUser, signUp, unfollowUser } from '../../services/conduit';
+import {
+  followUser,
+  signUp,
+  unfollowUser,
+  updateSettings,
+} from '../../services/conduit';
 import axios from 'axios';
 import { insertError } from '../error/error';
 
@@ -83,25 +88,24 @@ export const startRegistrationRule = rule(
     },
   })
 ).enact({
-  then: ({ StartRegistration: { email, password, username } }) => {
-    signUp({
+  then: async ({ StartRegistration: { email, password, username } }) => {
+    const result = await signUp({
       username,
       email,
       password: password ?? '',
-    }).then((result) => {
-      retract('StartRegistration', 'email', 'password', 'username');
-      result.match({
-        err: (e) => {
-          insertError(e);
-        },
-        ok: (user) => {
-          //TODO: I guess there currently isn't email validation?
-          window.location.hash = '#/';
-          insert({
-            LoadUser: user,
-          });
-        },
-      });
+    });
+    retract('StartRegistration', 'email', 'password', 'username');
+    result.match({
+      err: (e) => {
+        insertError(e);
+      },
+      ok: (user) => {
+        //TODO: I guess there currently isn't email validation?
+        window.location.hash = '#/';
+        insert({
+          LoadUser: user,
+        });
+      },
     });
   },
 });
@@ -118,6 +122,41 @@ rule('Load user', () => ({
     insert({
       [user.username]: user,
     });
+  },
+});
+
+export const updateSettingsRule = rule(
+  'Update Settings',
+  ({ username, password, image, bio, email }) => ({
+    UpdateSettings: { username, password, image, bio, email },
+  })
+).enact({
+  then: async ({ UpdateSettings }) => {
+    const result = await updateSettings(UpdateSettings);
+    console.log(result);
+    retractByConditions('UpdateSettings', userSettingsConditions);
+
+    result.match({
+      err: (e) => insertError(e),
+      ok: (user) => {
+        window.location.hash = '/';
+        insertUser(user);
+      },
+    });
+  },
+});
+
+rule('Logout User', ({ username }) => ({
+  LogoutUser: {
+    username,
+  },
+})).enact({
+  then: ({ LogoutUser: { username } }) => {
+    retractByConditions(username, userConditions);
+    retract('LogoutUser', 'username');
+    delete axios.defaults.headers.Authorization;
+    localStorage.removeItem('token');
+    window.location.hash = '/';
   },
 });
 

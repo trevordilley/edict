@@ -1,29 +1,29 @@
-import axios from 'axios';
-import React from 'react';
-import { store } from '../../../state/store';
-import { useStore } from '../../../state/storeHooks';
-import { UserSettings } from '../../../types/user';
+import React, { useEffect, useState } from 'react';
 import { buildGenericFormField } from '../../../types/genericFormField';
-import { logout } from '../../App/App.slice';
 import { GenericForm } from '../../GenericForm/GenericForm';
-import { startUpdate } from './Settings.slice';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
 import { useErrors } from '../../../rules/error/useErrors';
 import { useUser } from '../../../rules/user/useUser';
+import { updateSettingsRule } from '../../../rules/user/user';
+import { insert } from '../../../rules/session';
 
-export interface SettingsField {
-  name: keyof UserSettings;
-  type?: string;
-  isTextArea?: true;
-  placeholder: string;
-}
+const useSettings = () => {
+  const [updatedSettings, setUpdatedSettings] = useState(
+    updateSettingsRule.queryOne()
+  );
+  useEffect(() =>
+    updateSettingsRule.subscribeOne((r) => setUpdatedSettings(r))
+  );
 
-export function Settings() {
-  const { updating } = useStore(({ settings }) => settings);
-  const user = useUser();
   const {
     Error: { errors },
   } = useErrors();
+  const user = useUser();
+  return { updatedSettings: updatedSettings?.UpdateSettings, errors, user };
+};
+
+export function Settings() {
+  const { updatedSettings, errors, user } = useSettings();
   return (
     <div className="settings-page">
       <ContainerPage>
@@ -31,7 +31,7 @@ export function Settings() {
           <h1 className="text-xs-center">Your Settings</h1>
 
           <GenericForm
-            disabled={updating}
+            disabled={!!updatedSettings}
             formObject={{ ...user }}
             submitButtonText="Update Settings"
             errors={errors}
@@ -61,7 +61,10 @@ export function Settings() {
           />
 
           <hr />
-          <button className="btn btn-outline-danger" onClick={_logout}>
+          <button
+            className="btn btn-outline-danger"
+            onClick={() => logout(user?.username)}
+          >
             Or click here to logout.
           </button>
         </div>
@@ -72,8 +75,6 @@ export function Settings() {
 
 function onSubmit(ev: React.FormEvent) {
   ev.preventDefault();
-  store.dispatch(startUpdate());
-
   const target = ev.currentTarget;
   // Todo: Clean this up.
   const formValues = target as typeof target & {
@@ -81,27 +82,26 @@ function onSubmit(ev: React.FormEvent) {
     password: { value: string };
     image: { value: string };
     bio: { value: string };
+    email: { value: string };
   };
 
-  console.log(
-    formValues.username.value,
-    formValues.bio.value,
-    formValues.password.value,
-    formValues.image.value
-  );
-
-  // result.match({
-  //   err: (e) => store.dispatch(updateErrors(e)),
-  //   ok: (user) => {
-  //     store.dispatch(loadUser(user));
-  //     window.location.hash = '/';
-  //   },
-  // });
+  console.log('submitting?');
+  insert({
+    UpdateSettings: {
+      username: formValues.username.value,
+      password: formValues.password.value,
+      image: formValues.image.value,
+      bio: formValues.bio.value,
+      email: formValues.email.value,
+    },
+  });
 }
 
-function _logout() {
-  delete axios.defaults.headers.Authorization;
-  localStorage.removeItem('token');
-  store.dispatch(logout());
-  window.location.hash = '/';
+function logout(username?: string) {
+  if (!username) throw new Error('Logging out undefined username?');
+  insert({
+    LogoutUser: {
+      username,
+    },
+  });
 }
