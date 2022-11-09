@@ -73,7 +73,7 @@ export function ListFormGroup({
   type: string;
   placeholder: string;
   disabled: boolean;
-  listValue: string[];
+  listValue?: string[];
   lg: boolean;
   onEnter: () => void;
   onRemoveItem: (index: number) => void;
@@ -92,7 +92,7 @@ export function ListFormGroup({
         onKeyUp={onListFieldKeyUp(onEnter)}
       />
       <div className="tag-list">
-        {listValue.map((value, index) => (
+        {listValue?.map((value, index) => (
           <span
             key={value}
             className="tag-default tag-pill"
