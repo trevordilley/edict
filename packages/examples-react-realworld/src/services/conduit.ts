@@ -76,8 +76,6 @@ export async function login(
 
     const userResult = guard(object({ user: userDecoder }))(data).user;
 
-    insertUser(userResult);
-
     return Ok(userResult);
   } catch ({ response: { data } }) {
     const error = guard(object({ errors: genericErrorsDecoder }))(data).errors;
