@@ -16,7 +16,7 @@ import { getUser } from '../services/conduit';
 export function App() {
   useEffect(() => {
     getUser();
-  });
+  }, []);
   const user = useUser();
   const userIsLogged = user !== undefined;
   return (

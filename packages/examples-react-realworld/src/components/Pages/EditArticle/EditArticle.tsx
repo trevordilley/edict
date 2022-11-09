@@ -4,6 +4,7 @@ import { getArticle, updateArticle } from '../../../services/conduit';
 import { ArticleEditor } from '../../ArticleEditor/ArticleEditor';
 import { userRule } from '../../../rules/user/user';
 import { insertError } from '../../../rules/error/error';
+import { useArticle } from '../../../rules/article/useArticle';
 
 export type EditArticleFormFields<T extends React.FormEvent['currentTarget']> =
   T & {
@@ -22,10 +23,19 @@ export function EditArticle() {
   useEffect(() => {
     if (!slug) return;
     _loadArticle(slug);
-  }, [slug]);
+  }, []);
+
   if (!slug) return <></>;
-  return <ArticleEditor onSubmit={onSubmit(slug)} />;
+  return <SluggedArticle slug={slug} />;
 }
+
+const SluggedArticle: React.FC<{ slug: string }> = ({ slug }) => {
+  const article = useArticle(slug);
+  console.log('Loading slugged?', article);
+  return (
+    <ArticleEditor onSubmit={onSubmit(slug)} article={article?.$article} />
+  );
+};
 
 async function _loadArticle(slug: string) {
   const user = userRule.queryOne();

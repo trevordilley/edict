@@ -6,18 +6,21 @@ export function FormGroup({
   placeholder,
   disabled,
   lg,
+  value,
 }: {
   name: string;
   type: string;
   placeholder: string;
   disabled: boolean;
   lg: boolean;
+  value?: string | null;
 }) {
   return (
     <fieldset className="form-group">
       <input
         name={name}
         className={`form-control${!lg ? '' : ' form-control-lg'}`}
+        defaultValue={value ?? ''}
         {...{
           type,
           placeholder,
@@ -35,6 +38,7 @@ export function TextAreaFormGroup({
   disabled,
   rows,
   lg,
+  value,
 }: {
   name: string;
   type: string;
@@ -42,12 +46,14 @@ export function TextAreaFormGroup({
   disabled: boolean;
   rows: number;
   lg: boolean;
+  value?: string | null;
 }) {
   return (
     <fieldset className="form-group">
       <textarea
         name={name}
         className={`form-control${!lg ? '' : ' form-control-lg'}`}
+        defaultValue={value ?? ''}
         {...{
           type,
           placeholder,

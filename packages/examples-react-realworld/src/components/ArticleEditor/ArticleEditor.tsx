@@ -3,11 +3,14 @@ import { buildGenericFormField } from '../../types/genericFormField';
 import { ContainerPage } from '../ContainerPage/ContainerPage';
 import { GenericForm } from '../GenericForm/GenericForm';
 import { useErrors } from '../../rules/error/useErrors';
+import { ArticleForEditor } from '../../types/article';
 
 export function ArticleEditor({
   onSubmit,
+  article,
 }: {
   onSubmit: (ev: React.FormEvent) => void;
+  article?: ArticleForEditor;
 }) {
   const {
     Error: { errors },
@@ -17,7 +20,12 @@ export function ArticleEditor({
       <ContainerPage>
         <div className="col-md-10 offset-md-1 col-xs-12">
           <GenericForm
-            formObject={{ title: '', description: '', body: '', tag: '' }}
+            formObject={{
+              title: article?.title ?? '',
+              description: article?.description ?? '',
+              body: article?.body ?? '',
+              tag: article?.tagList.join(',') ?? '',
+            }}
             disabled={false}
             errors={errors}
             onSubmit={onSubmit}

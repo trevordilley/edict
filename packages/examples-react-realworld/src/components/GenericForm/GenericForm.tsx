@@ -42,6 +42,7 @@ export const GenericForm: FC<GenericFormProps> = ({
               type={field.type}
               placeholder={field.placeholder}
               lg={field.lg}
+              value={formObject[field.name]}
             />
           ) : field.fieldType === 'textarea' ? (
             <TextAreaFormGroup
@@ -52,6 +53,7 @@ export const GenericForm: FC<GenericFormProps> = ({
               placeholder={field.placeholder}
               rows={field.rows as number}
               lg={field.lg}
+              value={formObject[field.name]}
             />
           ) : (
             <ListFormGroup
