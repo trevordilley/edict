@@ -6,6 +6,7 @@ import { insert } from './rules/session';
 import { FetchState, HOME_TAB } from './rules/schema';
 import { DEFAULT_FEED_LIMIT, INITIAL_FEED_OFFSET } from './services/conduit';
 import { HashRouter } from 'react-router-dom';
+import axios from 'axios';
 
 insert({
   HomePage: {
@@ -32,6 +33,11 @@ insert({
     errors: {},
   },
 });
+const token = localStorage.getItem('token');
+if (token) {
+  axios.defaults.headers.Authorization = `Token ${token}`;
+}
+
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );

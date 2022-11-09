@@ -1,15 +1,7 @@
 import React from 'react';
-import { store } from '../../state/store';
-import { useStore } from '../../state/storeHooks';
 import { buildGenericFormField } from '../../types/genericFormField';
 import { ContainerPage } from '../ContainerPage/ContainerPage';
 import { GenericForm } from '../GenericForm/GenericForm';
-import {
-  addTag,
-  EditorState,
-  removeTag,
-  updateField,
-} from './ArticleEditor.slice';
 import { useErrors } from '../../rules/error/useErrors';
 
 export function ArticleEditor({
@@ -17,8 +9,6 @@ export function ArticleEditor({
 }: {
   onSubmit: (ev: React.FormEvent) => void;
 }) {
-  const { article, submitting, tag } = useStore(({ editor }) => editor);
-
   const {
     Error: { errors },
   } = useErrors();
@@ -27,10 +17,8 @@ export function ArticleEditor({
       <ContainerPage>
         <div className="col-md-10 offset-md-1 col-xs-12">
           <GenericForm
-            formObject={
-              { ...article, tag } as unknown as Record<string, string | null>
-            }
-            disabled={submitting}
+            formObject={{ title: '', description: '', body: '', tag: '' }}
+            disabled={false}
             errors={errors}
             onSubmit={onSubmit}
             submitButtonText="Publish Article"
@@ -68,16 +56,10 @@ export function ArticleEditor({
   );
 }
 
-function onUpdateField(name: string, value: string) {
-  store.dispatch(
-    updateField({ name: name as keyof EditorState['article'], value })
-  );
-}
-
 function onAddTag() {
-  store.dispatch(addTag());
+  // store.dispatch(addTag());
 }
 
 function onRemoveTag(_: string, index: number) {
-  store.dispatch(removeTag(index));
+  // store.dispatch(removeTag(index));
 }

@@ -1,7 +1,4 @@
-import axios from 'axios';
 import { Decoder, nullable, object, string } from 'decoders';
-import { loadUser } from '../components/App/App.slice';
-import { store } from '../state/store';
 
 export interface PublicUser {
   username: string;
@@ -31,10 +28,4 @@ export interface UserForRegistration {
   username: string;
   email: string;
   password: string;
-}
-
-export function loadUserIntoApp(user: User) {
-  localStorage.setItem('token', user.token);
-  axios.defaults.headers.Authorization = `Token ${user.token}`;
-  store.dispatch(loadUser(user));
 }

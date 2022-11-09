@@ -1,45 +1,41 @@
-import React, { Fragment, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getArticle, updateArticle } from '../../../services/conduit';
-import { store } from '../../../state/store';
-import { useStore } from '../../../state/storeHooks';
 import { ArticleEditor } from '../../ArticleEditor/ArticleEditor';
-import {
-  initializeEditor,
-  loadArticle,
-  startSubmitting,
-  updateErrors,
-} from '../../ArticleEditor/ArticleEditor.slice';
+import { userRule } from '../../../rules/user/user';
+import { insertError } from '../../../rules/error/error';
+
+export type EditArticleFormFields<T extends React.FormEvent['currentTarget']> =
+  T & {
+    title: { value: string };
+    description: { value: string };
+    body: { value: string };
+    tag: { value: string };
+  };
+
+export const parseEditArticleForm = (ev: React.FormEvent) =>
+  ev.currentTarget as EditArticleFormFields<typeof ev.currentTarget>;
 
 export function EditArticle() {
   const { slug } = useParams<{ slug: string }>();
-  const { loading } = useStore(({ editor }) => editor);
 
   useEffect(() => {
     if (!slug) return;
     _loadArticle(slug);
   }, [slug]);
   if (!slug) return <></>;
-  return (
-    <Fragment>
-      {!loading && <ArticleEditor onSubmit={onSubmit(slug)} />}
-    </Fragment>
-  );
+  return <ArticleEditor onSubmit={onSubmit(slug)} />;
 }
 
 async function _loadArticle(slug: string) {
-  store.dispatch(initializeEditor());
+  const user = userRule.queryOne();
   try {
-    const { title, description, body, tagList, author } = await getArticle(
-      slug
-    );
+    const article = await getArticle(slug);
 
-    if (author.username !== store.getState().app.user.unwrap().username) {
+    if (article.author.username !== user?.$user.username) {
       window.location.hash = '#/';
       return;
     }
-
-    store.dispatch(loadArticle({ title, description, body, tagList }));
   } catch {
     window.location.hash = '#/';
   }
@@ -48,12 +44,17 @@ async function _loadArticle(slug: string) {
 function onSubmit(slug: string): (ev: React.FormEvent) => void {
   return async (ev) => {
     ev.preventDefault();
-
-    store.dispatch(startSubmitting());
-    const result = await updateArticle(slug, store.getState().editor.article);
+    const { title, description, body, tag } = parseEditArticleForm(ev);
+    const tagList = tag.value.split(',');
+    const result = await updateArticle(slug, {
+      title: title.value,
+      description: description.value,
+      body: body.value,
+      tagList,
+    });
 
     result.match({
-      err: (errors) => store.dispatch(updateErrors(errors)),
+      err: (errors) => insertError(errors),
       ok: ({ slug }) => {
         window.location.hash = `#/article/${slug}`;
       },
