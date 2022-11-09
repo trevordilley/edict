@@ -77,7 +77,6 @@ export async function login(
     const userResult = guard(object({ user: userDecoder }))(data).user;
 
     insertUser(userResult);
-    insert({});
 
     return Ok(userResult);
   } catch ({ response: { data } }) {

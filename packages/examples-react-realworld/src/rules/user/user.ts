@@ -3,6 +3,7 @@ import { session } from '../session';
 import { FetchState } from '../schema';
 import {
   followUser,
+  login,
   signUp,
   unfollowUser,
   updateSettings,
@@ -74,6 +75,28 @@ rule('Update following status', ({ following, fetchState, username }) => ({
           fetchState: FetchState.DONE,
         },
       });
+    });
+  },
+});
+
+export const loginRule = rule(
+  'Login using email and password',
+  ({ email, password }) => ({
+    Login: {
+      email,
+      password,
+    },
+  })
+).enact({
+  then: async ({ Login: { email, password } }) => {
+    const result = await login(email, password!);
+    retract('Login', 'email', 'password');
+    result.match({
+      ok: (user) => {
+        insertUser(user);
+        window.location.hash = '#/';
+      },
+      err: (e) => insertError(e),
     });
   },
 });
@@ -178,5 +201,14 @@ export const getUserProfile = (username: string) =>
       ids: [username],
     },
   });
+
+export const startLogin = (email: string, password: string) => {
+  insert({
+    Login: {
+      email,
+      password,
+    },
+  });
+};
 
 export const getUser = () => userRule.queryOne();

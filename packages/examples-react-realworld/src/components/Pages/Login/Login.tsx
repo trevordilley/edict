@@ -1,16 +1,22 @@
-import React, { FormEvent } from 'react';
-import { login } from '../../../services/conduit';
+import React, { FormEvent, useEffect, useState } from 'react';
 import { buildGenericFormField } from '../../../types/genericFormField';
 import { GenericForm } from '../../GenericForm/GenericForm';
 import { ContainerPage } from '../../ContainerPage/ContainerPage';
 import { useErrors } from '../../../rules/error/useErrors';
-import { insert, retract } from '../../../rules/session';
-import { FetchState } from '../../../rules/schema';
+import { loginRule, startLogin } from '../../../rules/user/user';
+
+const useLogin = () => {
+  const [login, setLogin] = useState(loginRule.queryOne());
+  useEffect(() => loginRule.subscribeOne((l) => setLogin(l)));
+  const errors = useErrors();
+  return {
+    login: login?.Login,
+    errors: errors.Error.errors,
+  };
+};
 
 export function Login() {
-  const {
-    Error: { errors },
-  } = useErrors();
+  const { login, errors } = useLogin();
   return (
     <div className="auth-page">
       <ContainerPage>
@@ -21,7 +27,7 @@ export function Login() {
           </p>
 
           <GenericForm
-            disabled={false}
+            disabled={!!login}
             formObject={{ email: '', password: '' }}
             submitButtonText="Sign in"
             errors={errors}
@@ -29,7 +35,11 @@ export function Login() {
               signIn(ev);
             }}
             fields={[
-              buildGenericFormField({ name: 'email', placeholder: 'Email' }),
+              buildGenericFormField({
+                name: 'email',
+                placeholder: 'Email',
+                type: 'email',
+              }),
               buildGenericFormField({
                 name: 'password',
                 placeholder: 'Password',
@@ -53,26 +63,5 @@ async function signIn(ev: FormEvent) {
   };
   const email = formValues.email.value;
   const password = formValues.password.value;
-
-  insert({
-    User: {
-      isLoggingIn: FetchState.QUEUED,
-    },
-  });
-  login(email, password).then((result) => {
-    retract('User', 'isLoggingIn');
-    result.match({
-      ok: (user) => {
-        insert({
-          User: user,
-        });
-        window.location.hash = '#/';
-      },
-      err: (e) => {
-        insert({
-          Errors: e,
-        });
-      },
-    });
-  });
+  startLogin(email, password);
 }
