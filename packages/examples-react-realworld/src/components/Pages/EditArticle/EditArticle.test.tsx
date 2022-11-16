@@ -5,13 +5,15 @@ import { MemoryRouter, Route } from 'react-router-dom';
 import { getArticle, updateArticle } from '../../../services/conduit';
 import { store } from '../../../state/store';
 import { loadUser } from '../../App/App.slice';
-import { initializeEditor } from '../../ArticleEditor/ArticleEditor.slice';
+import { initializeEditor } from '../../organisms/ArticleEditor/ArticleEditor.slice';
 import { EditArticle } from './EditArticle';
 
 jest.mock('../../../services/conduit.ts');
 
 const mockedGetArticle = getArticle as jest.Mock<ReturnType<typeof getArticle>>;
-const mockedUpdateArticle = updateArticle as jest.Mock<ReturnType<typeof updateArticle>>;
+const mockedUpdateArticle = updateArticle as jest.Mock<
+  ReturnType<typeof updateArticle>
+>;
 
 const defaultArticle = {
   author: {
@@ -50,7 +52,7 @@ async function renderWithPath(articleSlug: string) {
   await act(async () => {
     render(
       <MemoryRouter initialEntries={[`/${articleSlug}`]}>
-        <Route path='/:slug'>
+        <Route path="/:slug">
           <EditArticle />
         </Route>
       </MemoryRouter>
@@ -78,7 +80,10 @@ it('Should redirect to home if article owner is not the logged user', async () =
 
 it('Should load article', async () => {
   location.hash = '#/editor/1234';
-  mockedGetArticle.mockResolvedValueOnce({ ...defaultArticle, tagList: ['123', '456'] });
+  mockedGetArticle.mockResolvedValueOnce({
+    ...defaultArticle,
+    tagList: ['123', '456'],
+  });
   await renderWithPath('1234');
 
   expect(store.getState().editor.loading).toBeFalsy();
@@ -88,7 +93,9 @@ it('Should load article', async () => {
 
 it('Should update errors if publish article fails', async () => {
   mockedGetArticle.mockResolvedValueOnce(defaultArticle);
-  mockedUpdateArticle.mockResolvedValueOnce(Err({ title: ['too smol', 'much fun'] }));
+  mockedUpdateArticle.mockResolvedValueOnce(
+    Err({ title: ['too smol', 'much fun'] })
+  );
 
   await renderWithPath('1234');
   await act(async () => {

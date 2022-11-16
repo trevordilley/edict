@@ -53,7 +53,6 @@ export type Schema = Article &
   } & Fetch &
   User & {
     isLoggingIn: FetchState;
-  } & Error &
-  Profile &
+  } & Error & { location: string } & Profile &
   UserSettings &
   Comment & { articleCount: number } & HomePage;

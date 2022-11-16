@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { User } from '../../types/user';
-import { useUser } from '../../rules/user/useUser';
+import { User } from '../../../types/user';
+import { useUser } from '../../../rules/user/useUser';
 
 export function Header() {
   const user = useUser();

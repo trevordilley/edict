@@ -1,9 +1,9 @@
 import React from 'react';
-import { buildGenericFormField } from '../../types/genericFormField';
-import { ContainerPage } from '../ContainerPage/ContainerPage';
+import { buildGenericFormField } from '../../../types/genericFormField';
+import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
 import { GenericForm } from '../GenericForm/GenericForm';
-import { useErrors } from '../../rules/error/useErrors';
-import { ArticleForEditor } from '../../types/article';
+import { useErrors } from '../../../rules/error/useErrors';
+import { ArticleForEditor } from '../../../types/article';
 
 export function ArticleEditor({
   onSubmit,
@@ -12,9 +12,7 @@ export function ArticleEditor({
   onSubmit: (ev: React.FormEvent) => void;
   article?: ArticleForEditor;
 }) {
-  const {
-    Error: { errors },
-  } = useErrors();
+  const errors = useErrors();
   return (
     <div className="editor-page">
       <ContainerPage>

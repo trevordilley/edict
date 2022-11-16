@@ -13,7 +13,7 @@ export function Pagination({
 }) {
   return (
     <nav>
-      <ul className='pagination'>
+      <ul className="pagination">
         {Math.ceil(count / itemsPerPage) > 1 &&
           range(1, Math.ceil(count / itemsPerPage) + 1).map((index) => (
             <li
@@ -21,7 +21,11 @@ export function Pagination({
               className={`page-item${currentPage !== index ? '' : ' active'}`}
               onClick={onPageChange && (() => onPageChange(index))}
             >
-              <a className='page-link' aria-label={`Go to page number ${index}`} href='#'>
+              <a
+                className="page-link"
+                aria-label={`Go to page number ${index}`}
+                href="packages/examples-react-realworld/src/components/molecules/Pagination/Pagination#"
+              >
                 {index}
               </a>
             </li>

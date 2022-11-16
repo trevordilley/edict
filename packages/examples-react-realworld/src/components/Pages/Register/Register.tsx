@@ -1,6 +1,6 @@
 import { buildGenericFormField } from '../../../types/genericFormField';
-import { GenericForm } from '../../GenericForm/GenericForm';
-import { ContainerPage } from '../../ContainerPage/ContainerPage';
+import { GenericForm } from '../../organisms/GenericForm/GenericForm';
+import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
 import { useErrors } from '../../../rules/error/useErrors';
 import { FormEvent, useEffect, useState } from 'react';
 import { insert } from '../../../rules/session';
@@ -13,10 +13,7 @@ const useRegistration = () => {
   useEffect(() =>
     startRegistrationRule.subscribeOne((r) => setRegistration(r))
   );
-  const {
-    Error: { errors },
-  } = useErrors();
-
+  const errors = useErrors();
   return { registration, errors };
 };
 

@@ -1,6 +1,6 @@
 import { User } from '../../types/user';
 import { session } from '../session';
-import { FetchState } from '../schema';
+import { FetchState, HOME_TAB } from '../schema';
 import {
   followUser,
   login,
@@ -10,9 +10,9 @@ import {
 } from '../../services/conduit';
 import axios from 'axios';
 import { insertError } from '../error/error';
+import * as decodeJwt from 'jwt-decode';
 
 const { insert, rule, conditions, retract, retractByConditions } = session;
-
 const publicUserConditions = conditions(({ username, image, bio }) => ({
   username,
   image,
@@ -51,36 +51,73 @@ export const insertUser = (
   });
 };
 
-export const logoutUser = () => {
-  retractByConditions('User', userConditions);
-};
-
-rule('Update following status', ({ following, fetchState, username }) => ({
+rule('Update following status', ({ following, username, token }) => ({
   $user: {
-    username,
     fetchState: { match: FetchState.QUEUED },
     following,
   },
+  Session: {
+    token,
+  },
 })).enact({
-  then: ({ $user: { username, following } }) => {
+  then: ({ $user: { id, following }, Session: { token } }) => {
+    if (!token) {
+      windowRedirect('register');
+      return;
+    }
+    const toggledFollow = !following;
     insert({
-      [username]: {
-        fetchState: FetchState.QUEUED,
+      [id]: {
+        fetchState: FetchState.SENT,
+        following: toggledFollow,
       },
     });
 
-    (following ? unfollowUser : followUser)(username).then(() => {
+    (following ? unfollowUser : followUser)(id).then((result) => {
       insert({
-        [username]: {
+        [id]: {
           fetchState: FetchState.DONE,
+          following: result.following,
         },
       });
     });
   },
 });
 
+rule(
+  'Setting a token persists the token, and sets the headers for axios',
+  ({ token }) => ({
+    Session: {
+      token,
+    },
+  })
+).enact({
+  when: ({ Session: { token } }) => token !== undefined,
+  then: async ({ Session: { token } }) => {
+    if (!token)
+      throw new Error('Token should never be undefined in this rule!');
+    const decoded = decodeJwt.default<{ username: string }>(token);
+    localStorage.setItem('token', token);
+
+    axios.defaults.headers.common['Authorization'] = `Token ${token}`;
+    insert({
+      Session: {
+        username: decoded.username,
+      },
+    });
+  },
+});
+
+export const setToken = (token?: string) => {
+  insert({
+    Session: {
+      token,
+    },
+  });
+};
+
 export const loginRule = rule(
-  'Login using email and password',
+  'Successful Login using email and password loads the user',
   ({ email, password }) => ({
     Login: {
       email,
@@ -93,8 +130,9 @@ export const loginRule = rule(
     retract('Login', 'email', 'password');
     result.match({
       ok: (user) => {
+        setToken(user.token);
         insertUser(user);
-        window.location.hash = '#/';
+        windowRedirect('#/');
       },
       err: (e) => insertError(e),
     });
@@ -123,27 +161,10 @@ export const startRegistrationRule = rule(
         insertError(e);
       },
       ok: (user) => {
-        //TODO: I guess there currently isn't email validation?
-        window.location.hash = '#/';
-        insert({
-          LoadUser: user,
-        });
+        setToken(user.token);
+        insertUser(user);
+        windowRedirect('#/');
       },
-    });
-  },
-});
-
-rule('Load user', () => ({
-  LoadUser: {
-    ...userConditions,
-  },
-})).enact({
-  then: ({ LoadUser }) => {
-    localStorage.setItem('token', LoadUser.token);
-    axios.defaults.headers.Authorization = `Token ${LoadUser.token}`;
-    const { id, ...user } = LoadUser;
-    insert({
-      [user.username]: user,
     });
   },
 });
@@ -156,30 +177,60 @@ export const updateSettingsRule = rule(
 ).enact({
   then: async ({ UpdateSettings }) => {
     const result = await updateSettings(UpdateSettings);
-    console.log(result);
     retractByConditions('UpdateSettings', userSettingsConditions);
 
     result.match({
       err: (e) => insertError(e),
       ok: (user) => {
-        window.location.hash = '/';
+        windowRedirect('/');
         insertUser(user);
       },
     });
   },
 });
 
-rule('Logout User', ({ username }) => ({
-  LogoutUser: {
-    username,
+rule(
+  'When the auth token is set to undefined, logout the user',
+  ({ token }) => ({
+    Session: {
+      token,
+      username: { then: false },
+    },
+  })
+).enact({
+  when: ({ Session: { token } }) => token === undefined,
+  then: ({ Session: { username } }) => {
+    retractByConditions(username, userConditions);
+    insert({
+      HomePage: {
+        tabNames: [HOME_TAB.GLOBAL_FEED],
+        selectedTab: HOME_TAB.GLOBAL_FEED,
+      },
+      Session: {
+        username: undefined,
+      },
+    });
+    delete axios.defaults.headers.common['Authorization'];
+    localStorage.removeItem('token');
+    windowRedirect('/');
+  },
+});
+
+export const windowRedirect = (location: string) => {
+  insert({
+    Page: {
+      location,
+    },
+  });
+};
+
+rule('Redirect when location changes', ({ location }) => ({
+  Page: {
+    location,
   },
 })).enact({
-  then: ({ LogoutUser: { username } }) => {
-    retractByConditions(username, userConditions);
-    retract('LogoutUser', 'username');
-    delete axios.defaults.headers.Authorization;
-    localStorage.removeItem('token');
-    window.location.hash = '/';
+  then: ({ Page: { location } }) => {
+    window.location.hash = location;
   },
 });
 
@@ -210,5 +261,3 @@ export const startLogin = (email: string, password: string) => {
     },
   });
 };
-
-export const getUser = () => userRule.queryOne();

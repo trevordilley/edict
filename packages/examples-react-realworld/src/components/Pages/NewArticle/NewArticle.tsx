@@ -1,8 +1,9 @@
 import { FormEvent } from 'react';
 import { createArticle } from '../../../services/conduit';
-import { ArticleEditor } from '../../ArticleEditor/ArticleEditor';
+import { ArticleEditor } from '../../organisms/ArticleEditor/ArticleEditor';
 import { insertError } from '../../../rules/error/error';
 import { parseEditArticleForm } from '../EditArticle/EditArticle';
+import { windowRedirect } from '../../../rules/user/user';
 
 export function NewArticle() {
   return <ArticleEditor onSubmit={onSubmit} />;
@@ -22,7 +23,7 @@ async function onSubmit(ev: FormEvent) {
   result.match({
     err: (errors) => insertError(errors),
     ok: ({ slug }) => {
-      window.location.hash = `#/article/${slug}`;
+      windowRedirect(`#/article/${slug}`);
     },
   });
 }

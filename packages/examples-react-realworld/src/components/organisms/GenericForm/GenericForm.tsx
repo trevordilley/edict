@@ -3,10 +3,10 @@ import {
   FormGroup,
   ListFormGroup,
   TextAreaFormGroup,
-} from '../FormGroup/FormGroup';
-import { GenericFormField } from '../../types/genericFormField';
-import { GenericErrors } from '../../types/error';
-import { Errors } from '../Errors/Errors';
+} from '../../molecules/FormGroup/FormGroup';
+import { GenericFormField } from '../../../types/genericFormField';
+import { GenericErrors } from '../../../types/error';
+import { Errors } from '../../atoms/Errors/Errors';
 
 export interface GenericFormProps {
   fields: GenericFormField[];

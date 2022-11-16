@@ -90,8 +90,6 @@ export async function getUser(): Promise<User> {
   const { data } = await axios.get('user');
   const user = guard(object({ user: userDecoder }))(data).user;
 
-  insertUser(user);
-
   return user;
 }
 
@@ -227,6 +225,8 @@ export async function getFeed(
     offset: 0,
     ...filters,
   };
+
+  console.log('axios defaults', axios.defaults.headers);
   const articles = guard(multipleArticlesDecoder)(
     (await axios.get(`articles/feed?${objectToQueryString(finalFilters)}`)).data
   );

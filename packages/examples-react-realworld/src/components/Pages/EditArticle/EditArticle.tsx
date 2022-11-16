@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getArticle, updateArticle } from '../../../services/conduit';
-import { ArticleEditor } from '../../ArticleEditor/ArticleEditor';
-import { userRule } from '../../../rules/user/user';
+import { ArticleEditor } from '../../organisms/ArticleEditor/ArticleEditor';
+import { userRule, windowRedirect } from '../../../rules/user/user';
 import { insertError } from '../../../rules/error/error';
 import { useArticle } from '../../../rules/article/useArticle';
 
@@ -43,11 +43,11 @@ async function _loadArticle(slug: string) {
     const article = await getArticle(slug);
 
     if (article.author.username !== user?.$user.username) {
-      window.location.hash = '#/';
+      windowRedirect('#/');
       return;
     }
   } catch {
-    window.location.hash = '#/';
+    windowRedirect('#/');
   }
 }
 
@@ -66,7 +66,7 @@ function onSubmit(slug: string): (ev: React.FormEvent) => void {
     result.match({
       err: (errors) => insertError(errors),
       ok: ({ slug }) => {
-        window.location.hash = `#/article/${slug}`;
+        windowRedirect(`#/article/${slug}`);
       },
     });
   };

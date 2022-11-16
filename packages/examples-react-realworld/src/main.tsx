@@ -6,12 +6,20 @@ import { insert } from './rules/session';
 import { FetchState, HOME_TAB } from './rules/schema';
 import { DEFAULT_FEED_LIMIT, INITIAL_FEED_OFFSET } from './services/conduit';
 import { HashRouter } from 'react-router-dom';
-import axios from 'axios';
+import { setToken } from './rules/user/user';
 
 insert({
+  App: {
+    token: undefined,
+    username: undefined,
+    errors: {},
+  },
+  Session: {
+    token: undefined,
+  },
   HomePage: {
     selectedTab: HOME_TAB.GLOBAL_FEED,
-    tabNames: [],
+    tabNames: [HOME_TAB.GLOBAL_FEED],
   },
   ArticleList: {
     limit: DEFAULT_FEED_LIMIT,
@@ -29,13 +37,10 @@ insert({
   Tags: {
     tagList: [],
   },
-  Error: {
-    errors: {},
-  },
 });
 const token = localStorage.getItem('token');
 if (token) {
-  axios.defaults.headers.Authorization = `Token ${token}`;
+  setToken(token);
 }
 
 const root = ReactDOM.createRoot(

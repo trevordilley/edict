@@ -8,9 +8,13 @@ import {
 } from '../../../services/conduit';
 import { redirect } from '../../../types/location';
 import { Profile } from '../../../types/profile';
-import { ArticlesViewer } from '../../ArticlesViewer/ArticlesViewer';
-import { UserInfo } from '../../UserInfo/UserInfo';
-import { userProfileRule, userRule } from '../../../rules/user/user';
+import { ArticlesViewer } from '../../organisms/ArticlesViewer/ArticlesViewer';
+import { UserInfo } from '../../organisms/UserInfo/UserInfo';
+import {
+  userProfileRule,
+  userRule,
+  windowRedirect,
+} from '../../../rules/user/user';
 import {
   articleListRule,
   changeArticlesPage,
@@ -79,7 +83,7 @@ async function onLoad(username: string, favorites: boolean) {
     await getProfile(username);
     await getArticlesByType(username, favorites);
   } catch {
-    window.location.href = '#/';
+    windowRedirect('#/');
   }
 }
 
@@ -114,8 +118,7 @@ function onTabChange(username: string): (page: string) => void {
   return async (page) => {
     const favorited = page === 'Favorited Articles';
     const navTo = `#/profile/${username}${!favorited ? '' : '/favorites'}`;
-    console.log(navTo);
-    window.location.hash = navTo;
+    windowRedirect(navTo);
     resetArticles();
     await getArticlesByType(username, favorited);
   };

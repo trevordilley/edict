@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
-import { Article } from '../../types/article';
+import { Article } from '../../../types/article';
 
 export function ArticlePreview({
   article: {

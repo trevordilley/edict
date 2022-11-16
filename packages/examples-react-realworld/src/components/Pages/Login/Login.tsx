@@ -1,17 +1,17 @@
-import React, { FormEvent, useEffect, useState } from 'react';
+import React, { FormEvent } from 'react';
 import { buildGenericFormField } from '../../../types/genericFormField';
-import { GenericForm } from '../../GenericForm/GenericForm';
-import { ContainerPage } from '../../ContainerPage/ContainerPage';
+import { GenericForm } from '../../organisms/GenericForm/GenericForm';
+import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
 import { useErrors } from '../../../rules/error/useErrors';
 import { loginRule, startLogin } from '../../../rules/user/user';
+import { useRuleOne } from '../../../rules/useRule';
 
 const useLogin = () => {
-  const [login, setLogin] = useState(loginRule.queryOne());
-  useEffect(() => loginRule.subscribeOne((l) => setLogin(l)));
+  const login = useRuleOne(loginRule);
   const errors = useErrors();
   return {
     login: login?.Login,
-    errors: errors.Error.errors,
+    errors,
   };
 };
 

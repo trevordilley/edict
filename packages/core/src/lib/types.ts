@@ -49,10 +49,7 @@ export type EnactionArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
 export interface QueryOneOptions {
   shouldThrowExceptionOnMoreThanOne?: boolean;
 }
-
-export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> = (
-  enaction?: EnactionArgs<SCHEMA, T>
-) => {
+export type EnactionResults<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
   query: (filter?: QueryArgs<SCHEMA, T>) => EnactArgs<SCHEMA, T>[];
   queryOne: (
     filter?: QueryArgs<SCHEMA, T>,
@@ -69,6 +66,9 @@ export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> = (
     options?: QueryOneOptions
   ) => () => void;
 };
+export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> = (
+  enaction?: EnactionArgs<SCHEMA, T>
+) => EnactionResults<SCHEMA, T>;
 
 export interface IEdict<SCHEMA> {
   insert: (args: InsertEdictFact<SCHEMA>) => void;

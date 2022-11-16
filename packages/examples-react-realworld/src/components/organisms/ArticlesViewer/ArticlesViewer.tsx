@@ -1,12 +1,11 @@
 import { Fragment } from 'react';
-import { Article } from '../../types/article';
-import { classObjectToClassName } from '../../types/style';
+import { Article } from '../../../types/article';
+import { classObjectToClassName } from '../../../types/style';
 import { ArticlePreview } from '../ArticlePreview/ArticlePreview';
-import { Pagination } from '../Pagination/Pagination';
-import { useArticles } from '../../rules/article/useArticle';
-import { useHome } from '../../rules/home/useHome';
-import { session } from '../../rules/session';
-import { FetchState } from '../../rules/schema';
+import { Pagination } from '../../molecules/Pagination/Pagination';
+import { useArticles } from '../../../rules/article/useArticle';
+import { useHome } from '../../Pages/Home/Home';
+import { toggleFavoriteArticle } from '../../../rules/article/article';
 
 export function ArticlesViewer({
   toggleClassName,
@@ -81,7 +80,7 @@ function Tab({
     <li className="nav-item">
       <a
         className={classObjectToClassName({ 'nav-link': true, active })}
-        href="#"
+        href="packages/examples-react-realworld/src/components/organisms/ArticlesViewer/ArticlesViewer#"
         onClick={(ev) => {
           ev.preventDefault();
           onClick();
@@ -122,11 +121,5 @@ function ArticleList({
 }
 
 function onFavoriteToggle(index: number, { slug, favorited }: Article) {
-  session.insert({
-    [slug]: {
-      slug,
-      favorited,
-      isFavoriting: FetchState.QUEUED,
-    },
-  });
+  toggleFavoriteArticle(slug, favorited);
 }

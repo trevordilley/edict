@@ -1,24 +1,19 @@
-import { Footer } from '../components/Footer/Footer';
+import { Footer } from '../components/atoms/Footer/Footer';
 import { Home } from '../components/Pages/Home/Home';
 import { ArticlePage } from '../components/Pages/ArticlePage/ArticlePage';
-import { Header } from '../components/Header/Header';
+import { Header } from '../components/molecules/Header/Header';
 import { Login } from '../components/Pages/Login/Login';
 import { Register } from '../components/Pages/Register/Register';
 import { Settings } from '../components/Pages/Settings/Settings';
 import { NewArticle } from '../components/Pages/NewArticle/NewArticle';
 import { EditArticle } from '../components/Pages/EditArticle/EditArticle';
 import { ProfilePage } from '../components/Pages/ProfilePage/ProfilePage';
-import { FC, PropsWithChildren, useEffect } from 'react';
-import { useUser } from '../rules/user/useUser';
+import { FC, PropsWithChildren } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { getUser } from '../services/conduit';
+import { useUser } from '../rules/user/useUser';
 
 export function App() {
-  useEffect(() => {
-    getUser();
-  }, []);
-  const user = useUser();
-  const userIsLogged = user !== undefined;
+  const userIsLogged = !!useUser();
   return (
     <>
       <Header />

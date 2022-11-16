@@ -13,10 +13,9 @@ import { Comment } from '../../../types/comment';
 import { redirect } from '../../../types/location';
 import { classObjectToClassName } from '../../../types/style';
 import { User } from '../../../types/user';
-import { TagList } from '../../ArticlePreview/ArticlePreview';
+import { TagList } from '../../organisms/ArticlePreview/ArticlePreview';
 import { session } from '../../../rules/session';
 import { FetchState } from '../../../rules/schema';
-import { userRule } from '../../../rules/user/user';
 import { useArticle, useArticleMeta } from '../../../rules/article/useArticle';
 import { useCommentSection } from '../../../rules/comment/useComments';
 import { useUser } from '../../../rules/user/useUser';
@@ -24,6 +23,7 @@ import {
   onPostCurrentComment,
   updateCurrentCommentBody,
 } from '../../../rules/comment/comment';
+import { toggleFavoriteArticle } from '../../../rules/article/article';
 
 export interface CommentSectionState {
   comments?: Comment[];
@@ -231,34 +231,16 @@ function NonOwnerArticleMetaActions({
 }
 
 async function onFollow(username: string, following: boolean) {
-  const user = userRule.queryOne();
-
-  if (!user) {
-    redirect('register');
-    return;
-  }
-
   session.insert({
     [username]: {
       following,
-      fetchState: FetchState.SENT,
+      fetchState: FetchState.QUEUED,
     },
   });
 }
 
 async function onFavorite(slug: string, favorited: boolean) {
-  const user = userRule.queryOne();
-  if (!user) {
-    redirect('register');
-    return;
-  }
-
-  session.insert({
-    [slug]: {
-      favorited,
-      isFavoriting: FetchState.QUEUED,
-    },
-  });
+  toggleFavoriteArticle(slug, favorited);
 }
 
 function OwnerArticleMetaActions({

@@ -7,6 +7,7 @@ import {
   getFeed,
   unfavoriteArticle,
 } from '../../services/conduit';
+import { windowRedirect } from '../user/user';
 
 const { insert, retract, rule, conditions, retractByConditions } = session;
 
@@ -50,17 +51,19 @@ rule(
       favoritesCount,
       isFavoriting: { match: FetchState.QUEUED },
     },
-    $user: {
+    Session: {
       token,
     },
   })
 ).enact({
-  then: ({ $article: { id, favorited, slug, favoritesCount }, $user }) => {
-    if (!$user.token) {
-      window.location.hash = '#/login';
+  then: ({
+    $article: { id, favorited, slug, favoritesCount },
+    Session: { token },
+  }) => {
+    if (!token) {
+      windowRedirect('register');
       return;
     }
-    console.log('Favoriting?');
     insert({
       [slug]: {
         isFavoriting: FetchState.SENT,
@@ -101,7 +104,7 @@ rule(
 
 rule(
   'changes to page filters refetches articles',
-  ({ selectedTab, offset, limit, tag, filterByAuthor }) => ({
+  ({ selectedTab, offset, limit, tag, filterByAuthor, token, username }) => ({
     HomePage: {
       selectedTab,
     },
@@ -111,8 +114,13 @@ rule(
       filterByAuthor,
       tag,
     },
+    Session: {
+      token,
+      username,
+    },
   })
 ).enact({
+  when: ({ Session: { token } }) => token !== undefined,
   then: async ({
     HomePage: { selectedTab },
     ArticleList: { offset, limit, tag, filterByAuthor },
@@ -203,6 +211,16 @@ export const insertArticle = (article: Article, isSubmitting = false) => {
     [ID.ARTICLE(article)]: {
       ...article,
       isSubmitting,
+    },
+  });
+};
+
+export const toggleFavoriteArticle = (slug: string, favorited: boolean) => {
+  session.insert({
+    [slug]: {
+      slug,
+      favorited,
+      isFavoriting: FetchState.QUEUED,
     },
   });
 };

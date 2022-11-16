@@ -1,5 +1,5 @@
-import { Profile } from '../../types/profile';
-import { useUser } from '../../rules/user/useUser';
+import { Profile } from '../../../types/profile';
+import { useUser } from '../../../rules/user/useUser';
 
 export function UserInfo({
   user: { image, username, bio, following },

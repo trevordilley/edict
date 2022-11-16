@@ -1,14 +1,14 @@
 import { session } from '../session';
+import { HOME_TAB } from '../schema';
 
 const { insert, rule } = session;
-
 // =================== \\
 // Rules               \\
 // =================== \\
 rule(
   'Derive available tabs based on selection and login state',
   ({ token, selectedTab }) => ({
-    $user: {
+    Session: {
       token,
     },
     HomePage: {
@@ -16,13 +16,15 @@ rule(
     },
   })
 ).enact({
-  then: ({ $user: { token }, HomePage: { selectedTab } }) => {
-    const tabNames = Array.from(
-      new Set([...(token ? ['Your Feed'] : []), 'Global Feed', selectedTab])
-    );
+  then: ({ Session: { token }, HomePage: { selectedTab } }) => {
+    console.log('Setting tabs');
+    const tabs = new Set([
+      HOME_TAB.GLOBAL_FEED,
+      ...(token !== undefined ? [HOME_TAB.YOUR_FEED, selectedTab] : []),
+    ]);
     insert({
       HomePage: {
-        tabNames,
+        tabNames: [...tabs],
       },
     });
   },
@@ -45,7 +47,11 @@ export const homePageRule = rule(
       tagList,
     },
   })
-).enact();
+).enact({
+  then: () => {
+    console.log('Firing???');
+  },
+});
 
 // =================== \\
 // Insert/Retracts     \\

@@ -1,13 +1,23 @@
 import { Option, Some } from '@hqoss/monads';
-import { ArticlesViewer } from '../../ArticlesViewer/ArticlesViewer';
-import { ContainerPage } from '../../ContainerPage/ContainerPage';
-import { useHome } from '../../../rules/home/useHome';
-import { getUser } from '../../../rules/user/user';
-import { changeHomeTab } from '../../../rules/home/home';
+import { ArticlesViewer } from '../../organisms/ArticlesViewer/ArticlesViewer';
+import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
+import { changeHomeTab, homePageRule } from '../../../rules/home/home';
 import { FetchState, HOME_TAB } from '../../../rules/schema';
 import { session } from '../../../rules/session';
 import { useEffect } from 'react';
+import { useRuleOne } from '../../../rules/useRule';
+import { userRule } from '../../../rules/user/user';
 
+export const useHome = () => {
+  const home = useRuleOne(homePageRule);
+  console.log(home?.HomePage.tabNames);
+  return {
+    selectedTab: home?.HomePage.selectedTab,
+    tagList: home?.Tags.tagList,
+    tabNames: home?.HomePage.tabNames,
+    currentPage: home?.ArticleList.currentPage,
+  };
+};
 export function Home() {
   useEffect(() => {
     load();
@@ -38,8 +48,9 @@ export function Home() {
 }
 
 async function load() {
-  const user = getUser();
+  const user = userRule.queryOne();
   if (user !== undefined) {
+    console.log(user);
     changeHomeTab(HOME_TAB.YOUR_FEED);
   }
 

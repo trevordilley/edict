@@ -8,7 +8,7 @@ export interface PublicUser {
 
 export interface User extends PublicUser {
   email: string;
-  token: string;
+  token?: string;
 }
 
 export const userDecoder: Decoder<User> = object({

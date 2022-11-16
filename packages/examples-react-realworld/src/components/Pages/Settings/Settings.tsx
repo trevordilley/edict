@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { buildGenericFormField } from '../../../types/genericFormField';
-import { GenericForm } from '../../GenericForm/GenericForm';
-import { ContainerPage } from '../../ContainerPage/ContainerPage';
+import { GenericForm } from '../../organisms/GenericForm/GenericForm';
+import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
 import { useErrors } from '../../../rules/error/useErrors';
 import { useUser } from '../../../rules/user/useUser';
-import { updateSettingsRule } from '../../../rules/user/user';
+import { setToken, updateSettingsRule } from '../../../rules/user/user';
 import { insert } from '../../../rules/session';
 
 const useSettings = () => {
@@ -15,9 +15,7 @@ const useSettings = () => {
     updateSettingsRule.subscribeOne((r) => setUpdatedSettings(r))
   );
 
-  const {
-    Error: { errors },
-  } = useErrors();
+  const errors = useErrors();
   const user = useUser();
   return { updatedSettings: updatedSettings?.UpdateSettings, errors, user };
 };
@@ -99,9 +97,5 @@ function onSubmit(ev: React.FormEvent) {
 
 function logout(username?: string) {
   if (!username) throw new Error('Logging out undefined username?');
-  insert({
-    LogoutUser: {
-      username,
-    },
-  });
+  setToken(undefined);
 }
