@@ -10,7 +10,6 @@ import { userRule } from '../../../rules/user/user';
 
 export const useHome = () => {
   const home = useRuleOne(homePageRule);
-  console.log(home?.HomePage.tabNames);
   return {
     selectedTab: home?.HomePage.selectedTab,
     tagList: home?.Tags.tagList,
@@ -50,7 +49,6 @@ export function Home() {
 async function load() {
   const user = userRule.queryOne();
   if (user !== undefined) {
-    console.log(user);
     changeHomeTab(HOME_TAB.YOUR_FEED);
   }
 

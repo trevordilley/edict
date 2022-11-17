@@ -17,7 +17,6 @@ rule(
   })
 ).enact({
   then: ({ Session: { token }, HomePage: { selectedTab } }) => {
-    console.log('Setting tabs');
     const tabs = new Set([
       HOME_TAB.GLOBAL_FEED,
       ...(token !== undefined ? [HOME_TAB.YOUR_FEED, selectedTab] : []),
@@ -47,11 +46,7 @@ export const homePageRule = rule(
       tagList,
     },
   })
-).enact({
-  then: () => {
-    console.log('Firing???');
-  },
-});
+).enact();
 
 // =================== \\
 // Insert/Retracts     \\

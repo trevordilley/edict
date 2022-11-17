@@ -1,9 +1,10 @@
 import { session } from '../session';
 
 export const sessionRule = session
-  .rule('Session', ({ token }) => ({
+  .rule('Session', ({ token, username }) => ({
     Session: {
       token,
+      username,
     },
   }))
   .enact();

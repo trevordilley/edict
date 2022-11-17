@@ -31,7 +31,6 @@ const useProfile = (username?: string) =>
 
 export function ProfilePage() {
   const { username } = useParams<{ username: string }>();
-  console.log('username?', username);
   const profile = useProfile(username)?.$userProfile;
   const favorites = useLocation().pathname.endsWith('favorites');
   useEffect(() => {

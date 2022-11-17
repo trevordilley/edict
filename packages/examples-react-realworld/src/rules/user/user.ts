@@ -169,20 +169,40 @@ export const startRegistrationRule = rule(
 });
 
 export const updateSettingsRule = rule(
-  'Update Settings',
-  ({ username, password, image, bio, email }) => ({
-    UpdateSettings: { username, password, image, bio, email },
+  'Update users information when it changes ',
+  ({ username, password, image, bio, email, token }) => ({
+    $user: {
+      username,
+      password,
+      image,
+      bio,
+      email,
+    },
+    Session: {
+      username: { join: '$user' },
+    },
+    SettingsPage: {
+      fetchState: { match: FetchState.QUEUED },
+    },
   })
 ).enact({
-  then: async ({ UpdateSettings }) => {
-    const result = await updateSettings(UpdateSettings);
-    retractByConditions('UpdateSettings', userSettingsConditions);
-
+  then: async ({ $user }) => {
+    insert({
+      SettingsPage: {
+        fetchState: FetchState.SENT,
+      },
+    });
+    const result = await updateSettings($user);
     result.match({
       err: (e) => insertError(e),
       ok: (user) => {
-        windowRedirect('/');
+        setToken(user.token);
         insertUser(user);
+        insert({
+          SettingsPage: {
+            fetchState: FetchState.DONE,
+          },
+        });
       },
     });
   },

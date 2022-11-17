@@ -116,7 +116,7 @@ export async function updateSettings(
   user: UserSettings
 ): Promise<Result<User, GenericErrors>> {
   try {
-    const { data } = await axios.put('user', user);
+    const { data } = await axios.put('user', { user });
     const decoded = guard(object({ user: userDecoder }))(data).user;
 
     insertUser(decoded);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { buildGenericFormField } from '../../../types/genericFormField';
 import { GenericForm } from '../../organisms/GenericForm/GenericForm';
 import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
@@ -6,30 +6,27 @@ import { useErrors } from '../../../rules/error/useErrors';
 import { useUser } from '../../../rules/user/useUser';
 import { setToken, updateSettingsRule } from '../../../rules/user/user';
 import { insert } from '../../../rules/session';
+import { sessionRule } from '../../../rules/session/session';
+import { FetchState } from '../../../rules/schema';
+import { useRuleOne } from '../../../rules/useRule';
 
 const useSettings = () => {
-  const [updatedSettings, setUpdatedSettings] = useState(
-    updateSettingsRule.queryOne()
-  );
-  useEffect(() =>
-    updateSettingsRule.subscribeOne((r) => setUpdatedSettings(r))
-  );
-
+  const updatingSettings =
+    useRuleOne(updateSettingsRule)?.SettingsPage.fetchState === FetchState.SENT;
   const errors = useErrors();
   const user = useUser();
-  return { updatedSettings: updatedSettings?.UpdateSettings, errors, user };
+  return { errors, user, updatingSettings };
 };
 
 export function Settings() {
-  const { updatedSettings, errors, user } = useSettings();
+  const { errors, user, updatingSettings } = useSettings();
   return (
     <div className="settings-page">
       <ContainerPage>
         <div className="col-md-6 offset-md-3 col-xs-12">
           <h1 className="text-xs-center">Your Settings</h1>
-
           <GenericForm
-            disabled={!!updatedSettings}
+            disabled={updatingSettings}
             formObject={{ ...user }}
             submitButtonText="Update Settings"
             errors={errors}
@@ -82,15 +79,22 @@ function onSubmit(ev: React.FormEvent) {
     bio: { value: string };
     email: { value: string };
   };
-
-  console.log('submitting?');
+  const username = sessionRule.queryOne()?.Session.username;
+  if (!username) {
+    throw new Error(
+      "Why is the session username undefined? This shouldn't happen when logged in!"
+    );
+  }
   insert({
-    UpdateSettings: {
+    [username]: {
       username: formValues.username.value,
       password: formValues.password.value,
       image: formValues.image.value,
       bio: formValues.bio.value,
       email: formValues.email.value,
+    },
+    SettingsPage: {
+      fetchState: FetchState.QUEUED,
     },
   });
 }
