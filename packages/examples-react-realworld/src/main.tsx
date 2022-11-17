@@ -4,9 +4,13 @@ import './index.css';
 import { App } from './app/app';
 import { insert } from './rules/session';
 import { FetchState, HOME_TAB } from './rules/schema';
-import { DEFAULT_FEED_LIMIT, INITIAL_FEED_OFFSET } from './services/conduit';
+import {
+  DEFAULT_FEED_LIMIT,
+  getUser,
+  INITIAL_FEED_OFFSET,
+} from './services/conduit';
 import { HashRouter } from 'react-router-dom';
-import { setToken } from './rules/user/user';
+import { insertUser, setToken } from './rules/user/user';
 
 insert({
   App: {
@@ -41,6 +45,7 @@ insert({
 const token = localStorage.getItem('token');
 if (token) {
   setToken(token);
+  getUser().then((u) => insertUser(u));
 }
 
 const root = ReactDOM.createRoot(
