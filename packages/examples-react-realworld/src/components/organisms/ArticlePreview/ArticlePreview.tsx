@@ -13,11 +13,9 @@ export function ArticlePreview({
     tagList,
     author: { image, username },
   },
-  isSubmitting,
   onFavoriteToggle,
 }: {
   article: Article;
-  isSubmitting: boolean;
   onFavoriteToggle?: () => void;
 }) {
   return (
@@ -37,7 +35,6 @@ export function ArticlePreview({
             favorited ? 'btn-primary' : 'btn-outline-primary'
           }`}
           aria-label="Toggle Favorite"
-          disabled={isSubmitting}
           onClick={onFavoriteToggle}
         >
           <i className="ion-heart"></i> {favoritesCount}

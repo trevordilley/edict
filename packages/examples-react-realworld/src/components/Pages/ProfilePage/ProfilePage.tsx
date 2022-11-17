@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import {
   followUser,
@@ -20,25 +20,19 @@ import {
   changeArticlesPage,
   resetArticles,
 } from '../../../rules/article/article';
+import { useRuleOne } from '../../../rules/useRule';
 
-const useProfile = (username?: string) => {
-  const q = {
+const useProfile = (username?: string) =>
+  useRuleOne(userProfileRule, {
     $userProfile: {
       ids: [username ?? ''],
     },
-  };
-  const [profile, setProfile] = useState(userProfileRule.queryOne(q));
-  useEffect(() => {
-    return userProfileRule.subscribeOne((p) => setProfile(p), q);
   });
-
-  return profile?.$userProfile;
-};
 
 export function ProfilePage() {
   const { username } = useParams<{ username: string }>();
-  const profile = useProfile(username);
-  console.log(username, profile);
+  console.log('username?', username);
+  const profile = useProfile(username)?.$userProfile;
   const favorites = useLocation().pathname.endsWith('favorites');
   useEffect(() => {
     if (!username) return;

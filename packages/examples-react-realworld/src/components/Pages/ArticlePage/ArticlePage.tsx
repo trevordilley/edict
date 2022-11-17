@@ -24,6 +24,8 @@ import {
   updateCurrentCommentBody,
 } from '../../../rules/comment/comment';
 import { toggleFavoriteArticle } from '../../../rules/article/article';
+import { useRuleOne } from '../../../rules/useRule';
+import { followingUsersRule } from '../../../rules/user/user';
 
 export interface CommentSectionState {
   comments?: Comment[];
@@ -130,7 +132,6 @@ function ArticlePageBanner(props: {
 
 function ArticleMeta({
   article,
-  metaSection,
   user,
 }: {
   article: Article;
@@ -142,18 +143,9 @@ function ArticleMeta({
       <ArticleAuthorInfo article={article} />
 
       {user?.username === article.author.username ? (
-        <OwnerArticleMetaActions
-          article={article}
-          deletingArticle={metaSection?.deletingArticle ?? FetchState.DONE}
-        />
+        <OwnerArticleMetaActions article={article} />
       ) : (
-        <NonOwnerArticleMetaActions
-          article={article}
-          submittingFavorite={
-            metaSection?.submittingFavorite ?? FetchState.DONE
-          }
-          submittingFollow={metaSection?.submittingFollow ?? FetchState.DONE}
-        />
+        <NonOwnerArticleMetaActions article={article} />
       )}
     </div>
   );
@@ -187,15 +179,14 @@ function NonOwnerArticleMetaActions({
     slug,
     favoritesCount,
     favorited,
-    author: { username, following },
+    author: { username },
   },
-  submittingFavorite,
-  submittingFollow,
 }: {
   article: Article;
-  submittingFavorite: FetchState;
-  submittingFollow: FetchState;
 }) {
+  const following =
+    useRuleOne(followingUsersRule, { $following: { username: [username] } })
+      ?.$following.following ?? false;
   return (
     <Fragment>
       <button
@@ -205,7 +196,6 @@ function NonOwnerArticleMetaActions({
           'btn-outline-secondary': !following,
           'btn-secondary': following,
         })}
-        disabled={submittingFollow === FetchState.QUEUED}
         onClick={() => onFollow(username, following)}
       >
         <i className="ion-plus-round"></i>
@@ -219,7 +209,6 @@ function NonOwnerArticleMetaActions({
           'btn-outline-primary': !favorited,
           'btn-primary': favorited,
         })}
-        disabled={submittingFavorite === FetchState.QUEUED}
         onClick={() => onFavorite(slug, favorited)}
       >
         <i className="ion-heart"></i>
@@ -243,13 +232,7 @@ async function onFavorite(slug: string, favorited: boolean) {
   toggleFavoriteArticle(slug, favorited);
 }
 
-function OwnerArticleMetaActions({
-  article: { slug },
-  deletingArticle,
-}: {
-  article: Article;
-  deletingArticle: FetchState;
-}) {
+function OwnerArticleMetaActions({ article: { slug } }: { article: Article }) {
   return (
     <Fragment>
       <button
@@ -262,7 +245,6 @@ function OwnerArticleMetaActions({
       &nbsp;
       <button
         className="btn btn-outline-danger btn-sm"
-        disabled={deletingArticle === FetchState.QUEUED}
         onClick={() => onDeleteArticle(slug)}
       >
         <i className="ion-heart"></i>

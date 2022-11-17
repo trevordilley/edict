@@ -92,11 +92,7 @@ function Tab({
   );
 }
 
-function ArticleList({
-  articles,
-}: {
-  articles?: { article: Article; isSubmitting: boolean }[];
-}) {
+function ArticleList({ articles }: { articles?: { article: Article }[] }) {
   return articles ? (
     <Fragment>
       {articles.length === 0 && (
@@ -104,11 +100,10 @@ function ArticleList({
           No articles are here... yet.
         </div>
       )}
-      {articles.map(({ article, isSubmitting }, index) => (
+      {articles.map(({ article }, index) => (
         <ArticlePreview
           key={article.slug}
           article={article}
-          isSubmitting={isSubmitting}
           onFavoriteToggle={() => onFavoriteToggle(index, article)}
         />
       ))}

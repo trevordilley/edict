@@ -152,7 +152,6 @@ export async function createArticle(
     return Ok(decoded);
   } catch ({ response: { data } }) {
     const error = guard(object({ errors: genericErrorsDecoder }))(data).errors;
-    console.log('err here', error);
     insertError(error);
     return Err(error);
   }
@@ -189,9 +188,8 @@ export async function getProfile(username: string): Promise<Profile> {
   const { data } = await axios.get(`profiles/${username}`);
 
   const profileData = guard(object({ profile: profileDecoder }))(data).profile;
-
   insert({
-    [username]: profileData,
+    [username]: { ...profileData, isSubmitting: false },
   });
 
   return profileData;

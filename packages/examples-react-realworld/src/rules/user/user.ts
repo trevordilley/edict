@@ -28,7 +28,6 @@ export const userSettingsConditions = conditions(({ email, password }) => ({
 const userConditions = conditions(({ email, token }) => ({
   ...publicUserConditions,
   email,
-  token,
 }));
 
 const userProfileConditions = conditions(({ following, isSubmitting }) => ({
@@ -238,20 +237,19 @@ export const userRule = rule('User', () => ({
   $user: userConditions,
 })).enact();
 
-export const publicUserRule = rule('Public User', () => ({
-  $publicUser: publicUserConditions,
-})).enact();
-
 export const userProfileRule = rule('User Profile', () => ({
   $userProfile: userProfileConditions,
 })).enact();
 
-export const getUserProfile = (username: string) =>
-  userProfileRule.queryOne({
-    $userProfile: {
-      ids: [username],
+export const followingUsersRule = rule(
+  'Authors the user follows',
+  ({ following, username }) => ({
+    $following: {
+      following,
+      username,
     },
-  });
+  })
+).enact();
 
 export const startLogin = (email: string, password: string) => {
   insert({

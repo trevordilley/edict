@@ -8,7 +8,6 @@ export const useArticles = () => {
   return {
     articles: articles.map((a) => ({
       article: a.$article,
-      isSubmitting: a.$article.isSubmitting,
     })),
     articleCount: articleCount?.ArticleList.articleCount ?? 0,
   };

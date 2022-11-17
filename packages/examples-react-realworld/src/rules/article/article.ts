@@ -26,7 +26,6 @@ const articleConditions = conditions(
     favorited,
     favoritesCount,
     author,
-    isSubmitting,
   }) => ({
     slug,
     title,
@@ -38,7 +37,6 @@ const articleConditions = conditions(
     favorited,
     favoritesCount,
     author,
-    isSubmitting,
   })
 );
 
@@ -157,17 +155,11 @@ export const articleRules = rule('Articles', () => ({
   $article: articleConditions,
 })).enact();
 
-export const articleMetaRule = rule(
-  'Article Meta',
-  ({ slug, submittingFavorite, submittingFollow, deletingArticle }) => ({
-    $articleMeta: {
-      slug,
-      submittingFavorite,
-      submittingFollow,
-      deletingArticle,
-    },
-  })
-).enact();
+export const articleMetaRule = rule('Article Meta', ({ slug }) => ({
+  $articleMeta: {
+    slug,
+  },
+})).enact();
 
 export const articleListRule = rule(
   'Article List',
@@ -206,12 +198,9 @@ export const changeArticlesPage = (currentPage: number) => {
 export const retractArticle = (slug: string) => {
   retractByConditions(slug, articleConditions);
 };
-export const insertArticle = (article: Article, isSubmitting = false) => {
+export const insertArticle = (article: Article) => {
   insert({
-    [ID.ARTICLE(article)]: {
-      ...article,
-      isSubmitting,
-    },
+    [ID.ARTICLE(article)]: article,
   });
 };
 
