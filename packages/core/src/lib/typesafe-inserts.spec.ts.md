@@ -1,3 +1,4 @@
+```typescript
 import { attr } from '@edict/core';
 
 const schema = {
@@ -120,3 +121,6 @@ describe('TypeSafe inserts...', () => {
     expect(2).toBe(4);
   });
 });
+
+
+```
