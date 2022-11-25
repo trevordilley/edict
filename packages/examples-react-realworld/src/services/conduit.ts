@@ -148,6 +148,8 @@ export async function createArticle(
   try {
     const { data } = await axios.post('articles', { article });
     const decoded = guard(object({ article: articleDecoder }))(data).article;
+    // example of typesafe api
+    // session.$article(decoded.slug).insert(decoded);
     insertArticle(decoded);
     return Ok(decoded);
   } catch ({ response: { data } }) {

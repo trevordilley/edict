@@ -20,6 +20,8 @@ import {
 } from '@edict/rete';
 import { insertFactToFact } from './utils';
 
+export const attr = <T>(): T => undefined as any;
+
 const ID_PREFIX = 'id___';
 const VALUE_PREFIX = 'val___';
 const idPrefix = (i: string) => `${ID_PREFIX}${i}`;

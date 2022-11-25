@@ -168,6 +168,77 @@ export const startRegistrationRule = rule(
   },
 });
 
+/*
+// rewritten using new typesafe syntax
+
+export const startRegistrationRule = rule(
+  'Starting registration',
+  ({StartRegistration: { email, password, username }}) => ({
+    StartRegistration: {
+      email,
+      password,
+      username,
+    },
+  })
+).enact({
+  then: async ({ StartRegistration: { email, password, username } }) => {
+    const result = await signUp({
+      username,
+      email,
+      password: password ?? '',
+    });
+    session.StartRegistration.retract.email()
+    session.StartRegistration.retract.password()
+    session.StartRegistration.retract.username()
+    result.match({
+      err: (e) => {
+        insertError(e);
+      },
+      ok: (user) => {
+        session.Session.insert({
+          token: user.token,
+          username: user.username
+        })
+        session.$user(user.username).insert(user)
+        windowRedirect('#/');
+      },
+    });
+  },
+});
+
+
+
+export const updateSettingsRule = rule(
+  'Update users information when it changes ',
+  ($user) => ({
+    $user,
+    Session: {
+      username: { join: '$user' },
+    },
+    SettingsPage: {
+      fetchState: { match: FetchState.QUEUED },
+    },
+  })
+).enact({
+  then: async ({ $user }) => {
+    session.SettingsPage.insert({
+        fetchState: FetchState.SENT,
+      })
+    const result = await updateSettings($user);
+    result.match({
+      err: (e) => insertError(e),
+      ok: (user) => {
+        setToken(user.token);
+        session.$user(user.username).insert(user)
+        session.SettingsPage.insert({
+            fetchState: FetchState.DONE,
+          })
+      },
+    });
+  },
+});
+ */
+
 export const updateSettingsRule = rule(
   'Update users information when it changes ',
   ({ username, password, image, bio, email, token }) => ({
@@ -219,6 +290,16 @@ rule(
 ).enact({
   when: ({ Session: { token } }) => token === undefined,
   then: ({ Session: { username } }) => {
+    /*
+      session.$user(username).retract.all()
+      session.HomePage.insert({
+        tabNames: [HOME_TAB.GLOBAL_FEED],
+        selectedTab: HOME_TAB.GLOBAL_FEED,
+      })
+      session.Session.insert({
+        username: undefined
+        })
+     */
     retractByConditions(username, userConditions);
     insert({
       HomePage: {
@@ -236,6 +317,7 @@ rule(
 });
 
 export const windowRedirect = (location: string) => {
+  // session.Page.insert({location})
   insert({
     Page: {
       location,
@@ -256,6 +338,14 @@ rule('Redirect when location changes', ({ location }) => ({
 export const userRule = rule('User', () => ({
   $user: userConditions,
 })).enact();
+
+/*
+  playing with typesafe api examples
+export const userProfileRule = rule('User Profile', ({$userProfile}) => ({
+  $userProfile,
+})).enact();
+
+ */
 
 export const userProfileRule = rule('User Profile', () => ({
   $userProfile: userProfileConditions,

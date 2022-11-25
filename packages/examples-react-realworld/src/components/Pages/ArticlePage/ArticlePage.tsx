@@ -47,23 +47,24 @@ export interface ArticlePageState {
 
 const useArticlePage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const a = useArticle(slug ?? '');
-  const c = useCommentSection(slug ?? '');
-  const m = useArticleMeta(slug ?? '');
-  const u = useUser();
+  const articleFacts = useArticle(slug ?? '');
+  const commentFacts = useCommentSection(slug ?? '');
+  const metaFacts = useArticleMeta(slug ?? '');
+  const userFacts = useUser();
 
   useEffect(() => {
     onLoad(slug ?? '');
   }, [slug]);
 
-  const metaSection = m;
-  const user = u;
+  const metaSection = metaFacts;
+  const user = userFacts;
   const commentSection = {
-    comments: c.comments,
-    commentBody: c.currentComment?.commentBody ?? '',
-    submittingComment: c.currentComment?.submittingComment ?? FetchState.DONE,
+    comments: commentFacts.comments,
+    commentBody: commentFacts.currentComment?.commentBody ?? '',
+    submittingComment:
+      commentFacts.currentComment?.submittingComment ?? FetchState.DONE,
   };
-  const article = a?.$article;
+  const article = articleFacts?.$article;
   if (!commentSection || !article) {
     return undefined;
   } else {
