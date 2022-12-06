@@ -1,0 +1,85 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nrwl/web:webpack",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "compiler": "babel",
+        "outputPath": "dist/packages/examples/react-realworld",
+        "index": "packages/examples/react-realworld/src/index.html",
+        "baseHref": "/",
+        "main": "packages/examples/react-realworld/src/main.tsx",
+        "polyfills": "packages/examples/react-realworld/src/polyfills.ts",
+        "tsConfig": "packages/examples/react-realworld/tsconfig.app.json",
+        "assets": [
+          "packages/examples/react-realworld/src/favicon.ico",
+          "packages/examples/react-realworld/src/assets"
+        ],
+        "styles": [],
+        "scripts": [],
+        "webpackConfig": "@nrwl/react/plugins/webpack"
+      },
+      "configurations": {
+        "development": {
+          "extractLicenses": false,
+          "optimization": false,
+          "sourceMap": true,
+          "vendorChunk": true
+        },
+        "production": {
+          "fileReplacements": [
+            {
+              "replace": "packages/examples/react-realworld/src/environments/environment.ts",
+              "with": "packages/examples/react-realworld/src/environments/environment.prod.ts"
+            }
+          ],
+          "optimization": true,
+          "outputHashing": "all",
+          "sourceMap": false,
+          "namedChunks": false,
+          "extractLicenses": true,
+          "vendorChunk": false
+        }
+      }
+    },
+    "serve": {
+      "executor": "@nrwl/web:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "examples-react-realworld:build",
+        "hmr": true
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "examples-react-realworld:build:development"
+        },
+        "production": {
+          "buildTarget": "examples-react-realworld:build:production",
+          "hmr": false
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": [
+          "packages/examples/react-realworld/**/*.{ts,tsx,js,jsx}"
+        ]
+      }
+    },
+    "test": {
+      "executor": "@nrwl/jest:jest",
+      "outputs": ["coverage/packages/examples/react-realworld"],
+      "options": {
+        "jestConfig": "packages/examples/react-realworld/jest.config.ts",
+        "passWithNoTests": true
+      }
+    }
+  },
+  "tags": []
+}

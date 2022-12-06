@@ -78,6 +78,7 @@ export interface IEdict<SCHEMA> {
     conditions: { [key in keyof SCHEMA]?: any }
   ) => void;
   fire: (recursionLimit?: number) => void;
+  reset: () => void;
   conditions: <
     T extends {
       [ATTR in keyof Partial<SCHEMA>]:

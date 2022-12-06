@@ -41,7 +41,10 @@ export const edict = <SCHEMA>(
   autoFire = false,
   debug = false
 ): IEdict<SCHEMA> => {
-  const session = rete.initSession<SCHEMA>(autoFire, debug);
+  let session = rete.initSession<SCHEMA>(autoFire, debug);
+  const reset = () => {
+    session = rete.initSession<SCHEMA>(autoFire, debug);
+  };
   const insert = (insertFacts: InsertEdictFact<SCHEMA>) => {
     // be dumb about this
     const factTuples = insertFactToFact(insertFacts);
@@ -177,7 +180,6 @@ export const edict = <SCHEMA>(
         });
       });
       rete.addProductionToSession(session, production, onAlreadyExists);
-
       const convertFilterArgs = (filter: QueryArgs<SCHEMA, T>) => {
         const joinIds = Object.keys(filter);
 
@@ -293,6 +295,7 @@ export const edict = <SCHEMA>(
     fire,
     conditions,
     rule,
+    reset,
     debug: {
       dotFile,
       perf,
