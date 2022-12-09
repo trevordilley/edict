@@ -1,15 +1,17 @@
 import { FormEvent } from 'react';
 import { createArticle } from '../../../services/conduit';
 import { ArticleEditor } from '../../organisms/ArticleEditor/ArticleEditor';
-import { insertError } from '../../../rules/error/error';
 import { parseEditArticleForm } from '../EditArticle/EditArticle';
-import { windowRedirect } from '../../../rules/user/user';
+import { useEdict } from '../../../rules/EdictContext';
+import { EdictSession } from '../../../rules/session';
 
 export function NewArticle() {
-  return <ArticleEditor onSubmit={onSubmit} />;
+  const EDICT = useEdict();
+
+  return <ArticleEditor onSubmit={(ev) => onSubmit(ev, EDICT)} />;
 }
 
-async function onSubmit(ev: FormEvent) {
+async function onSubmit(ev: FormEvent, EDICT: EdictSession) {
   ev.preventDefault();
   const { description, body, tag, title } = parseEditArticleForm(ev);
 
@@ -21,9 +23,10 @@ async function onSubmit(ev: FormEvent) {
   });
 
   result.match({
-    err: (errors) => insertError(errors),
-    ok: ({ slug }) => {
-      windowRedirect(`#/article/${slug}`);
+    err: (errors) => EDICT.ERROR.ACTIONS.insertError(errors),
+    ok: (article) => {
+      EDICT.ARTICLE.ACTIONS.insertArticle(article);
+      EDICT.USER.ACTIONS.windowRedirect(`#/article/${article}`);
     },
   });
 }

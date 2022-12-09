@@ -1,11 +1,11 @@
 import * as React from 'react';
 import { createContext, PropsWithChildren, useContext } from 'react';
-import { EdictSession, initializeSession } from './session';
+import { EdictSession } from './session';
 
 const EdictContext = createContext<EdictSession | undefined>(undefined);
-export const Edict = (props: PropsWithChildren<any>) => {
+export const Edict = (props: PropsWithChildren<{ session: EdictSession }>) => {
   return (
-    <EdictContext.Provider value={initializeSession()}>
+    <EdictContext.Provider value={props.session}>
       {props.children}
     </EdictContext.Provider>
   );

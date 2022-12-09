@@ -17,6 +17,7 @@ import { TagList } from '../../organisms/ArticlePreview/ArticlePreview';
 import { FetchState } from '../../../rules/schema';
 import { useRuleOne } from '../../../rules/useRule';
 import { useEdict } from '../../../rules/EdictContext';
+import { EdictSession } from '../../../rules/session';
 
 export interface CommentSectionState {
   comments?: Comment[];
@@ -38,14 +39,15 @@ export interface ArticlePageState {
 
 const useArticlePage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { ARTICLE, COMMENT, USER } = useEdict();
+  const EDICT = useEdict();
+  const { ARTICLE, COMMENT, USER } = EDICT;
   const articleFacts = ARTICLE.HOOKS.useArticle(slug ?? '');
   const commentFacts = COMMENT.HOOKS.useCommentSection(slug ?? '');
   const metaFacts = ARTICLE.HOOKS.useArticleMeta(slug ?? '');
   const userFacts = USER.HOOKS.useUser();
 
   useEffect(() => {
-    onLoad(slug ?? '');
+    onLoad(slug ?? '', EDICT);
   }, [slug]);
 
   const metaSection = metaFacts;
@@ -98,10 +100,12 @@ export function ArticlePage() {
   );
 }
 
-async function onLoad(slug: string) {
+async function onLoad(slug: string, EDICT: EdictSession) {
   try {
-    await getArticle(slug);
-    await getArticleComments(slug);
+    const article = await getArticle(slug);
+    EDICT.ARTICLE.ACTIONS.insertArticle(article);
+    const comments = await getArticleComments(slug);
+    EDICT.COMMENT.ACTIONS.insertComments(comments);
   } catch {
     redirect('');
   }
@@ -215,6 +219,7 @@ function NonOwnerArticleMetaActions({
 }
 
 function OwnerArticleMetaActions({ article: { slug } }: { article: Article }) {
+  const EDICT = useEdict();
   return (
     <Fragment>
       <button
@@ -227,7 +232,7 @@ function OwnerArticleMetaActions({ article: { slug } }: { article: Article }) {
       &nbsp;
       <button
         className="btn btn-outline-danger btn-sm"
-        onClick={() => onDeleteArticle(slug)}
+        onClick={() => onDeleteArticle(slug, EDICT)}
       >
         <i className="ion-heart"></i>
         &nbsp; Delete Article
@@ -236,7 +241,8 @@ function OwnerArticleMetaActions({ article: { slug } }: { article: Article }) {
   );
 }
 
-async function onDeleteArticle(slug: string) {
+async function onDeleteArticle(slug: string, EDICT: EdictSession) {
+  EDICT.ARTICLE.ACTIONS.retractArticle(slug);
   await deleteArticle(slug);
   redirect('');
 }
@@ -347,6 +353,7 @@ function ArticleComment({
   index: number;
   user?: User;
 }) {
+  const EDICT = useEdict();
   return (
     <div className="card">
       <div className="card-block">
@@ -366,7 +373,7 @@ function ArticleComment({
             <i
               className="ion-trash-a"
               aria-label={`Delete comment ${index + 1}`}
-              onClick={() => onDeleteComment(slug, id)}
+              onClick={() => onDeleteComment(slug, id, EDICT)}
             ></i>
           </span>
         )}
@@ -375,7 +382,9 @@ function ArticleComment({
   );
 }
 
-async function onDeleteComment(slug: string, id: number) {
+async function onDeleteComment(slug: string, id: number, EDICT: EdictSession) {
   await deleteComment(slug, id);
-  await getArticleComments(slug);
+  EDICT.COMMENT.ACTIONS.retractComment(id);
+  const comments = await getArticleComments(slug);
+  EDICT.COMMENT.ACTIONS.insertComments(comments);
 }

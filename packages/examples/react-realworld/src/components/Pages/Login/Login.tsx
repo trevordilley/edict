@@ -2,13 +2,13 @@ import React, { FormEvent } from 'react';
 import { buildGenericFormField } from '../../../types/genericFormField';
 import { GenericForm } from '../../organisms/GenericForm/GenericForm';
 import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
-import { useErrors } from '../../../rules/error/useErrors';
-import { loginRule, startLogin } from '../../../rules/user/user';
 import { useRuleOne } from '../../../rules/useRule';
+import { useEdict } from '../../../rules/EdictContext';
 
 const useLogin = () => {
-  const login = useRuleOne(loginRule);
-  const errors = useErrors();
+  const { USER, ERROR } = useEdict();
+  const login = useRuleOne(USER.RULES.loginRule);
+  const errors = ERROR.HOOKS.useErrors();
   return {
     login: login?.Login,
     errors,
@@ -16,6 +16,7 @@ const useLogin = () => {
 };
 
 export function Login() {
+  const { USER } = useEdict();
   const { login, errors } = useLogin();
   return (
     <div className="auth-page">
@@ -32,7 +33,7 @@ export function Login() {
             submitButtonText="Sign in"
             errors={errors}
             onSubmit={(ev) => {
-              signIn(ev);
+              signIn(ev, USER.ACTIONS.startLogin);
             }}
             fields={[
               buildGenericFormField({
@@ -53,7 +54,10 @@ export function Login() {
   );
 }
 
-async function signIn(ev: FormEvent) {
+async function signIn(
+  ev: FormEvent,
+  login: (email: string, password: string) => void
+) {
   ev.preventDefault();
   const target = ev.currentTarget;
   // Todo: Clean this up.
@@ -63,5 +67,5 @@ async function signIn(ev: FormEvent) {
   };
   const email = formValues.email.value;
   const password = formValues.password.value;
-  startLogin(email, password);
+  login(email, password);
 }

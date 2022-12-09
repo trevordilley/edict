@@ -1,8 +1,7 @@
 import { Option, Some } from '@hqoss/monads';
 import { ArticlesViewer } from '../../organisms/ArticlesViewer/ArticlesViewer';
 import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
-import { changeHomeTab } from '../../../rules/home/home';
-import { FetchState, HOME_TAB } from '../../../rules/schema';
+import { HOME_TAB } from '../../../rules/schema';
 import { useEffect } from 'react';
 import { useRuleOne } from '../../../rules/useRule';
 import { useEdict } from '../../../rules/EdictContext';
@@ -18,21 +17,13 @@ export const useHome = () => {
   };
 };
 export function Home() {
-  const { USER } = useEdict();
+  const { USER, ARTICLE, HOME } = useEdict();
   useEffect(() => {
     const user = USER.RULES.userRule.queryOne();
     if (user !== undefined) {
-      changeHomeTab(HOME_TAB.YOUR_FEED);
+      HOME.ACTIONS.changeHomeTab(HOME_TAB.YOUR_FEED);
     }
-
-    session.insert({
-      ArticleList: {
-        currentPage: 1,
-      },
-      Tags: {
-        fetchState: FetchState.QUEUED,
-      },
-    });
+    ARTICLE.ACTIONS.resetArticlePagination();
   }, []);
 
   const { tagList: tags, selectedTab, tabNames } = useHome();
@@ -46,8 +37,8 @@ export function Home() {
             toggleClassName="feed-toggle"
             selectedTab={selectedTab!}
             tabs={tabNames ?? []}
-            onPageChange={onPageChange}
-            onTabChange={changeHomeTab}
+            onPageChange={(idx) => ARTICLE.ACTIONS.setArticlePage(idx)}
+            onTabChange={HOME.ACTIONS.changeHomeTab}
           />
         </div>
 
@@ -58,8 +49,6 @@ export function Home() {
     </div>
   );
 }
-
-async function load() {}
 
 function renderBanner() {
   return (
@@ -72,15 +61,9 @@ function renderBanner() {
   );
 }
 
-async function onPageChange(index: number) {
-  session.insert({
-    ArticleList: {
-      currentPage: index,
-    },
-  });
-}
-
 function HomeSidebar({ tags }: { tags: Option<string[]> }) {
+  const { HOME } = useEdict();
+
   return (
     <div className="sidebar">
       <p>Popular Tags</p>
@@ -95,7 +78,7 @@ function HomeSidebar({ tags }: { tags: Option<string[]> }) {
                 key={tag}
                 href="src/components/Pages/Home/Home#"
                 className="tag-pill tag-default"
-                onClick={() => changeHomeTab(`# ${tag}`)}
+                onClick={() => HOME.ACTIONS.changeHomeTab(`# ${tag}`)}
               >
                 {tag}
               </a>

@@ -127,12 +127,11 @@ export const initializeSession = () => {
         const result = favorited
           ? unfavoriteArticle(slug)
           : favoriteArticle(slug);
-        result.then((r) => {
+        result.then((article) => {
+          insertArticle(article);
           insert({
             [slug]: {
               isFavoriting: FetchState.DONE,
-              favorited: r.favorited,
-              favoritesCount: r.favoritesCount,
             },
           });
         });
@@ -212,13 +211,34 @@ export const initializeSession = () => {
 
         resetArticles();
         const fetchArticles =
-          selectedTab === 'Your Feed' ? getFeed : loadArticlesIntoSession;
-        await fetchArticles(
+          selectedTab === 'Your Feed' ? getFeed : getArticles;
+        const articles = await fetchArticles(
           !selectedTab.startsWith('#') ? filters : finalFilters
         );
+
+        articles.articles.forEach((a) => insertArticle(a));
+        insertArticleCount(articles.articlesCount);
       },
     });
 
+  const resetArticlePagination = () => {
+    session.insert({
+      ArticleList: {
+        currentPage: 1,
+      },
+      Tags: {
+        fetchState: FetchState.QUEUED,
+      },
+    });
+  };
+
+  const setArticlePage = (pageIdx: number) => {
+    session.insert({
+      ArticleList: {
+        currentPage: pageIdx,
+      },
+    });
+  };
   // =================== \\
   // Queries             \\
   // =================== \\
@@ -347,16 +367,19 @@ export const initializeSession = () => {
       },
     });
 
-    Promise.all([createComment(slug, body), getArticleComments(slug)]).then(
-      () => {
-        insert({
-          CurrentComment: {
-            submittingComment: FetchState.DONE,
-            commentBody: undefined,
-          },
-        });
-      }
-    );
+    createComment(slug, body).then((comment) => {
+      insertComments([{ ...comment, slug }]);
+      insert({
+        CurrentComment: {
+          submittingComment: FetchState.DONE,
+          commentBody: undefined,
+        },
+      });
+    });
+
+    getArticleComments(slug).then((comments) => {
+      insertComments(comments);
+    });
   };
 
   // Errors
@@ -446,6 +469,21 @@ export const initializeSession = () => {
       },
     }))
     .enact();
+
+  const updateProfileSettings = (args: {
+    username: string;
+    password: string;
+    image: string;
+    bio: string;
+    email: string;
+  }) => {
+    insert({
+      [args.username]: args,
+      SettingsPage: {
+        fetchState: FetchState.QUEUED,
+      },
+    });
+  };
 
   // Tags
 
@@ -805,6 +843,24 @@ export const initializeSession = () => {
       },
     });
 
+  const startRegistration = ({
+    username,
+    email,
+    password,
+  }: {
+    username: string;
+    email: string;
+    password: string;
+  }) => {
+    session.insert({
+      StartRegistration: {
+        username,
+        email,
+        password,
+      },
+    });
+  };
+
   const updateCurrentCommentBody = (commentBody: string) => {
     insert({
       CurrentComment: {
@@ -943,6 +999,8 @@ export const initializeSession = () => {
         changeArticlesPage,
         insertArticleCount,
         resetArticles,
+        resetArticlePagination,
+        setArticlePage,
       },
     },
     COMMENT: {
@@ -962,6 +1020,7 @@ export const initializeSession = () => {
       },
     },
     ERROR: {
+      ACTIONS: { insertError },
       RULES: { errorRule },
       HOOKS: {
         useErrors: () => useRuleOne(errorRule)?.App.errors ?? {},
@@ -1004,6 +1063,8 @@ export const initializeSession = () => {
         insertUser,
         updateFollowing,
         toggleFavoriteArticle,
+        startRegistration,
+        updateProfileSettings,
       },
       HOOKS: {
         useUser: () => {

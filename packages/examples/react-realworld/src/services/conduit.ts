@@ -21,11 +21,6 @@ import {
   UserForRegistration,
   UserSettings,
 } from '../types/user';
-import { insertArticle, retractArticle } from '../rules/article/article';
-import { insertUser } from '../rules/user/user';
-import { insertError } from '../rules/error/error';
-import { insertProfile } from '../rules/profile/profile';
-import { insertComments, retractComment } from '../rules/comment/comment';
 
 axios.defaults.baseURL = settings.baseApiUrl;
 export const DEFAULT_FEED_LIMIT = 10;
@@ -68,9 +63,6 @@ export async function login(
     return Ok(userResult);
   } catch ({ response: { data } }) {
     const error = guard(object({ errors: genericErrorsDecoder }))(data).errors;
-
-    insertError(error);
-
     return Err(error);
   }
 }
@@ -86,7 +78,6 @@ export async function favoriteArticle(slug: string): Promise<Article> {
   const favoritedArticle = guard(object({ article: articleDecoder }))(
     (await axios.post(`articles/${slug}/favorite`)).data
   ).article;
-  insertArticle(favoritedArticle);
 
   return favoritedArticle;
 }
@@ -95,8 +86,6 @@ export async function unfavoriteArticle(slug: string): Promise<Article> {
   const unfavoritedArticle = guard(object({ article: articleDecoder }))(
     (await axios.delete(`articles/${slug}/favorite`)).data
   ).article;
-
-  insertArticle(unfavoritedArticle);
 
   return unfavoritedArticle;
 }
@@ -108,12 +97,9 @@ export async function updateSettings(
     const { data } = await axios.put('user', { user });
     const decoded = guard(object({ user: userDecoder }))(data).user;
 
-    insertUser(decoded);
-
     return Ok(decoded);
   } catch ({ data }) {
     const err = guard(object({ errors: genericErrorsDecoder }))(data).errors;
-    insertError(err);
     return Err(err);
   }
 }
@@ -139,11 +125,9 @@ export async function createArticle(
     const decoded = guard(object({ article: articleDecoder }))(data).article;
     // example of typesafe api
     // session.$article(decoded.slug).insert(decoded);
-    insertArticle(decoded);
     return Ok(decoded);
   } catch ({ response: { data } }) {
     const error = guard(object({ errors: genericErrorsDecoder }))(data).errors;
-    insertError(error);
     return Err(error);
   }
 }
@@ -152,7 +136,6 @@ export async function getArticle(slug: string): Promise<Article> {
   const { data } = await axios.get(`articles/${slug}`);
 
   const article = guard(object({ article: articleDecoder }))(data).article;
-  insertArticle(article);
 
   return article;
 }
@@ -166,11 +149,9 @@ export async function updateArticle(
     const updatedArticle = guard(object({ article: articleDecoder }))(
       data
     ).article;
-    insertArticle(updatedArticle);
     return Ok(updatedArticle);
   } catch ({ response: { data } }) {
     const err = guard(object({ errors: genericErrorsDecoder }))(data).errors;
-    insertError(err);
     return Err(err);
   }
 }
@@ -186,21 +167,13 @@ export async function getProfile(username: string): Promise<Profile> {
 export async function followUser(username: string): Promise<Profile> {
   const { data } = await axios.post(`profiles/${username}/follow`);
 
-  const following = guard(object({ profile: profileDecoder }))(data).profile;
-
-  insertProfile(following);
-
-  return following;
+  return guard(object({ profile: profileDecoder }))(data).profile;
 }
 
 export async function unfollowUser(username: string): Promise<Profile> {
   const { data } = await axios.delete(`profiles/${username}/follow`);
 
-  const unfollowing = guard(object({ profile: profileDecoder }))(data).profile;
-
-  insertProfile(unfollowing);
-
-  return unfollowing;
+  return guard(object({ profile: profileDecoder }))(data).profile;
 }
 
 export async function getFeed(
@@ -212,11 +185,9 @@ export async function getFeed(
     ...filters,
   };
 
-  console.log('axios defaults', axios.defaults.headers);
   const articles = guard(multipleArticlesDecoder)(
     (await axios.get(`articles/feed?${objectToQueryString(finalFilters)}`)).data
   );
-  articles.articles.forEach((a) => insertArticle(a));
 
   return articles;
 }
@@ -229,7 +200,6 @@ export async function getArticleComments(
   const comments = guard(object({ comments: array(commentDecoder) }))(
     data
   ).comments.map((c) => ({ ...c, slug }));
-  insertComments(comments);
 
   return comments;
 }
@@ -239,7 +209,6 @@ export async function deleteComment(
   commentId: number
 ): Promise<void> {
   await axios.delete(`articles/${slug}/comments/${commentId}`);
-  retractComment(commentId);
 }
 
 export async function createComment(
@@ -252,12 +221,9 @@ export async function createComment(
 
   const comment = guard(object({ comment: commentDecoder }))(data).comment;
 
-  insertComments([{ ...comment, slug }]);
-
   return comment;
 }
 
 export async function deleteArticle(slug: string): Promise<void> {
   await axios.delete(`articles/${slug}`);
-  retractArticle(slug);
 }

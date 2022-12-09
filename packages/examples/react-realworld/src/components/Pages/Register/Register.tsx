@@ -1,24 +1,25 @@
 import { buildGenericFormField } from '../../../types/genericFormField';
 import { GenericForm } from '../../organisms/GenericForm/GenericForm';
 import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
-import { useErrors } from '../../../rules/error/useErrors';
-import { FormEvent, useEffect, useState } from 'react';
-import { insert } from '../../../rules/session';
-import { startRegistrationRule } from '../../../rules/user/user';
+import { FormEvent } from 'react';
+import { useEdict } from '../../../rules/EdictContext';
+import { useRuleOne } from '../../../rules/useRule';
 
 const useRegistration = () => {
-  const [registration, setRegistration] = useState(
-    startRegistrationRule.queryOne()
-  );
-  useEffect(() =>
-    startRegistrationRule.subscribeOne((r) => setRegistration(r))
-  );
-  const errors = useErrors();
-  return { registration, errors };
+  const { USER, ERROR } = useEdict();
+
+  const registration = useRuleOne(USER.RULES.startRegistrationRule);
+
+  const errors = ERROR.HOOKS.useErrors();
+  return {
+    registration,
+    errors,
+    startRegistration: USER.ACTIONS.startRegistration,
+  };
 };
 
 export function Register() {
-  const { registration, errors } = useRegistration();
+  const { registration, errors, startRegistration } = useRegistration();
 
   return (
     <div className="auth-page">
@@ -34,7 +35,7 @@ export function Register() {
             formObject={{ username: '', password: '', email: '' }}
             submitButtonText="Sign up"
             errors={errors}
-            onSubmit={onSubmit}
+            onSubmit={(ev) => onSubmit(ev, startRegistration)}
             fields={[
               buildGenericFormField({
                 name: 'username',
@@ -58,7 +59,14 @@ export function Register() {
   );
 }
 
-function onSubmit(ev: FormEvent) {
+function onSubmit(
+  ev: FormEvent,
+  startRegistration: (args: {
+    username: string;
+    password: string;
+    email: string;
+  }) => void
+) {
   ev.preventDefault();
   const target = ev.currentTarget;
   // Todo: Clean this up.
@@ -67,12 +75,9 @@ function onSubmit(ev: FormEvent) {
     password: { value: string };
     email: { value: string };
   };
-
-  insert({
-    StartRegistration: {
-      username: formValues.username.value,
-      email: formValues.email.value,
-      password: formValues.password.value,
-    },
+  startRegistration({
+    username: formValues.username.value,
+    password: formValues.password.value,
+    email: formValues.email.value,
   });
 }

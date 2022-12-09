@@ -3,9 +3,8 @@ import { Article } from '../../../types/article';
 import { classObjectToClassName } from '../../../types/style';
 import { ArticlePreview } from '../ArticlePreview/ArticlePreview';
 import { Pagination } from '../../molecules/Pagination/Pagination';
-import { useArticles } from '../../../rules/article/useArticle';
 import { useHome } from '../../Pages/Home/Home';
-import { toggleFavoriteArticle } from '../../../rules/article/article';
+import { useEdict } from '../../../rules/EdictContext';
 
 export function ArticlesViewer({
   toggleClassName,
@@ -20,7 +19,8 @@ export function ArticlesViewer({
   onPageChange?: (index: number) => void;
   onTabChange?: (tab: string) => void;
 }) {
-  const { articles, articleCount } = useArticles();
+  const EDICT = useEdict();
+  const { articles, articleCount } = EDICT.ARTICLE.HOOKS.useArticles();
   const home = useHome();
 
   if (!home) return <span />;
@@ -93,6 +93,7 @@ function Tab({
 }
 
 function ArticleList({ articles }: { articles?: { article: Article }[] }) {
+  const EDICT = useEdict();
   return articles ? (
     <Fragment>
       {articles.length === 0 && (
@@ -104,7 +105,12 @@ function ArticleList({ articles }: { articles?: { article: Article }[] }) {
         <ArticlePreview
           key={article.slug}
           article={article}
-          onFavoriteToggle={() => onFavoriteToggle(index, article)}
+          onFavoriteToggle={() =>
+            EDICT.ARTICLE.ACTIONS.toggleFavoriteArticle(
+              article.slug,
+              article.favorited
+            )
+          }
         />
       ))}
     </Fragment>
@@ -113,8 +119,4 @@ function ArticleList({ articles }: { articles?: { article: Article }[] }) {
       Loading articles...
     </div>
   );
-}
-
-function onFavoriteToggle(index: number, { slug, favorited }: Article) {
-  toggleFavoriteArticle(slug, favorited);
 }

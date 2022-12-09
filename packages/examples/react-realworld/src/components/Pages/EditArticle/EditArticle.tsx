@@ -2,9 +2,8 @@ import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getArticle, updateArticle } from '../../../services/conduit';
 import { ArticleEditor } from '../../organisms/ArticleEditor/ArticleEditor';
-import { userRule, windowRedirect } from '../../../rules/user/user';
-import { insertError } from '../../../rules/error/error';
 import { useEdict } from '../../../rules/EdictContext';
+import { EdictSession } from '../../../rules/session';
 
 export type EditArticleFormFields<T extends React.FormEvent['currentTarget']> =
   T & {
@@ -19,10 +18,10 @@ export const parseEditArticleForm = (ev: React.FormEvent) =>
 
 export function EditArticle() {
   const { slug } = useParams<{ slug: string }>();
-
+  const EDICT = useEdict();
   useEffect(() => {
     if (!slug) return;
-    _loadArticle(slug);
+    _loadArticle(slug, EDICT);
   }, []);
 
   if (!slug) return <></>;
@@ -30,16 +29,20 @@ export function EditArticle() {
 }
 
 const SluggedArticle: React.FC<{ slug: string }> = ({ slug }) => {
-  const { ARTICLE } = useEdict();
-  const article = ARTICLE.HOOKS.useArticle(slug);
+  const EDICT = useEdict();
+  const article = EDICT.ARTICLE.HOOKS.useArticle(slug);
   console.log('Loading slugged?', article);
   return (
-    <ArticleEditor onSubmit={onSubmit(slug)} article={article?.$article} />
+    <ArticleEditor
+      onSubmit={onSubmit(slug, EDICT)}
+      article={article?.$article}
+    />
   );
 };
 
-async function _loadArticle(slug: string) {
-  const user = userRule.queryOne();
+async function _loadArticle(slug: string, EDICT: EdictSession) {
+  const user = EDICT.USER.RULES.userRule.queryOne();
+  const { windowRedirect } = EDICT.USER.ACTIONS;
   try {
     const article = await getArticle(slug);
 
@@ -47,12 +50,16 @@ async function _loadArticle(slug: string) {
       windowRedirect('#/');
       return;
     }
+    EDICT.ARTICLE.ACTIONS.insertArticle(article);
   } catch {
     windowRedirect('#/');
   }
 }
 
-function onSubmit(slug: string): (ev: React.FormEvent) => void {
+function onSubmit(
+  slug: string,
+  EDICT: EdictSession
+): (ev: React.FormEvent) => void {
   return async (ev) => {
     ev.preventDefault();
     const { title, description, body, tag } = parseEditArticleForm(ev);
@@ -65,9 +72,10 @@ function onSubmit(slug: string): (ev: React.FormEvent) => void {
     });
 
     result.match({
-      err: (errors) => insertError(errors),
-      ok: ({ slug }) => {
-        windowRedirect(`#/article/${slug}`);
+      err: (errors) => EDICT.ERROR.ACTIONS.insertError(errors),
+      ok: (article) => {
+        EDICT.ARTICLE.ACTIONS.insertArticle(article);
+        EDICT.USER.ACTIONS.windowRedirect(`#/article/${article.slug}`);
       },
     });
   };

@@ -2,23 +2,23 @@ import React from 'react';
 import { buildGenericFormField } from '../../../types/genericFormField';
 import { GenericForm } from '../../organisms/GenericForm/GenericForm';
 import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
-import { useErrors } from '../../../rules/error/useErrors';
-import { useUser } from '../../../rules/user/useUser';
-import { setToken, updateSettingsRule } from '../../../rules/user/user';
-import { insert } from '../../../rules/session';
-import { sessionRule } from '../../../rules/session/session';
 import { FetchState } from '../../../rules/schema';
 import { useRuleOne } from '../../../rules/useRule';
+import { useEdict } from '../../../rules/EdictContext';
+import { EdictSession } from '../../../rules/session';
 
 const useSettings = () => {
+  const { USER, ERROR } = useEdict();
   const updatingSettings =
-    useRuleOne(updateSettingsRule)?.SettingsPage.fetchState === FetchState.SENT;
-  const errors = useErrors();
-  const user = useUser();
+    useRuleOne(USER.RULES.updateSettingsRule)?.SettingsPage.fetchState ===
+    FetchState.SENT;
+  const errors = ERROR.HOOKS.useErrors();
+  const user = USER.HOOKS.useUser();
   return { errors, user, updatingSettings };
 };
 
 export function Settings() {
+  const EDICT = useEdict();
   const { errors, user, updatingSettings } = useSettings();
   return (
     <div className="settings-page">
@@ -30,7 +30,7 @@ export function Settings() {
             formObject={{ ...user }}
             submitButtonText="Update Settings"
             errors={errors}
-            onSubmit={onSubmit}
+            onSubmit={(ev) => onSubmit(ev, EDICT)}
             fields={[
               buildGenericFormField({
                 name: 'image',
@@ -58,7 +58,7 @@ export function Settings() {
           <hr />
           <button
             className="btn btn-outline-danger"
-            onClick={() => logout(user?.username)}
+            onClick={() => logout(EDICT, user?.username)}
           >
             Or click here to logout.
           </button>
@@ -68,7 +68,7 @@ export function Settings() {
   );
 }
 
-function onSubmit(ev: React.FormEvent) {
+function onSubmit(ev: React.FormEvent, EDICT: EdictSession) {
   ev.preventDefault();
   const target = ev.currentTarget;
   // Todo: Clean this up.
@@ -79,27 +79,22 @@ function onSubmit(ev: React.FormEvent) {
     bio: { value: string };
     email: { value: string };
   };
-  const username = sessionRule.queryOne()?.Session.username;
+  const username = EDICT.SESSION.RULES.sessionRule.queryOne()?.Session.username;
   if (!username) {
     throw new Error(
       "Why is the session username undefined? This shouldn't happen when logged in!"
     );
   }
-  insert({
-    [username]: {
-      username: formValues.username.value,
-      password: formValues.password.value,
-      image: formValues.image.value,
-      bio: formValues.bio.value,
-      email: formValues.email.value,
-    },
-    SettingsPage: {
-      fetchState: FetchState.QUEUED,
-    },
+  EDICT.USER.ACTIONS.updateProfileSettings({
+    username: formValues.username.value,
+    password: formValues.password.value,
+    image: formValues.image.value,
+    bio: formValues.bio.value,
+    email: formValues.email.value,
   });
 }
 
-function logout(username?: string) {
+function logout(EDICT: EdictSession, username?: string) {
   if (!username) throw new Error('Logging out undefined username?');
-  setToken(undefined);
+  EDICT.USER.ACTIONS.setToken(undefined);
 }

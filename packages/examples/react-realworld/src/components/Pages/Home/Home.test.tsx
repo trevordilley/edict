@@ -8,14 +8,8 @@ import {
   unfavoriteArticle,
 } from '../../../services/conduit';
 import { Home } from './Home';
-import { homePageRule } from '../../../rules/home/home';
-import { initializeSession, session } from '../../../rules/session';
-import { insertAllTags, tagList } from '../../../rules/tag/tag';
-import {
-  insertArticle,
-  insertArticleCount,
-} from '../../../rules/article/article';
-import { FetchState } from '../../../rules/schema';
+import { EdictSession, initializeSession } from '../../../rules/session';
+import { Edict } from '../../../rules/EdictContext';
 
 jest.mock('../../../services/conduit');
 
@@ -49,43 +43,45 @@ const defaultArticle = {
   updatedAt: new Date(),
 };
 
+let edictSession: EdictSession | undefined;
 beforeEach(async () => {
   await act(async () => {
-    initializeSession();
+    edictSession = initializeSession();
     // store.dispatch(initializeApp());
     // store.dispatch(changeTab('Global Feed'));
   });
 });
 
 it('Should load articles', async () => {
-  insertArticle(defaultArticle);
-  insertArticle({
+  const session = edictSession!;
+  session.ARTICLE.ACTIONS.insertArticle(defaultArticle);
+  session.ARTICLE.ACTIONS.insertArticle({
     ...defaultArticle,
     description: 'Test 2',
     slug: 'test-2344',
     author: { ...defaultArticle.author, image: null },
   });
-  insertArticleCount(0);
-  insertAllTags(['twitter', 'facebook', 'google']);
-  session.insert({
-    Tags: {
-      fetchState: FetchState.DONE,
-    },
+  session.ARTICLE.ACTIONS.insertArticleCount(0);
+  mockedGetTags.mockResolvedValueOnce({
+    tags: ['twitter', 'facebook', 'google'],
   });
-  session.fire();
-  const tags = tagList.queryOne();
+  const tags = session.TAG.QUERIES.tagList.queryOne();
+  console.log('tags', tags);
   await act(async () => {
     await render(
-      <MemoryRouter>
-        <Home />
-      </MemoryRouter>
+      <Edict session={session}>
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>
+      </Edict>
     );
   });
-  const results = homePageRule.queryOne()?.HomePage;
   screen.getByText('google');
   screen.getByText('Test 1');
   screen.getByText('Test 2');
-  expect(homePageRule.queryOne()?.HomePage.selectedTab).toMatch('Global Feed');
+  expect(
+    edictSession?.HOME.RULES.homePageRule.queryOne()?.HomePage.selectedTab
+  ).toMatch('Global Feed');
 });
 
 it('Should show message if there are no articles', async () => {
