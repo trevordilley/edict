@@ -1,5 +1,5 @@
 import { Profile } from '../../../types/profile';
-import { useUser } from '../../../rules/user/useUser';
+import { useEdict } from '../../../rules/EdictContext';
 
 export function UserInfo({
   user: { image, username, bio, following },
@@ -12,8 +12,9 @@ export function UserInfo({
   onFollowToggle?: () => void;
   onEditSettings?: () => void;
 }) {
-  const sessionUser = useUser();
-
+  const EDICT = useEdict();
+  const sessionUser = EDICT.USER.HOOKS.useUser();
+  console.log('user?', sessionUser);
   return (
     <div className="user-info">
       <div className="container">

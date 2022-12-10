@@ -1,10 +1,11 @@
 import { Fragment } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { User } from '../../../types/user';
-import { useUser } from '../../../rules/user/useUser';
+import { useEdict } from '../../../rules/EdictContext';
 
 export function Header() {
-  const user = useUser();
+  const EDICT = useEdict();
+  const user = EDICT.USER.HOOKS.useUser();
 
   return (
     <nav className="navbar navbar-light">

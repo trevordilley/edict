@@ -1,81 +1,89 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { store } from '../../state/store';
-import { loadUser } from '../App/App.slice';
 import { UserInfo } from './UserInfo';
+import { initializeSession } from '../../../rules/session';
+import { Edict } from '../../../rules/EdictContext';
 
-beforeEach(async () => {
-  await act(async () => {
-    store.dispatch(
-      loadUser({
-        email: 'jake@jake.jake',
-        token: 'jwt.token.here',
-        username: 'jake',
-        bio: 'I work at statefarm',
-        image: null,
-      })
-    );
+const initialize = () => {
+  const session = initializeSession();
+  session.USER.ACTIONS.insertUser({
+    email: 'jake@jake.jake',
+    token: 'jwt.token.here',
+    username: 'jake',
+    bio: 'I work at statefarm',
+    image: null,
   });
-});
-
-it('Should toggle favorite', async () => {
-  const mockOnFollowToggle = jest.fn();
-  await act(async () => {
+  return session;
+};
+describe('UserInfo...', () => {
+  it('Should toggle favorite', async () => {
+    const mockOnFollowToggle = jest.fn();
+    const session = initialize();
     render(
-      <UserInfo
-        user={{
-          username: 'test jack',
-          bio: 'I work at statefarm',
-          image: null,
-          following: false,
-        }}
-        onFollowToggle={mockOnFollowToggle}
-      />
+      <Edict session={session}>
+        <UserInfo
+          user={{
+            username: 'test jack',
+            bio: 'I work at statefarm',
+            image: null,
+            following: false,
+          }}
+          disabled={false}
+          onFollowToggle={mockOnFollowToggle}
+        />
+      </Edict>
     );
+    await act(async () => {
+      fireEvent.click(screen.getByText('Follow test jack'));
+    });
 
-    fireEvent.click(screen.getByText('Follow test jack'));
+    expect(mockOnFollowToggle.mock.calls).toHaveLength(1);
   });
 
-  expect(mockOnFollowToggle.mock.calls).toHaveLength(1);
-});
-
-it('Should toggle favorite for followed', async () => {
-  const mockOnFollowToggle = jest.fn();
-  await act(async () => {
+  it('Should toggle favorite for followed', async () => {
+    const mockOnFollowToggle = jest.fn();
+    const session = initialize();
     render(
-      <UserInfo
-        user={{
-          username: 'test jack',
-          bio: 'I work at statefarm',
-          image: null,
-          following: true,
-        }}
-        onFollowToggle={mockOnFollowToggle}
-      />
+      <Edict session={session}>
+        <UserInfo
+          user={{
+            username: 'test jack',
+            bio: 'I work at statefarm',
+            image: null,
+            following: true,
+          }}
+          disabled={false}
+          onFollowToggle={mockOnFollowToggle}
+        />
+      </Edict>
     );
+    await act(async () => {
+      fireEvent.click(screen.getByText('Unfollow test jack'));
+    });
 
-    fireEvent.click(screen.getByText('Unfollow test jack'));
+    expect(mockOnFollowToggle.mock.calls).toHaveLength(1);
   });
 
-  expect(mockOnFollowToggle.mock.calls).toHaveLength(1);
-});
-
-it('Should trigger edit settings', async () => {
-  const mockOnEditSettings = jest.fn();
-  await act(async () => {
+  it('Should trigger edit settings', async () => {
+    const mockOnEditSettings = jest.fn();
+    const session = initialize();
     render(
-      <UserInfo
-        user={{
-          username: 'jake',
-          bio: 'I work at statefarm',
-          image: null,
-          following: true,
-        }}
-        onEditSettings={mockOnEditSettings}
-      />
+      <Edict session={session}>
+        <UserInfo
+          user={{
+            username: 'jake',
+            bio: 'I work at statefarm',
+            image: null,
+            following: true,
+          }}
+          disabled={false}
+          onEditSettings={mockOnEditSettings}
+        />
+      </Edict>
     );
+    await act(async () => {
+      fireEvent.click(screen.getByText('Edit Profile Settings'));
+    });
 
-    fireEvent.click(screen.getByText('Edit Profile Settings'));
+    expect(mockOnEditSettings.mock.calls).toHaveLength(1);
   });
-
-  expect(mockOnEditSettings.mock.calls).toHaveLength(1);
 });

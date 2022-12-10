@@ -1,21 +1,35 @@
-import { act, render, screen } from '@testing-library/react';
-import { store } from '../../state/store';
-import { initializeApp, loadUser } from '../App/App.slice';
+import { render, screen } from '@testing-library/react';
 import { Header } from './Header';
+import { initializeSession } from '../../../rules/session';
+import { Edict } from '../../../rules/EdictContext';
+import { BrowserRouter, MemoryRouter, Route, Routes } from 'react-router-dom';
+import '@testing-library/jest-dom/extend-expect';
 
 it('Should render', () => {
-  render(<Header />);
+  const session = initializeSession();
+  render(
+    <Edict session={session}>
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<Header />}></Route>
+        </Routes>
+      </MemoryRouter>
+    </Edict>
+  );
 });
 
 describe('Header for guest', () => {
-  beforeAll(() => {
-    act(() => {
-      store.dispatch(initializeApp);
-    });
-  });
-
   beforeEach(() => {
-    render(<Header />);
+    const session = initializeSession();
+    render(
+      <Edict session={session}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Header />}></Route>
+          </Routes>
+        </BrowserRouter>
+      </Edict>
+    );
   });
 
   it('Should render Sign in link', () => {
@@ -36,21 +50,25 @@ describe('Header for guest', () => {
 });
 
 describe('Header for user', () => {
-  beforeAll(() => {
-    act(() => {
-      store.dispatch(
-        loadUser({
-          email: 'jake@jake.jake',
-          token: 'jwt.token.here',
-          username: 'jake',
-          bio: 'I work at statefarm',
-          image: null,
-        })
-      );
+  beforeEach(() => {
+    const session = initializeSession();
+    session.USER.ACTIONS.insertUser({
+      email: 'jake@jake.jake',
+      token: 'jwt.token.here',
+      username: 'jake',
+      bio: 'I work at statefarm',
+      image: null,
     });
+    render(
+      <Edict session={session}>
+        <MemoryRouter>
+          <Routes>
+            <Route path="/" element={<Header />}></Route>
+          </Routes>
+        </MemoryRouter>
+      </Edict>
+    );
   });
-
-  beforeEach(() => render(<Header />));
 
   it('Should render New Article link', () => {
     expectLinkByText('New Article', 'editor');
@@ -77,7 +95,7 @@ function expectLinkByText(text: string, href: string) {
   const link = screen.getByText(text);
   expect(link).toBeInTheDocument();
   expect(link.nodeName).toMatch('A');
-  expect(link.getAttribute('href')).toMatch('#/' + href);
+  expect(link.getAttribute('href')).toMatch('/' + href);
 }
 
 function expectEmptyQueryByText(text: string) {

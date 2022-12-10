@@ -2,8 +2,8 @@ import React from 'react';
 import { buildGenericFormField } from '../../../types/genericFormField';
 import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
 import { GenericForm } from '../GenericForm/GenericForm';
-import { useErrors } from '../../../rules/error/useErrors';
 import { ArticleForEditor } from '../../../types/article';
+import { useEdict } from '../../../rules/EdictContext';
 
 export function ArticleEditor({
   onSubmit,
@@ -12,7 +12,8 @@ export function ArticleEditor({
   onSubmit: (ev: React.FormEvent) => void;
   article?: ArticleForEditor;
 }) {
-  const errors = useErrors();
+  const EDICT = useEdict();
+  const errors = EDICT.ERROR.HOOKS.useErrors();
   return (
     <div className="editor-page">
       <ContainerPage>

@@ -62,10 +62,10 @@ async function signIn(
   const target = ev.currentTarget;
   // Todo: Clean this up.
   const formValues = target as typeof target & {
-    email: { value: string };
-    password: { value: string };
+    email?: { value: string };
+    password?: { value: string };
   };
-  const email = formValues.email.value;
-  const password = formValues.password.value;
+  const email = formValues.email?.value ?? '';
+  const password = formValues.password?.value ?? '';
   login(email, password);
 }

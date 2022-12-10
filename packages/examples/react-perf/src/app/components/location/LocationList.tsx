@@ -40,7 +40,7 @@ export const LocationList: React.FC<{
   return (
     <div>
       {locations.map((l) => (
-        <LocationRow {...l} />
+        <LocationRow {...l} id={l.id} />
       ))}
     </div>
   );

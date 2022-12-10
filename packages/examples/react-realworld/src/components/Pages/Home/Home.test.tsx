@@ -94,9 +94,7 @@ it('Should show message if there are no articles', async () => {
   await act(async () => {
     await render(
       <MemoryRouter>
-        <MemoryRouter>
-          <Home />
-        </MemoryRouter>
+        <Home />
       </MemoryRouter>
     );
   });

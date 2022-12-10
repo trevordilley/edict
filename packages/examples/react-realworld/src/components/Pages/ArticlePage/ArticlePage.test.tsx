@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import {
   createComment,
   deleteArticle,
@@ -11,23 +11,37 @@ import {
   unfavoriteArticle,
   unfollowUser,
 } from '../../../services/conduit';
-import { store } from '../../../state/store';
 import { Comment } from '../../../types/comment';
 import { redirect } from '../../../types/location';
-import { initializeApp, loadUser } from '../../App/App.slice';
 import { ArticlePage } from './ArticlePage';
+import { Edict } from '../../../rules/EdictContext';
+import { EdictSession, initializeSession } from '../../../rules/session';
 
 jest.mock('../../../services/conduit.ts');
 
 const mockedGetArticle = getArticle as jest.Mock<ReturnType<typeof getArticle>>;
-const mockedGetArticleComments = getArticleComments as jest.Mock<ReturnType<typeof getArticleComments>>;
+const mockedGetArticleComments = getArticleComments as jest.Mock<
+  ReturnType<typeof getArticleComments>
+>;
 const mockedFollowUser = followUser as jest.Mock<ReturnType<typeof followUser>>;
-const mockedUnfollowUser = unfollowUser as jest.Mock<ReturnType<typeof unfollowUser>>;
-const mockedFavoriteArticle = favoriteArticle as jest.Mock<ReturnType<typeof favoriteArticle>>;
-const mockedUnfavoriteArticle = unfavoriteArticle as jest.Mock<ReturnType<typeof unfavoriteArticle>>;
-const mockedCreateComment = createComment as jest.Mock<ReturnType<typeof createComment>>;
-const mockedDeleteComment = deleteComment as jest.Mock<ReturnType<typeof deleteComment>>;
-const mockedDeleteArticle = deleteArticle as jest.Mock<ReturnType<typeof deleteArticle>>;
+const mockedUnfollowUser = unfollowUser as jest.Mock<
+  ReturnType<typeof unfollowUser>
+>;
+const mockedFavoriteArticle = favoriteArticle as jest.Mock<
+  ReturnType<typeof favoriteArticle>
+>;
+const mockedUnfavoriteArticle = unfavoriteArticle as jest.Mock<
+  ReturnType<typeof unfavoriteArticle>
+>;
+const mockedCreateComment = createComment as jest.Mock<
+  ReturnType<typeof createComment>
+>;
+const mockedDeleteComment = deleteComment as jest.Mock<
+  ReturnType<typeof deleteComment>
+>;
+const mockedDeleteArticle = deleteArticle as jest.Mock<
+  ReturnType<typeof deleteArticle>
+>;
 
 const defaultArticle = {
   author: {
@@ -60,35 +74,33 @@ const defaultComment: Comment = {
   },
 };
 
-async function renderWithPath(slug: string) {
+async function renderWithPath(slug: string, session: EdictSession) {
   await act(async () => {
     render(
-      <MemoryRouter initialEntries={[`/${slug}`]}>
-        <Route path='/:slug'>
-          <ArticlePage />
-        </Route>
-      </MemoryRouter>
+      <Edict session={session}>
+        <MemoryRouter initialEntries={[`/${slug}`]}>
+          <Routes>
+            <Route path="/:slug" element={<ArticlePage />}></Route>
+          </Routes>
+        </MemoryRouter>
+      </Edict>
     );
   });
 }
 
 describe('For guest', () => {
-  beforeEach(async () => {
-    await act(async () => {
-      store.dispatch(initializeApp());
-    });
-  });
-
   it('Should redirect to home if it fails to load article', async () => {
+    const session = initializeSession();
     redirect('article/something');
     mockedGetArticle.mockRejectedValueOnce({});
     mockedGetArticleComments.mockResolvedValueOnce([]);
-    await renderWithPath('sample-slug');
+    await renderWithPath('sample-slug', session);
 
-    expect(location.hash === '#/').toBeTruthy();
+    expect(window.location.hash === '#/').toBeTruthy();
   });
 
   it('Should render article', async () => {
+    const session = initializeSession();
     mockedGetArticle.mockResolvedValueOnce({
       ...defaultArticle,
       title: 'The Title',
@@ -96,7 +108,7 @@ describe('For guest', () => {
       tagList: ['tag1', 'tag2'],
     });
     mockedGetArticleComments.mockResolvedValueOnce([defaultComment]);
-    await renderWithPath('sample-slug');
+    await renderWithPath('sample-slug', session);
 
     expect(screen.getByText('The Title')).toBeInTheDocument();
     expect(screen.getByText('The Body')).toBeInTheDocument();
@@ -105,20 +117,32 @@ describe('For guest', () => {
   });
 
   it('Should show sign in option', async () => {
+    const session = initializeSession();
     mockedGetArticle.mockResolvedValueOnce(defaultArticle);
     mockedGetArticleComments.mockResolvedValueOnce([defaultComment]);
-    await renderWithPath('sample-slug');
+    await renderWithPath('sample-slug', session);
 
     expect(screen.getByText('Sign in')).toBeInTheDocument();
   });
 
   it('Should show comments', async () => {
+    const session = initializeSession();
     mockedGetArticle.mockResolvedValueOnce(defaultArticle);
     mockedGetArticleComments.mockResolvedValueOnce([
-      { ...defaultComment, id: 1, body: 'First Comment', author: { ...defaultComment.author, username: 'James' } },
-      { ...defaultComment, id: 2, body: 'Second Comment', author: { ...defaultComment.author, username: 'jakelson' } },
+      {
+        ...defaultComment,
+        id: 1,
+        body: 'First Comment',
+        author: { ...defaultComment.author, username: 'James' },
+      },
+      {
+        ...defaultComment,
+        id: 2,
+        body: 'Second Comment',
+        author: { ...defaultComment.author, username: 'jakelson' },
+      },
     ]);
-    await renderWithPath('sample-slug');
+    await renderWithPath('sample-slug', session);
 
     expect(screen.getByText('First Comment')).toBeInTheDocument();
     expect(screen.getByText('James')).toBeInTheDocument();
@@ -127,13 +151,14 @@ describe('For guest', () => {
   });
 
   it('Should redirect to register on follow', async () => {
+    const session = initializeSession();
     redirect('article/something');
     mockedGetArticle.mockResolvedValueOnce({
       ...defaultArticle,
       author: { ...defaultArticle.author, username: 'the truth' },
     });
     mockedGetArticleComments.mockResolvedValueOnce([]);
-    await renderWithPath('sample-slug');
+    await renderWithPath('sample-slug', session);
 
     await act(async () => {
       fireEvent.click(screen.queryAllByText('Follow the truth')[0]);
@@ -143,6 +168,7 @@ describe('For guest', () => {
   });
 
   it('Should redirect to register on favorite', async () => {
+    const session = initializeSession();
     redirect('article/something');
     mockedGetArticle.mockResolvedValueOnce({
       ...defaultArticle,
@@ -150,7 +176,7 @@ describe('For guest', () => {
       author: { ...defaultArticle.author, username: 'the truth' },
     });
     mockedGetArticleComments.mockResolvedValueOnce([]);
-    await renderWithPath('sample-slug');
+    await renderWithPath('sample-slug', session);
 
     await act(async () => {
       fireEvent.click(screen.queryAllByText('Favorite Article')[0]);
@@ -187,12 +213,20 @@ describe('For non article owner User', () => {
     redirect('article/something');
     mockedGetArticle.mockResolvedValueOnce({
       ...defaultArticle,
-      author: { ...defaultArticle.author, username: 'the truth', following: false },
+      author: {
+        ...defaultArticle.author,
+        username: 'the truth',
+        following: false,
+      },
     });
     mockedGetArticleComments.mockResolvedValueOnce([]);
     await renderWithPath('sample-slug');
 
-    mockedFollowUser.mockResolvedValueOnce({ ...defaultArticle.author, following: true, username: 'the truth' });
+    mockedFollowUser.mockResolvedValueOnce({
+      ...defaultArticle.author,
+      following: true,
+      username: 'the truth',
+    });
     await act(async () => {
       fireEvent.click(screen.queryAllByText('Follow the truth')[0]);
     });
@@ -206,12 +240,20 @@ describe('For non article owner User', () => {
     redirect('article/something');
     mockedGetArticle.mockResolvedValueOnce({
       ...defaultArticle,
-      author: { ...defaultArticle.author, username: 'the truth', following: true },
+      author: {
+        ...defaultArticle.author,
+        username: 'the truth',
+        following: true,
+      },
     });
     mockedGetArticleComments.mockResolvedValueOnce([]);
     await renderWithPath('sample-slug');
 
-    mockedUnfollowUser.mockResolvedValueOnce({ ...defaultArticle.author, following: false, username: 'the truth' });
+    mockedUnfollowUser.mockResolvedValueOnce({
+      ...defaultArticle.author,
+      following: false,
+      username: 'the truth',
+    });
     await act(async () => {
       fireEvent.click(screen.queryAllByText('Unfollow the truth')[0]);
     });
@@ -230,7 +272,10 @@ describe('For non article owner User', () => {
     mockedGetArticleComments.mockResolvedValueOnce([]);
     await renderWithPath('sample-slug');
 
-    mockedFavoriteArticle.mockResolvedValueOnce({ ...defaultArticle, favorited: true });
+    mockedFavoriteArticle.mockResolvedValueOnce({
+      ...defaultArticle,
+      favorited: true,
+    });
     await act(async () => {
       fireEvent.click(screen.queryAllByText('Favorite Article')[0]);
     });
@@ -249,7 +294,10 @@ describe('For non article owner User', () => {
     mockedGetArticleComments.mockResolvedValueOnce([]);
     await renderWithPath('sample-slug');
 
-    mockedUnfavoriteArticle.mockResolvedValueOnce({ ...defaultArticle, favorited: false });
+    mockedUnfavoriteArticle.mockResolvedValueOnce({
+      ...defaultArticle,
+      favorited: false,
+    });
     await act(async () => {
       fireEvent.click(screen.queryAllByText('Unfavorite Article')[0]);
     });
@@ -265,7 +313,9 @@ describe('For non article owner User', () => {
     await renderWithPath('sample-slug');
 
     mockedCreateComment.mockResolvedValueOnce(defaultComment);
-    mockedGetArticleComments.mockResolvedValueOnce([{ ...defaultComment, body: 'This is a test comment' }]);
+    mockedGetArticleComments.mockResolvedValueOnce([
+      { ...defaultComment, body: 'This is a test comment' },
+    ]);
     await act(async () => {
       fireEvent.change(screen.getByPlaceholderText('Write a comment...'), {
         target: { value: 'This is a test comment' },
@@ -279,7 +329,9 @@ describe('For non article owner User', () => {
     expect(screen.getByText('This is a test comment')).toBeInTheDocument();
     expect(mockedCreateComment.mock.calls).toHaveLength(1);
     expect(mockedCreateComment.mock.calls[0][0]).toMatch(defaultArticle.slug);
-    expect(mockedCreateComment.mock.calls[0][1]).toMatch('This is a test comment');
+    expect(mockedCreateComment.mock.calls[0][1]).toMatch(
+      'This is a test comment'
+    );
   });
 
   it("Comment should not have delete button if is not the logged user's comment", async () => {
@@ -310,12 +362,16 @@ describe('For non article owner User', () => {
     await renderWithPath('sample-slug');
 
     mockedDeleteComment.mockResolvedValueOnce();
-    mockedGetArticleComments.mockResolvedValueOnce([{ ...defaultComment, body: 'This is a test comment after' }]);
+    mockedGetArticleComments.mockResolvedValueOnce([
+      { ...defaultComment, body: 'This is a test comment after' },
+    ]);
     await act(async () => {
       fireEvent.click(screen.getByLabelText('Delete comment 1'));
     });
 
-    expect(screen.getByText('This is a test comment after')).toBeInTheDocument();
+    expect(
+      screen.getByText('This is a test comment after')
+    ).toBeInTheDocument();
     expect(mockedDeleteComment.mock.calls).toHaveLength(1);
     expect(mockedDeleteComment.mock.calls[0][0]).toMatch(defaultArticle.slug);
     expect(mockedDeleteComment.mock.calls[0][1]).toBe(3);

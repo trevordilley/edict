@@ -25,8 +25,8 @@ import { User } from '../types/user';
 import { useEffect, useState } from 'react';
 import { useRule, useRuleOne } from './useRule';
 
-export const initializeSession = () => {
-  const session = edict<Schema>(true);
+export const initializeSession = (autoFire = true) => {
+  const session = edict<Schema>(autoFire);
   const { insert, retract, conditions, rule, retractByConditions } = session;
   // Articles
 
@@ -1077,6 +1077,7 @@ export const initializeSession = () => {
         },
       },
     },
+    ENGINE: session,
   };
 };
 
