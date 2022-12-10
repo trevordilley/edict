@@ -376,3 +376,234 @@ describe('edict...', () => {
     expect(thenFinallyCount).toBe(1);
   });
 });
+
+it('Reusable conditions with conditions()', () => {
+  const { rule, insert, fire, conditions } = edict<Schema>();
+
+  const personConds = conditions(({ Color, Height }) => ({
+    Color,
+    Height,
+  }));
+
+  rule('red color folks are 70 years old', () => ({
+    $person: {
+      ...personConds,
+    },
+  })).enact({
+    when: ({ $person: { Color } }) => Color === 'red',
+    then: ({ $person: { id } }) => {
+      insert({
+        [id]: {
+          Age: 70,
+        },
+      });
+    },
+  });
+
+  rule('blue color  are 50 years old', () => ({
+    $person: {
+      ...personConds,
+    },
+  })).enact({
+    when: ({ $person: { Color } }) => Color === 'blue',
+    then: ({ $person: { id } }) => {
+      insert({
+        [id]: {
+          Age: 50,
+        },
+      });
+    },
+  });
+
+  rule('orange color  are 30 years old', () => ({
+    $person: {
+      ...personConds,
+    },
+  })).enact({
+    when: ({ $person: { Color } }) => Color === 'orange',
+    then: ({ $person: { id } }) => {
+      insert({
+        [id]: {
+          Age: 30,
+        },
+      });
+    },
+  });
+
+  const people = rule('People', ({ Age }) => ({
+    $person: {
+      ...personConds,
+      Age,
+    },
+  })).enact();
+
+  insert({
+    bob: {
+      Color: 'blue',
+      Height: 88,
+    },
+    joe: {
+      Color: 'red',
+      Height: 33,
+    },
+    jimmy: {
+      Color: 'blue',
+      Height: 45,
+    },
+    tom: {
+      Color: 'orange',
+      Height: 34,
+    },
+  });
+
+  fire();
+  expect(people.query().length).toBe(4);
+
+  const red = people.query({
+    $person: {
+      Color: ['red'],
+    },
+  });
+  red.forEach((r) => {
+    expect(r.$person.Age).toBe(70);
+  });
+
+  const blue = people.query({
+    $person: {
+      Color: ['blue'],
+    },
+  });
+  blue.map((b) => {
+    expect(b.$person.Age).toBe(50);
+  });
+
+  const orange = people.query({
+    $person: {
+      Color: ['orange'],
+    },
+  });
+  orange.map((o) => {
+    expect(o.$person.Age).toBe(30);
+  });
+});
+
+it('Reusable conditions can be used to retract', () => {
+  const { rule, insert, fire, retractByConditions, conditions } =
+    edict<Schema>();
+
+  const personConds = conditions(({ Color, Height }) => ({
+    Color,
+    Height,
+  }));
+
+  const people = rule('People', () => ({
+    $person: personConds,
+  })).enact();
+
+  insert({
+    bob: {
+      Color: 'blue',
+      Height: 88,
+    },
+    joe: {
+      Color: 'red',
+      Height: 33,
+    },
+    jimmy: {
+      Color: 'blue',
+      Height: 45,
+    },
+    tom: {
+      Color: 'orange',
+      Height: 34,
+    },
+  });
+
+  fire();
+  expect(people.query().length).toBe(4);
+  const tom = () =>
+    people.query({
+      $person: {
+        ids: ['tom'],
+      },
+    });
+  expect(tom().length).toBe(1);
+  retractByConditions('tom', personConds);
+  fire();
+  expect(tom().length).toBe(0);
+  expect(people.query().length).toBe(3);
+});
+
+it('Async then and thenFinally work', async () => {
+  const { rule, insert, fire } = edict<Schema>();
+  let thenFinallyCount = 0;
+  rule('Filters work', ({ Color }) => ({
+    $person: {
+      Color,
+    },
+  })).enact({
+    then: async ({ $person: { id, Color } }) => {
+      await new Promise<void>((resolve) => {
+        if (Color === 'red') {
+          insert({
+            [id]: {
+              Height: 10,
+            },
+          });
+        } else if (Color === 'blue') {
+          insert({
+            [id]: {
+              Height: 20,
+            },
+          });
+        } else if (Color === 'orange') {
+          insert({
+            [id]: {
+              Height: 30,
+            },
+          });
+        }
+        resolve();
+      });
+    },
+    thenFinally: async () => {
+      await new Promise<void>((resolve) => {
+        thenFinallyCount++;
+        resolve();
+      });
+    },
+  });
+
+  const heightQuery = rule('Heights from Color', ({ Color, Height }) => ({
+    $person: {
+      Color,
+      Height,
+    },
+  })).enact();
+
+  insert({
+    bob: {
+      Color: 'blue',
+    },
+    joe: {
+      Color: 'red',
+    },
+    jimmy: {
+      Color: 'blue',
+    },
+    tom: {
+      Color: 'orange',
+    },
+  });
+
+  fire();
+  await new Promise((r) => setTimeout(r, 0));
+  const results = heightQuery.query();
+  expect(results.length).toBe(4);
+  results.forEach(({ $person: { Color, Height } }) => {
+    if (Color === 'red') expect(Height).toBe(10);
+    if (Color === 'blue') expect(Height).toBe(20);
+    if (Color === 'orange') expect(Height).toBe(30);
+  });
+  expect(thenFinallyCount).toBe(1);
+});

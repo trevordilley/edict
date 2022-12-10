@@ -1,9 +1,8 @@
 // trick the type-system so we can use the schema like an object
 // TODO: If the new API works, maybe we don't need to do this?
 
-import { PRODUCTION_ALREADY_EXISTS_BEHAVIOR } from '@edict/rete';
+import { Debug, PRODUCTION_ALREADY_EXISTS_BEHAVIOR } from '@edict/rete';
 
-export type ATTR<SCHEMA> = { [attr in keyof SCHEMA]: SCHEMA[attr] };
 export type ConditionOptions<T> = { then?: boolean; match?: T; join?: string };
 export type Condition<SCHEMA> = {
   [ATTR in keyof SCHEMA]: ConditionOptions<SCHEMA[ATTR]>;
@@ -47,20 +46,48 @@ export type EnactionArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
   ) => Promise<void> | void;
 };
 
-export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> = (
-  enaction?: EnactionArgs<SCHEMA, T>
-) => {
+export interface QueryOneOptions {
+  shouldThrowExceptionOnMoreThanOne?: boolean;
+}
+export type EnactionResults<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
   query: (filter?: QueryArgs<SCHEMA, T>) => EnactArgs<SCHEMA, T>[];
+  queryOne: (
+    filter?: QueryArgs<SCHEMA, T>,
+    options?: QueryOneOptions
+  ) => EnactArgs<SCHEMA, T> | undefined;
   subscribe: (
     fn: (results: EnactArgs<SCHEMA, T>[]) => void,
     filter?: QueryArgs<SCHEMA, T>
   ) => () => void;
+
+  subscribeOne: (
+    fn: (results: EnactArgs<SCHEMA, T> | undefined) => void,
+    filter?: QueryArgs<SCHEMA, T>,
+    options?: QueryOneOptions
+  ) => () => void;
 };
+export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> = (
+  enaction?: EnactionArgs<SCHEMA, T>
+) => EnactionResults<SCHEMA, T>;
 
 export interface IEdict<SCHEMA> {
   insert: (args: InsertEdictFact<SCHEMA>) => void;
   retract: (id: string, ...attrs: (keyof SCHEMA)[]) => void;
+  retractByConditions: (
+    id: string,
+    conditions: { [key in keyof SCHEMA]?: any }
+  ) => void;
   fire: (recursionLimit?: number) => void;
+  reset: () => void;
+  conditions: <
+    T extends {
+      [ATTR in keyof Partial<SCHEMA>]:
+        | ConditionOptions<SCHEMA[ATTR]>
+        | undefined;
+    }
+  >(
+    conds: (schema: Condition<SCHEMA>) => T
+  ) => T;
   rule: <T extends ConditionArgs<SCHEMA>>(
     name: string,
     conditions: (schema: Condition<SCHEMA>) => T,
@@ -68,6 +95,7 @@ export interface IEdict<SCHEMA> {
   ) => { enact: Enact<SCHEMA, T> };
   debug: {
     dotFile: () => string;
+    engineDebug?: Debug<SCHEMA>;
     perf: () => {
       frames: PerformanceEntryList[];
       capture: () => PerformanceEntryList;

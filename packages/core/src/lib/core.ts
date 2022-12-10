@@ -7,34 +7,23 @@ import {
   IEdict,
   InsertEdictFact,
   QueryArgs,
+  QueryOneOptions,
 } from './types';
 import * as _ from 'lodash';
-import { InternalFactRepresentation } from '@edict/types';
 import {
   ConvertMatchFn,
+  DebugOptions,
+  DEFAULT_MAX_FRAME_DUMPS,
   Field,
   PRODUCTION_ALREADY_EXISTS_BEHAVIOR,
   QueryFilter,
   rete,
   viz,
 } from '@edict/rete';
+import { insertFactToFact } from './utils';
 
-export const insertFactToFact = <S>(
-  insertion: InsertEdictFact<S>
-): InternalFactRepresentation<S> => {
-  // TODO: This is just weird, it doesn't like the type and I don't get why. I'm sure I'll find out when I really
-  // don't want to find out!
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  return _.keys(insertion)
-    .map((id: string) =>
-      _.keys(insertion[id]).map((attr: string) => {
-        const val = _.get(insertion, `${id}.${attr}`);
-        return [id, attr, val] as [string, string, any];
-      })
-    )
-    .flat();
-};
+export const attr = <T>(): T => undefined as any;
+
 const ID_PREFIX = 'id___';
 const VALUE_PREFIX = 'val___';
 const idPrefix = (i: string) => `${ID_PREFIX}${i}`;
@@ -52,9 +41,16 @@ const valueKey = ({
 
 export const edict = <SCHEMA>(
   autoFire = false,
-  debug = false
+  debug: DebugOptions = {
+    enabled: false,
+    maxFrameDumps: DEFAULT_MAX_FRAME_DUMPS,
+  }
 ): IEdict<SCHEMA> => {
-  const session = rete.initSession<SCHEMA>(autoFire, debug);
+  console.log(debug);
+  let session = rete.initSession<SCHEMA>(autoFire, debug);
+  const reset = () => {
+    session = rete.initSession<SCHEMA>(autoFire, debug);
+  };
   const insert = (insertFacts: InsertEdictFact<SCHEMA>) => {
     // be dumb about this
     const factTuples = insertFactToFact(insertFacts);
@@ -67,6 +63,26 @@ export const edict = <SCHEMA>(
     attrs.map((attr) => {
       rete.retractFactByIdAndAttr<SCHEMA>(session, id, attr);
     });
+  };
+
+  const retractByConditions = (
+    id: string,
+    conditions: { [key in keyof SCHEMA]?: any }
+  ) => {
+    retract(id, ...(Object.keys(conditions) as (keyof SCHEMA)[]));
+  };
+
+  const conditions = <
+    T extends {
+      [ATTR in keyof Partial<SCHEMA>]:
+        | ConditionOptions<SCHEMA[ATTR]>
+        | undefined;
+    }
+  >(
+    conds: (schema: Condition<SCHEMA>) => T
+  ): T => {
+    const schema = {} as unknown as SCHEMA;
+    return conds(schema);
   };
 
   const rule = <T extends ConditionArgs<SCHEMA>>(
@@ -170,7 +186,6 @@ export const edict = <SCHEMA>(
         });
       });
       rete.addProductionToSession(session, production, onAlreadyExists);
-
       const convertFilterArgs = (filter: QueryArgs<SCHEMA, T>) => {
         const joinIds = Object.keys(filter);
 
@@ -195,21 +210,61 @@ export const edict = <SCHEMA>(
         return filters;
       };
 
+      const query = (filter?: QueryArgs<SCHEMA, T>) => {
+        if (!filter) return rete.queryAll(session, production);
+        return rete.queryAll(session, production, convertFilterArgs(filter));
+      };
+
+      const queryOne = (
+        filter?: QueryArgs<SCHEMA, T>,
+        options?: QueryOneOptions
+      ) => {
+        const result = query(filter);
+        if (result.length > 1 && options?.shouldThrowExceptionOnMoreThanOne) {
+          throw new Error('queryOne returned more than one result!');
+        }
+
+        return result.pop();
+      };
+      const subscribe = (
+        fn: (results: EnactArgs<SCHEMA, T>[]) => void,
+        filter?: QueryArgs<SCHEMA, T>
+      ) =>
+        rete.subscribeToProduction(
+          session,
+          production,
+          fn,
+          filter !== undefined ? convertFilterArgs(filter) : undefined
+        );
+      const subscribeOne = (
+        fn: (results: EnactArgs<SCHEMA, T> | undefined) => void,
+        filter?: QueryArgs<SCHEMA, T>,
+        options?: QueryOneOptions
+      ) =>
+        rete.subscribeToProduction(
+          session,
+          production,
+          (results) => {
+            if (
+              results.length > 1 &&
+              options?.shouldThrowExceptionOnMoreThanOne
+            ) {
+              throw new Error(
+                `subscribeOne received more than one result! ${results.length} received!`
+              );
+            }
+
+            const item = results.pop();
+            fn(item);
+          },
+          filter !== undefined ? convertFilterArgs(filter) : undefined
+        );
+
       return {
-        query: (filter?: QueryArgs<SCHEMA, T>) => {
-          if (!filter) return rete.queryAll(session, production);
-          return rete.queryAll(session, production, convertFilterArgs(filter));
-        },
-        subscribe: (
-          fn: (results: EnactArgs<SCHEMA, T>[]) => void,
-          filter?: QueryArgs<SCHEMA, T>
-        ) =>
-          rete.subscribeToProduction(
-            session,
-            production,
-            fn,
-            filter !== undefined ? convertFilterArgs(filter) : undefined
-          ),
+        query,
+        queryOne,
+        subscribe,
+        subscribeOne,
         rule: production,
       };
     };
@@ -242,11 +297,15 @@ export const edict = <SCHEMA>(
   return {
     insert,
     retract,
+    retractByConditions,
     fire,
+    conditions,
     rule,
+    reset,
     debug: {
       dotFile,
       perf,
+      engineDebug: session.debug,
     },
   };
 };
