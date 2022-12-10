@@ -14,7 +14,6 @@ export function UserInfo({
 }) {
   const EDICT = useEdict();
   const sessionUser = EDICT.USER.HOOKS.useUser();
-  console.log('user?', sessionUser);
   return (
     <div className="user-info">
       <div className="container">
