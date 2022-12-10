@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [12.x, 14.x]
+        node-version: [16.x]
 
     steps:
       - uses: actions/checkout@v3
@@ -21,8 +21,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-	  cache: "yarn"
-      - run: yarn
-      - run: yarn nx affected --target=test
-      - run: yarn nx affected --target=build 
+	  cache: "npm"
+      - run: npm i
+      - run: npx nx affected --target=test
+      - run: npx nx affected --target=build 
 
