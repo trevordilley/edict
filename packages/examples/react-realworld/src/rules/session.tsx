@@ -179,14 +179,9 @@ export const initializeSession = (autoFire = true) => {
           filterByAuthor,
           tag,
         },
-        Session: {
-          token,
-          username,
-        },
       })
     )
     .enact({
-      when: ({ Session: { token } }) => token !== undefined,
       then: async ({
         HomePage: { selectedTab },
         ArticleList: { offset, limit, tag, filterByAuthor },
@@ -210,6 +205,11 @@ export const initializeSession = (autoFire = true) => {
         };
 
         resetArticles();
+        session.insert({
+          ArticleList: {
+            fetchState: FetchState.QUEUED,
+          },
+        });
         const fetchArticles =
           selectedTab === 'Your Feed' ? getFeed : getArticles;
         const articles = await fetchArticles(
@@ -218,6 +218,11 @@ export const initializeSession = (autoFire = true) => {
 
         articles.articles.forEach((a) => insertArticle(a));
         insertArticleCount(articles.articlesCount);
+        session.insert({
+          ArticleList: {
+            fetchState: FetchState.DONE,
+          },
+        });
       },
     });
 
@@ -258,10 +263,18 @@ export const initializeSession = (autoFire = true) => {
     .enact();
 
   const articleListRule = session
-    .rule('Article List', ({ articleCount, currentPage }) => ({
+    .rule('Article List', ({ articleCount, currentPage, fetchState }) => ({
       ArticleList: {
         articleCount,
         currentPage,
+      },
+    }))
+    .enact();
+
+  const fetchStateRule = session
+    .rule('Fetch State Of Id', ({ fetchState }) => ({
+      $thing: {
+        fetchState,
       },
     }))
     .enact();
@@ -307,6 +320,7 @@ export const initializeSession = (autoFire = true) => {
       },
     });
   };
+
   const loadArticlesIntoSession = async (filters: ArticlesFilters = {}) => {
     const decodedArticles = await getArticles(filters);
     decodedArticles.articles.forEach((a) => insertArticle(a));
@@ -416,7 +430,8 @@ export const initializeSession = (autoFire = true) => {
       then: ({ Session: { token }, HomePage: { selectedTab } }) => {
         const tabs = new Set([
           HOME_TAB.GLOBAL_FEED,
-          ...(token !== undefined ? [HOME_TAB.YOUR_FEED, selectedTab] : []),
+          selectedTab,
+          ...(token !== undefined ? [HOME_TAB.YOUR_FEED] : []),
         ]);
         insert({
           HomePage: {
@@ -460,7 +475,6 @@ export const initializeSession = (autoFire = true) => {
   };
 
   // Auth session
-
   const sessionRule = session
     .rule('Session', ({ token, username }) => ({
       Session: {
@@ -478,15 +492,11 @@ export const initializeSession = (autoFire = true) => {
     email: string;
   }) => {
     insert({
-      [args.username]: args,
-      SettingsPage: {
-        fetchState: FetchState.QUEUED,
-      },
+      UpdateSettings: args,
     });
   };
 
   // Tags
-
   const insertAllTags = (tags: string[]) => {
     insert({
       Tags: {
@@ -767,40 +777,32 @@ export const initializeSession = (autoFire = true) => {
   const updateSettingsRule = rule(
     'Update users information when it changes ',
     ({ username, password, image, bio, email, token }) => ({
-      $user: {
+      UpdateSettings: {
         username,
         password,
         image,
         bio,
         email,
       },
-      Session: {
-        username: { join: '$user' },
-      },
-      SettingsPage: {
-        fetchState: { match: FetchState.QUEUED },
-      },
     })
   ).enact({
-    then: async ({ $user }) => {
-      insert({
-        SettingsPage: {
-          fetchState: FetchState.SENT,
-        },
-      });
-      const result = await updateSettings($user);
+    then: async ({ UpdateSettings }) => {
+      const result = await updateSettings(UpdateSettings);
       result.match({
         err: (e) => insertError(e),
         ok: (user) => {
           setToken(user.token);
           insertUser(user);
-          insert({
-            SettingsPage: {
-              fetchState: FetchState.DONE,
-            },
-          });
         },
       });
+      retract(
+        'UpdateSettings',
+        'username',
+        'password',
+        'image',
+        'bio',
+        'email'
+      );
     },
   });
 
@@ -961,12 +963,15 @@ export const initializeSession = (autoFire = true) => {
         useArticles: () => {
           const articles = useRule(articleRules);
           const articleCount = useRuleOne(articleListRule);
-
+          const fetchState = useRuleOne(fetchStateRule, {
+            $thing: { ids: ['ArticleList'] },
+          });
           return {
             articles: articles.map((a) => ({
               article: a.$article,
             })),
             articleCount: articleCount?.ArticleList.articleCount ?? 0,
+            fetchState: fetchState?.$thing.fetchState ?? FetchState.QUEUED,
           };
         },
 
