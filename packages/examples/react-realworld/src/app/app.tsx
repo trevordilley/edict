@@ -19,7 +19,9 @@ export function App() {
     const token = localStorage.getItem('token');
     if (token) {
       USER.ACTIONS.setToken(token);
-      getUser().then((u) => USER.ACTIONS.insertUser(u));
+      getUser().then((u) => {
+        USER.ACTIONS.insertUser(u);
+      });
     }
   }, []);
 

@@ -2,19 +2,22 @@ import React from 'react';
 import { buildGenericFormField } from '../../../types/genericFormField';
 import { GenericForm } from '../../organisms/GenericForm/GenericForm';
 import { ContainerPage } from '../../atoms/ContainerPage/ContainerPage';
-import { FetchState } from '../../../rules/schema';
 import { useRuleOne } from '../../../rules/useRule';
 import { useEdict } from '../../../rules/EdictContext';
 import { EdictSession } from '../../../rules/session';
 
 const useSettings = () => {
   const { USER, ERROR } = useEdict();
-  const updatingSettings =
-    useRuleOne(USER.RULES.updateSettingsRule)?.SettingsPage.fetchState ===
-    FetchState.SENT;
+  const settingsBeingUpdated = useRuleOne(
+    USER.RULES.updateSettingsRule
+  )?.UpdateSettings;
   const errors = ERROR.HOOKS.useErrors();
   const user = USER.HOOKS.useUser();
-  return { errors, user, updatingSettings };
+  return {
+    errors,
+    user,
+    updatingSettings: !!settingsBeingUpdated,
+  };
 };
 
 export function Settings() {

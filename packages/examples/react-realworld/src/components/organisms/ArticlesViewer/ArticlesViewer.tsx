@@ -5,6 +5,7 @@ import { ArticlePreview } from '../ArticlePreview/ArticlePreview';
 import { Pagination } from '../../molecules/Pagination/Pagination';
 import { useHome } from '../../Pages/Home/Home';
 import { useEdict } from '../../../rules/EdictContext';
+import { FetchState } from '../../../rules/schema';
 
 export function ArticlesViewer({
   toggleClassName,
@@ -20,7 +21,8 @@ export function ArticlesViewer({
   onTabChange?: (tab: string) => void;
 }) {
   const EDICT = useEdict();
-  const { articles, articleCount } = EDICT.ARTICLE.HOOKS.useArticles();
+  const { articles, articleCount, fetchState } =
+    EDICT.ARTICLE.HOOKS.useArticles();
   const home = useHome();
 
   if (!home) return <span />;
@@ -29,7 +31,7 @@ export function ArticlesViewer({
       <ArticlesTabSet
         {...{ tabs, selectedTab, toggleClassName, onTabChange }}
       />
-      <ArticleList articles={articles} />
+      <ArticleList articles={articles} fetchState={fetchState} />
       <Pagination
         currentPage={home.currentPage ?? 1}
         count={articleCount}
@@ -92,16 +94,22 @@ function Tab({
   );
 }
 
-function ArticleList({ articles }: { articles?: { article: Article }[] }) {
+function ArticleList({
+  articles,
+  fetchState,
+}: {
+  articles?: { article: Article }[];
+  fetchState: FetchState;
+}) {
   const EDICT = useEdict();
-  return articles ? (
+  return fetchState === FetchState.DONE ? (
     <Fragment>
-      {articles.length === 0 && (
+      {articles?.length === 0 && (
         <div className="article-preview" key={1}>
           No articles are here... yet.
         </div>
       )}
-      {articles.map(({ article }, index) => (
+      {articles?.map(({ article }, index) => (
         <ArticlePreview
           key={article.slug}
           article={article}
