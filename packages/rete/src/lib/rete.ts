@@ -11,6 +11,9 @@ import {
   CondFn,
   Condition,
   ConvertMatchFn,
+  DebugFrame,
+  DebugOptions,
+  DEFAULT_MAX_FRAME_DUMPS,
   ExecutedNodes,
   Fact,
   FactFragment,
@@ -708,7 +711,21 @@ const fireRules = <T>(
   if (session.insideRule) {
     return;
   }
+  let debugFrame: DebugFrame<T> | undefined = undefined;
+  let startTs: number | undefined = undefined;
+  let startingFacts: Fact<T>[] = [];
   if (process.env.NODE_ENV === 'development') {
+    if (session.debug.enabled) {
+      startingFacts = queryFullSession(session);
+      debugFrame = {
+        initialMutations: [...session.debug.mutationsSinceLastFire],
+        triggeredRules: [],
+        dt: 0,
+        startingFacts,
+        endingFacts: [],
+      };
+      startTs = performance.now();
+    }
     performance.mark('fireRules_start');
   }
   // Only for debugging purposes, should we remove for prod usage?
@@ -790,8 +807,14 @@ const fireRules = <T>(
           if (!match.vars) {
             throw new Error(`expected match ${match.id} to have vars??`);
           }
-          if (session.debug) {
-            console.log(node.ruleName, ' running thenFn');
+          if (process.env.NODE_ENV === 'development') {
+            if (session.debug.enabled) {
+              debugFrame?.triggeredRules.push({
+                ruleName: node.ruleName,
+                kind: 'then',
+                vars: match.vars,
+              });
+            }
           }
           node.nodeType?.thenFn?.(match.vars);
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds);
@@ -802,8 +825,13 @@ const fireRules = <T>(
     // Execute `thenFinally` blocks
     thenFinallyQueue.forEach((node) => {
       session.triggeredNodeIds.clear();
-      if (session.debug) {
-        console.log(node.ruleName, ' running thenFinallyFn');
+      if (process.env.NODE_ENV === 'development') {
+        if (session.debug.enabled) {
+          debugFrame?.triggeredRules.push({
+            ruleName: node.ruleName,
+            kind: 'thenFinally',
+          });
+        }
       }
       node.nodeType?.thenFinallyFn?.();
       add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds);
@@ -822,12 +850,21 @@ const fireRules = <T>(
     });
   }
   session.triggeredSubscriptionQueue.clear();
-  if (session.debug) {
-    console.log('Finished fireRules()');
-  }
   if (process.env.NODE_ENV === 'development') {
     performance.mark('fireRules_end');
     performance.measure('fireRules', 'fireRules_start', 'fireRules_end');
+    if (session.debug.enabled) {
+      debugFrame!.dt = performance.now() - startTs!;
+      const endingFacts = queryFullSession(session);
+      debugFrame!.endingFacts = endingFacts;
+      session.debug.numFramesSinceInit = session.debug.numFramesSinceInit + 1;
+      session.debug.frames.push(debugFrame!);
+      const maxFrames = session.debug.maxFrameDumps ?? DEFAULT_MAX_FRAME_DUMPS;
+      if (maxFrames > -1 && session.debug.frames.length > maxFrames) {
+        session.debug.frames.shift();
+      }
+      session.debug.mutationsSinceLastFire = [];
+    }
   }
   return { executedNodes, session };
 };
@@ -936,11 +973,16 @@ const upsertFact = <T>(
     }
   }
 };
-
 const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const nodes = new Set<AlphaNode<T>>();
   getAlphaNodesForFact(session, session.alphaNode, fact, true, nodes);
   upsertFact(session, fact, nodes);
+  if (process.env.NODE_ENV === 'development') {
+    session.debug.mutationsSinceLastFire.push({
+      kind: 'insert',
+      fact,
+    });
+  }
   if (session.autoFire) {
     fireRules(session);
   }
@@ -949,6 +991,10 @@ const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
 const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   if (process.env.NODE_ENV === 'development') {
     performance.mark('retractFact_start');
+    session.debug.mutationsSinceLastFire.push({
+      kind: 'retract',
+      fact,
+    });
   }
   const idAttr = getIdAttr(fact);
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
@@ -985,6 +1031,10 @@ const retractFactByIdAndAttr = <T>(
 ) => {
   if (process.env.NODE_ENV === 'development') {
     performance.mark('retractFactByIdAndAttr_start');
+    session.debug.mutationsSinceLastFire.push({
+      kind: 'retract',
+      fact: [id, attr, undefined],
+    });
   }
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set<AlphaNode<T>>();
@@ -1016,8 +1066,13 @@ const retractFactByIdAndAttr = <T>(
 const defaultInitMatch = <T>() => {
   return new Map<string, FactFragment<T>>();
 };
-
-const initSession = <T>(autoFire = true, debug = false): Session<T> => {
+const initSession = <T>(
+  autoFire = true,
+  debug: DebugOptions = {
+    enabled: false,
+    maxFrameDumps: 40,
+  }
+): Session<T> => {
   let nodeIdCounter = 0;
   const nextId = () => nodeIdCounter++;
   const alphaNode: AlphaNode<T> = {
@@ -1057,7 +1112,12 @@ const initSession = <T>(autoFire = true, debug = false): Session<T> => {
     triggeredSubscriptionQueue: new Set<string>(),
     autoFire,
     nextId,
-    debug,
+    debug: {
+      ...debug,
+      numFramesSinceInit: 0,
+      frames: [],
+      mutationsSinceLastFire: [],
+    },
   };
 };
 
@@ -1170,57 +1230,6 @@ const get = <T, U>(
   }
   return prod.convertMatchFn(vars);
 };
-
-// proc find*[I, T](session: Session, prod: Production, params: array[I, (string, T)]): int =
-// for match in session.leafNodes[prod.name].matches.values:
-// if match.enabled and matchesParams(match.vars, params):
-// return match.id
-//   -1
-//
-// proc find*(session: Session, prod: Production): int =
-// for match in session.leafNodes[prod.name].matches.values:
-// if match.enabled:
-// return match.id
-//   -1
-// proc matchesParams[I, T, MatchT](vars: MatchT, params: array[I, (string, T)]): bool =
-// for (varName, val) in params:
-//   if vars[varname] != val:
-// return false
-// true
-
-// const matchesParams = <I, T>(
-//   vars: MatchT<T> | undefined,
-//   params: [I, [string, T]]
-// ): boolean => {
-//   for (const p of params) {
-//     const [varName, val] = params;
-//     if (vars?.get(varName) != val[1]) {
-//       return false;
-//     }
-//   }
-//   return true;
-// };
-// const find = <I, T, U>(
-//   session: Session<T>,
-//   prod: Production<T, U>,
-//   params?: [I, [string, T]]
-// ) => {
-//   const matches =
-//     session.leafNodes.getValue(prod.name)?.leafNode?.matches.values() ?? [];
-//
-//   for (const m of matches) {
-//     if (m.enabled) {
-//       if (params) {
-//         if (matchesParams(m.vars, params)) {
-//           return m.id;
-//         }
-//       } else {
-//         return m.id;
-//       }
-//     }
-//   }
-//   return undefined;
-// };
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
   session.idAttrNodes.containsKey([id, attr]);

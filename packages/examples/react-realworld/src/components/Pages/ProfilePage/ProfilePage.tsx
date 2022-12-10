@@ -28,6 +28,7 @@ export function ProfilePage() {
   const profile = useProfile(username)?.$userProfile;
   const favorites = useLocation().pathname.endsWith('favorites');
   const EDICT = useEdict();
+  console.log('frames', EDICT.ENGINE.debug.engineDebug?.frames);
   useEffect(() => {
     if (!username) return;
     onLoad(username, favorites, EDICT);
@@ -72,7 +73,8 @@ async function onLoad(
   EDICT: EdictSession
 ) {
   try {
-    await getProfile(username);
+    const profile = await getProfile(username);
+    EDICT.PROFILE.ACTIONS.insertProfile(profile);
     await getArticlesByType(username, favorites, EDICT);
   } catch {
     EDICT.USER.ACTIONS.windowRedirect('#/');

@@ -143,6 +143,35 @@ export interface Production<T, U> {
   thenFinallyFn?: ThenFinallyFn<T, U>;
 }
 
+interface Mutation<T> {
+  kind: 'insert' | 'retract';
+  fact: Fact<T>;
+}
+
+export interface DebugFrame<T> {
+  initialMutations: Mutation<T>[];
+  startingFacts: Fact<T>[];
+  endingFacts: Fact<T>[];
+  dt: number;
+  triggeredRules: {
+    ruleName: string;
+    kind: 'then' | 'thenFinally';
+    vars?: MatchT<T>;
+  }[];
+}
+
+export const DEFAULT_MAX_FRAME_DUMPS = 40;
+
+export interface DebugOptions {
+  enabled: boolean;
+  maxFrameDumps?: number;
+}
+export interface Debug<T> extends DebugOptions {
+  numFramesSinceInit: number;
+  frames: DebugFrame<T>[];
+  mutationsSinceLastFire: Mutation<T>[];
+}
+
 export interface Session<T> {
   alphaNode: AlphaNode<T>;
   leafNodes: Dictionary<string, MemoryNode<T>>;
@@ -156,7 +185,7 @@ export interface Session<T> {
   autoFire: boolean;
   initMatch: InitMatchFn<T>;
   nextId: () => number;
-  debug: boolean;
+  debug: Debug<T>;
 }
 
 export type ExecutedNodes<T> = Map<MemoryNode<T>, Set<MemoryNode<T>>>[];

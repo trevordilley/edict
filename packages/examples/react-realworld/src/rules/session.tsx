@@ -26,7 +26,7 @@ import { useEffect, useState } from 'react';
 import { useRule, useRuleOne } from './useRule';
 
 export const initializeSession = (autoFire = true) => {
-  const session = edict<Schema>(autoFire);
+  const session = edict<Schema>(autoFire, { enabled: true });
   const { insert, retract, conditions, rule, retractByConditions } = session;
   // Articles
 
@@ -456,7 +456,7 @@ export const initializeSession = (autoFire = true) => {
 
   // Profile
   const insertProfile = (profile: Profile) => {
-    insert({ [ID.PROFILE(profile)]: { ...profile } });
+    insert({ [ID.PROFILE(profile)]: { ...profile, isSubmitting: false } });
   };
 
   // Auth session

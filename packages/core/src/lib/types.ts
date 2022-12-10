@@ -1,7 +1,7 @@
 // trick the type-system so we can use the schema like an object
 // TODO: If the new API works, maybe we don't need to do this?
 
-import { PRODUCTION_ALREADY_EXISTS_BEHAVIOR } from '@edict/rete';
+import { Debug, PRODUCTION_ALREADY_EXISTS_BEHAVIOR } from '@edict/rete';
 
 export type ConditionOptions<T> = { then?: boolean; match?: T; join?: string };
 export type Condition<SCHEMA> = {
@@ -95,6 +95,7 @@ export interface IEdict<SCHEMA> {
   ) => { enact: Enact<SCHEMA, T> };
   debug: {
     dotFile: () => string;
+    engineDebug?: Debug<SCHEMA>;
     perf: () => {
       frames: PerformanceEntryList[];
       capture: () => PerformanceEntryList;

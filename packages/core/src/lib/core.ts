@@ -12,6 +12,8 @@ import {
 import * as _ from 'lodash';
 import {
   ConvertMatchFn,
+  DebugOptions,
+  DEFAULT_MAX_FRAME_DUMPS,
   Field,
   PRODUCTION_ALREADY_EXISTS_BEHAVIOR,
   QueryFilter,
@@ -39,8 +41,12 @@ const valueKey = ({
 
 export const edict = <SCHEMA>(
   autoFire = false,
-  debug = false
+  debug: DebugOptions = {
+    enabled: false,
+    maxFrameDumps: DEFAULT_MAX_FRAME_DUMPS,
+  }
 ): IEdict<SCHEMA> => {
+  console.log(debug);
   let session = rete.initSession<SCHEMA>(autoFire, debug);
   const reset = () => {
     session = rete.initSession<SCHEMA>(autoFire, debug);
@@ -299,6 +305,7 @@ export const edict = <SCHEMA>(
     debug: {
       dotFile,
       perf,
+      engineDebug: session.debug,
     },
   };
 };
