@@ -263,7 +263,7 @@ with `$` is a "join", which will match _any fact that has associated attributes_
   * [phaser](packages/examples/phaser-game) A perf test using phaser. Also shows how to incorporate the edict library into your game logic (in a basic way)
   * [todo](packages/examples/react-todo) A simple todo app
   * [react performance](packages/examples/react-perf) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
-  * [realworld app](packages/examples/react-realworld) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
+  * [realworld app](packages/examples/react-realworld/README.md) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
 ## Contributing and setup
 
