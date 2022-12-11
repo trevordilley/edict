@@ -1,6 +1,6 @@
 {
   "name": "edict",
-  "version": "0.1.0-beta",
+  "version": "0.1.0-alpha",
   "license": "MIT",
   "scripts": {
     "core:test:watch": "nx test core --watch",

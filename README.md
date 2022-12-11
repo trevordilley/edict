@@ -1,6 +1,6 @@
 # Edict
 
-**current version: `0.1.0-beta`**
+**current version: `0.1.0-alpha`**
 
 Write declarative business logic driven by facts with Edict!
 
