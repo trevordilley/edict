@@ -10,11 +10,11 @@ their work some stars!
 
 ## Goal 
 The aim of this example was definitely "Can I write a full app in `edict`?" and
-definitely not _"Here's how to write an app in `edict`"
+definitely not _"Here's how to write an app in `edict`"_
 
 I call this out because this was example was not written from scratch with `edict`, but rather 
 had `redux` gutted from the source and `edict` introduced into an existing app, which
-naturally means there will be awkwardness. 
+naturally means there will be areas where the fit doesn't seem appropriate. 
 
 ## Future of this example
 As I iterate on making `edict`'s api more type-safe, and adding new debugging and profiling capabilities,
