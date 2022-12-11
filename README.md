@@ -1,9 +1,8 @@
 # Edict
 
-**current version: `0.1.0-alpha`**
+**current version: `0.1.0-alpha`** (I have at least one possible  big API change in the works)
 
-Write declarative business logic driven by facts with Edict!
-
+Organize your business logic in terms of rules which trigger reactively
 
 ```typescript
 // Contrived foobar example, more interesting 
@@ -75,12 +74,196 @@ remotely possible without Zach's work. This library stands on his shoulders in e
 I'd also like to thank my youngest child for waking me up at god-awful early hours to "flatten his blanket" and "turn his pillow the other way", allowing me plenty of
 early mornings to keep on this work!
 
+## Usage
+
+Let's walk through a simple usage of Edict.
+
+In this example we'll build an application that figures out which users are
+having a birthday!
+
+### The Schema
+
+The `Schema` describes the shape of your facts, specifically the
+types of data that can be associated with an id and value. Later when we insert
+a fact it will be clearer how the schema relates to both rules and
+facts.
+
+```typescript
+type Schema = {
+  name: string,
+  email: string,
+  birthDay: Date,
+  isCelebratingBirthDay: boolean,
+
+  // An attribute that will be tied to a "single" fact
+  todaysDate: Date,
+};
+
+// This `session` will maintain it's own database of facts and rules. It also will
+// expose functions to add/remove new rules and facts, query the facts etc.
+//
+// Edict does not create "global" data, each invocation of `edict()` creates
+// new independent sessions
+const mySession = edict<Schema>();
+```
+
+One the key benefits to having an attribute schema is type-safety. Edict will not allow you to insert
+facts with attributes not declared in the schema for that session. The other really nice benefit is that
+with proper editor tooling (auto-completion!) it's trivial to explore the space of possible facts and attributes!
+
+
+Now let's create our first rule!
+
+```typescript
+const { rule } = mySession;
+
+const results = rule('When a birthday is today, celebrate the birthday!',
+  ({ birthDay, todaysDate }) =>
+    ({
+      // "today" matches the id when inserting the fact (see above)
+      today: {
+        todaysDate,
+      },
+
+      // "$user" is a _bound_ id. By prefixing the id with "$" you signal to edict that
+      // you want to match ANY fact with the following attributes. This allows you to "join"
+      // many facts to be processed by this rule!
+      $user: {
+        birthDay,
+      },
+    }))
+    // `rule()` returns an object with `enact()` 
+    // `enact()` let's you apply reactions to the
+    // rule you've defined, and adds it to the session
+    .enact({
+      // "when" filters out facts, runs before "then"
+      when: ({ $user, today }) => {
+        // Match users who have a birthday today!
+        return (
+          $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
+          $user.birthDay.getDate() === today.todaysDate.getDate()
+        )
+     },
+
+     then: ({ $user }) => {
+      insert({ [$user.id]: { isCelebratingBirthDay: true } });
+     },
+});
+```
+
+### Inserting Facts
+
+Now that we have our session, let's insert some facts.
+
+*Note! You need to define rules before your facts are inserted!*
+
+```typescript
+// Here is how you would insert multiple facts about different people with names and emails
+const { insert } = mySession;
+
+insert({
+  // "bob" is the "id", it could be an integer, uuid, whatever makes sense for your application!
+  bob: {
+    name: 'Bob Johnson',
+    email: 'bob@hotmail.com',
+    birthDay: new Date('2008-01-19'),
+  },
+  tom: {
+    name: 'Tom Kennedy',
+    email: 'tomk@aol.com',
+    birthDay: new Date('1967-03-02'),
+  },
+
+  // Let's assume these two are twins born on the same day!
+  jack: {
+    name: 'Jack Maxwell',
+    email: 'jack@gmail.com',
+    birthDay: new Date('2022-03-02'),
+  },
+  jill: {
+    name: 'Jill Maxwell',
+    email: 'jill@gmail.com',
+    birthDay: new Date('2022-03-02'),
+  },
+
+  // Let's pretend it's Tom, Jack and Jill's birthdays!
+  today: {todaysDate: new Date('2022-03-02')},
+});
+```
+
+> Under the hood, facts are represented as entity-attribute-value tuples. So the
+> entry "bob" above is internally stored as
+> ["bob", "name", "Bob Johnson"], ["bob", "email", "bob@hotmail.com"], etc.
+> This enables maximum flexibility for rule definition and engine implementation.
+> However a design goal of Edict is to expose an idiomatic javascript API
+> to keep usage ergonomic.
+
+### Queries
+
+The object returned from calling `rule()` contains a function named `enact()`.
+
+The arguments to `enact()` are optional, but allow you to specify what happens when a rule
+is triggered by the fact database.
+
+The return value of `enact()` is an object containing the `query()` function. `query()` will
+return an array of facts matching your rule.
+
+You don't have to supply arguments to `enact()` by the way! Some rules are more
+like queries, and allow you to pull out a subset of the facts matching the conditions
+of the rule!
+
+```typescript
+const usersCelebratingBirthdays = rule("All users celebrating their birthday", ({ isCelebratingBirthDay }) =>
+  ({
+    $user: {
+      name, 
+      isCelebratingBirthDay,
+    },
+  })
+).enact(
+  {when: ({$user}) => $user.isCelebratingBirthDay}
+)
+
+const {fire} = mySession
+
+// fire() will actually trigger your rules. If you call edict like
+// this: `edict(true)` then every insert or retraction will automatically
+// call `fire()`, which may or may not be what you want depending on your
+// use-case.
+fire()
+
+const users = usersCelebratingBirthdays.query();
+
+users.forEach(({$user}) => console.log(`${$user.name} is celebrating their birthday!`));
+```
+### Joining 
+Let's look a little closer at the above example:
+```typescript
+const usersCelebratingBirthdays = rule("All users celebrating their birthday", ({ isCelebratingBirthDay }) =>
+  ({
+    $user: { // <== Notice the name `$user`
+      name,
+      isCelebratingBirthDay,
+    },
+  })
+).enact(
+  {when: ({$user}) => $user.isCelebratingBirthDay}
+)
+```
+
+In the _condition_ block (the second argument of `rule`, e.g. `rule("a name", conditionBlock)`) any _id_ that starts 
+with `$` is a "join", which will match _any fact that has associated attributes_. 
+
+
 ## Project Breakdown
 
 * [@edict/core](packages/core/README.md) is the main library used by other applications
 * [@edict/rete](packages/rete/README.md) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
-* [examples](packages/examples) are where I keep my running versions of apps that use this library for testing. A little bare now but I plan to move one of my meatier Phaser games in there soon!
-
+* [examples](packages/examples) are where I keep my running versions of apps that use this library for testing.
+  * [phaser](packages/examples/phaser-game) A perf test using phaser. Also shows how to incorporate the edict library into your game logic (in a basic way)
+  * [todo](packages/examples/react-todo) A simple todo app
+  * [react performance](packages/examples/react-perf) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
+  * [realworld app](packages/examples/react-realworld) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
 ## Contributing and setup
 
@@ -95,4 +278,5 @@ npm run test # runs all the tests
 npm run  build # builds all the things
 npm run example:phaser # Run the phaser example
 npm run example:react # Run the react example!
+npm run example:realworld # Run the conduit realworld example!
 ```
