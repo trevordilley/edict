@@ -385,6 +385,7 @@ have an entry for `birthDay`.
 
 #### Attribute joins to relate ids
 **TODO: Make a test for these examples**
+
 Sometimes, you may want to match facts based on their relationship to
 each other. The example below illustrates such a condition 
 
