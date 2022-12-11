@@ -21,8 +21,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-	  cache: "npm"
       - run: npm i
       - run: npx nx affected --target=test
-      - run: npx nx affected --target=build 
+      - run: npx nx affected --target=build
 
