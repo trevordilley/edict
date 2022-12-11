@@ -1,6 +1,6 @@
-import { edict } from '@edict/core';
-import * as decodeJwt from 'jwt-decode';
-import { FetchState, HOME_TAB, ID, Schema } from './schema';
+import { edict } from '@edict/core'
+import * as decodeJwt from 'jwt-decode'
+import { FetchState, HOME_TAB, ID, Schema } from './schema'
 import {
   createComment,
   DEFAULT_FEED_LIMIT,
@@ -16,23 +16,19 @@ import {
   unfavoriteArticle,
   unfollowUser,
   updateSettings,
-} from '../services/conduit';
-import { Article, ArticlesFilters } from '../types/article';
-import { Comment } from '../types/comment';
-import { Profile } from '../types/profile';
-import axios from 'axios';
-import { User } from '../types/user';
-import { useEffect, useState } from 'react';
-import { useRule, useRuleOne } from './useRule';
+} from '../services/conduit'
+import { Article, ArticlesFilters } from '../types/article'
+import { Comment } from '../types/comment'
+import { Profile } from '../types/profile'
+import axios from 'axios'
+import { User } from '../types/user'
+import { useEffect, useState } from 'react'
+import { useRule, useRuleOne } from './useRule'
 
 export const initializeSession = (autoFire = true) => {
-  const session = edict<Schema>(autoFire, { enabled: true });
-  const { insert, retract, conditions, rule, retractByConditions } = session;
-  // Articles
+  const session = edict<Schema>(autoFire, { enabled: true })
+  const { insert, retract, conditions, rule, retractByConditions } = session
 
-  // =================== \\
-  // Article Rules               \\
-  // =================== \\
   const articleConditions = conditions(
     ({
       slug,
@@ -57,285 +53,256 @@ export const initializeSession = (autoFire = true) => {
       favoritesCount,
       author,
     })
-  );
+  )
   const useComments = (slug: string) => {
     const filter = {
       $comment: {
         slug: [slug],
       },
-    };
+    }
 
-    const [comments, setComments] = useState(commentRule.query(filter));
+    const [comments, setComments] = useState(commentRule.query(filter))
 
     useEffect(() => {
-      return commentRule.subscribe((c) => setComments(c));
-    });
+      return commentRule.subscribe((c) => setComments(c))
+    })
     return comments
       .map((c) => c.$comment)
       .sort((a, b) => {
-        return b.createdAt.getTime() - a.createdAt.getTime();
-      });
-  };
+        return b.createdAt.getTime() - a.createdAt.getTime()
+      })
+  }
 
   const useCommentSection = (slug: string) => {
-    const comments = useComments(slug);
+    const comments = useComments(slug)
 
     const [currentComment, setCurrentComment] = useState(
       currentCommentRule.queryOne()
-    );
+    )
 
     useEffect(() =>
       currentCommentRule.subscribeOne((c) => setCurrentComment(c))
-    );
+    )
 
     return {
       comments,
       currentComment: currentComment?.CurrentComment,
-    };
-  };
-  session
-    .rule(
-      'Changing the favorite-ness of an article updates the db',
-      ({ favorited, slug, token, favoritesCount }) => ({
-        $article: {
-          favorited,
-          slug,
-          favoritesCount,
-          isFavoriting: { match: FetchState.QUEUED },
-        },
-        Session: {
-          token,
+    }
+  }
+
+  rule(
+    'Changing the favorite-ness of an article updates the db',
+    ({ favorited, slug, token, favoritesCount }) => ({
+      $article: {
+        favorited,
+        slug,
+        favoritesCount,
+        isFavoriting: { match: FetchState.QUEUED },
+      },
+      Session: {
+        token,
+      },
+    })
+  ).enact({
+    then: ({
+      $article: { id, favorited, slug, favoritesCount },
+      Session: { token },
+    }) => {
+      if (!token) {
+        windowRedirect('register')
+        return
+      }
+      insert({
+        [slug]: {
+          isFavoriting: FetchState.SENT,
+          favorited: !favorited,
+          favoritesCount: favorited ? favoritesCount - 1 : favoritesCount + 1,
         },
       })
-    )
-    .enact({
-      then: ({
-        $article: { id, favorited, slug, favoritesCount },
-        Session: { token },
-      }) => {
-        if (!token) {
-          windowRedirect('register');
-          return;
-        }
+      const result = favorited ? unfavoriteArticle(slug) : favoriteArticle(slug)
+      result.then((article) => {
+        insertArticle(article)
         insert({
           [slug]: {
-            isFavoriting: FetchState.SENT,
-            favorited: !favorited,
-            favoritesCount: favorited ? favoritesCount - 1 : favoritesCount + 1,
+            isFavoriting: FetchState.DONE,
           },
-        });
-        const result = favorited
-          ? unfavoriteArticle(slug)
-          : favoriteArticle(slug);
-        result.then((article) => {
-          insertArticle(article);
-          insert({
-            [slug]: {
-              isFavoriting: FetchState.DONE,
-            },
-          });
-        });
-      },
-    });
+        })
+      })
+    },
+  })
 
-  session
-    .rule(
-      'Changing the page or limit updates the offset',
-      ({ currentPage, limit }) => ({
+  rule(
+    'Changing the page or limit updates the offset',
+    ({ currentPage, limit }) => ({
+      ArticleList: {
+        currentPage,
+        limit,
+      },
+    })
+  ).enact({
+    then: ({ ArticleList: { currentPage, limit } }) => {
+      insert({
         ArticleList: {
-          currentPage,
-          limit,
+          offset: (currentPage - 1) * limit,
         },
       })
-    )
-    .enact({
-      then: ({ ArticleList: { currentPage, limit } }) => {
-        insert({
-          ArticleList: {
-            offset: (currentPage - 1) * limit,
-          },
-        });
-      },
-    });
+    },
+  })
 
-  session
-    .rule(
-      'changes to page filters refetches articles',
-      ({
+  rule(
+    'changes to page filters refetches articles',
+    ({ selectedTab, offset, limit, tag, filterByAuthor, token, username }) => ({
+      HomePage: {
         selectedTab,
+      },
+      ArticleList: {
+        offset,
+        limit,
+        filterByAuthor,
+        tag,
+      },
+    })
+  ).enact({
+    then: async ({
+      HomePage: { selectedTab },
+      ArticleList: { offset, limit, tag, filterByAuthor },
+    }) => {
+      const filters = {
         offset,
         limit,
         tag,
         filterByAuthor,
-        token,
-        username,
-      }) => ({
-        HomePage: {
-          selectedTab,
-        },
+      }
+      // Remove undefined
+      Object.keys(filters).forEach((key) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        filters[key] === undefined && delete filters[key]
+      })
+
+      const finalFilters = {
+        ...filters,
+        tag: selectedTab.slice(2),
+      }
+
+      resetArticles()
+      insert({
         ArticleList: {
-          offset,
-          limit,
-          filterByAuthor,
-          tag,
+          fetchState: FetchState.QUEUED,
         },
       })
-    )
-    .enact({
-      then: async ({
-        HomePage: { selectedTab },
-        ArticleList: { offset, limit, tag, filterByAuthor },
-      }) => {
-        const filters = {
-          offset,
-          limit,
-          tag,
-          filterByAuthor,
-        };
-        // Remove undefined
-        Object.keys(filters).forEach((key) => {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          filters[key] === undefined && delete filters[key];
-        });
+      const fetchArticles = selectedTab === 'Your Feed' ? getFeed : getArticles
+      const articles = await fetchArticles(
+        !selectedTab.startsWith('#') ? filters : finalFilters
+      )
 
-        const finalFilters = {
-          ...filters,
-          tag: selectedTab.slice(2),
-        };
-
-        resetArticles();
-        session.insert({
-          ArticleList: {
-            fetchState: FetchState.QUEUED,
-          },
-        });
-        const fetchArticles =
-          selectedTab === 'Your Feed' ? getFeed : getArticles;
-        const articles = await fetchArticles(
-          !selectedTab.startsWith('#') ? filters : finalFilters
-        );
-
-        articles.articles.forEach((a) => insertArticle(a));
-        insertArticleCount(articles.articlesCount);
-        session.insert({
-          ArticleList: {
-            fetchState: FetchState.DONE,
-          },
-        });
-      },
-    });
+      articles.articles.forEach((a) => insertArticle(a))
+      insertArticleCount(articles.articlesCount)
+      insert({
+        ArticleList: {
+          fetchState: FetchState.DONE,
+        },
+      })
+    },
+  })
 
   const resetArticlePagination = () => {
-    session.insert({
+    insert({
       ArticleList: {
         currentPage: 1,
       },
       Tags: {
         fetchState: FetchState.QUEUED,
       },
-    });
-  };
+    })
+  }
 
   const setArticlePage = (pageIdx: number) => {
-    session.insert({
+    insert({
       ArticleList: {
         currentPage: pageIdx,
       },
-    });
-  };
-  // =================== \\
-  // Queries             \\
-  // =================== \\
+    })
+  }
 
-  const articleRules = session
-    .rule('Articles', () => ({
-      $article: articleConditions,
-    }))
-    .enact();
+  const articleRules = rule('Articles', () => ({
+    $article: articleConditions,
+  })).enact()
 
-  const articleMetaRule = session
-    .rule('Article Meta', ({ slug }) => ({
-      $articleMeta: {
-        slug,
-      },
-    }))
-    .enact();
+  const articleMetaRule = rule('Article Meta', ({ slug }) => ({
+    $articleMeta: {
+      slug,
+    },
+  })).enact()
 
-  const articleListRule = session
-    .rule('Article List', ({ articleCount, currentPage, fetchState }) => ({
+  const articleListRule = rule(
+    'Article List',
+    ({ articleCount, currentPage, fetchState }) => ({
       ArticleList: {
         articleCount,
         currentPage,
       },
-    }))
-    .enact();
+    })
+  ).enact()
 
-  const fetchStateRule = session
-    .rule('Fetch State Of Id', ({ fetchState }) => ({
-      $thing: {
-        fetchState,
-      },
-    }))
-    .enact();
+  const fetchStateRule = rule('Fetch State Of Id', ({ fetchState }) => ({
+    $thing: {
+      fetchState,
+    },
+  })).enact()
 
-  // =================== \\
-  // Insert/Retracts     \\
-  // =================== \\
   const resetArticles = () => {
     articleRules.query().forEach((a) => {
-      retractArticle(a.$article.slug);
-    });
-  };
+      retractArticle(a.$article.slug)
+    })
+  }
   const insertArticleCount = (articleCount: number) => {
     insert({
       ArticleList: {
         articleCount,
       },
-    });
-  };
+    })
+  }
   const changeArticlesPage = (currentPage: number) => {
     insert({
       ArticleList: {
         currentPage,
       },
-    });
-  };
+    })
+  }
 
   const retractArticle = (slug: string) => {
-    retractByConditions(slug, articleConditions);
-  };
+    retractByConditions(slug, articleConditions)
+  }
 
   const insertArticle = (article: Article) => {
     insert({
       [ID.ARTICLE(article)]: article,
-    });
-  };
+    })
+  }
   const toggleFavoriteArticle = (slug: string, favorited: boolean) => {
-    session.insert({
+    insert({
       [slug]: {
         slug,
         favorited,
         isFavoriting: FetchState.QUEUED,
       },
-    });
-  };
+    })
+  }
 
   const loadArticlesIntoSession = async (filters: ArticlesFilters = {}) => {
-    const decodedArticles = await getArticles(filters);
-    decodedArticles.articles.forEach((a) => insertArticle(a));
-    insertArticleCount(decodedArticles.articlesCount);
-  };
-
-  // Comments
+    const decodedArticles = await getArticles(filters)
+    decodedArticles.articles.forEach((a) => insertArticle(a))
+    insertArticleCount(decodedArticles.articlesCount)
+  }
 
   const insertComments = (comments: (Comment & { slug: string })[]) => {
     comments.forEach((c) => {
       insert({
         [ID.COMMENT(c.id)]: c,
-      });
-    });
-  };
+      })
+    })
+  }
 
   const retractComment = (commentId: number) => {
     retract(
@@ -345,8 +312,8 @@ export const initializeSession = (autoFire = true) => {
       'updatedAt',
       'body',
       'author'
-    );
-  };
+    )
+  }
 
   const commentCond = conditions(
     ({ id, slug, createdAt, updatedAt, body, author }) => ({
@@ -357,95 +324,82 @@ export const initializeSession = (autoFire = true) => {
       body,
       author,
     })
-  );
+  )
 
-  const commentRule = session
-    .rule('Comments', () => ({
-      $comment: commentCond,
-    }))
-    .enact();
+  const commentRule = rule('Comments', () => ({
+    $comment: commentCond,
+  })).enact()
 
-  const currentCommentRule = session
-    .rule('Current Comment', ({ commentBody, submittingComment }) => ({
+  const currentCommentRule = rule(
+    'Current Comment',
+    ({ commentBody, submittingComment }) => ({
       CurrentComment: {
         commentBody,
         submittingComment,
       },
-    }))
-    .enact();
+    })
+  ).enact()
 
   const onPostCurrentComment = (slug: string, body: string) => {
     insert({
       CurrentComment: {
         submittingComment: FetchState.QUEUED,
       },
-    });
+    })
 
     createComment(slug, body).then((comment) => {
-      insertComments([{ ...comment, slug }]);
+      insertComments([{ ...comment, slug }])
       insert({
         CurrentComment: {
           submittingComment: FetchState.DONE,
           commentBody: undefined,
         },
-      });
-    });
+      })
+    })
 
     getArticleComments(slug).then((comments) => {
-      insertComments(comments);
-    });
-  };
+      insertComments(comments)
+    })
+  }
 
-  // Errors
+  const errorRule = rule('Errors', ({ errors }) => ({
+    App: {
+      errors,
+    },
+  })).enact()
 
-  const errorRule = session
-    .rule('Errors', ({ errors }) => ({
-      App: {
-        errors,
-      },
-    }))
-    .enact();
-
-  //export
   const insertError = (errorObj: { [key: string]: string[] }) => {
-    insert({ App: { errors: errorObj } });
-  };
+    insert({ App: { errors: errorObj } })
+  }
 
-  // =================== \\
-  // Home Rules               \\
-  // =================== \\
-  session
-    .rule(
-      'Derive available tabs based on selection and login state',
-      ({ token, selectedTab }) => ({
-        Session: {
-          token,
-        },
+  rule(
+    'Derive available tabs based on selection and login state',
+    ({ token, selectedTab }) => ({
+      Session: {
+        token,
+      },
+      HomePage: {
+        selectedTab,
+      },
+    })
+  ).enact({
+    then: ({ Session: { token }, HomePage: { selectedTab } }) => {
+      const tabs = new Set([
+        HOME_TAB.GLOBAL_FEED,
+        selectedTab,
+        ...(token !== undefined ? [HOME_TAB.YOUR_FEED] : []),
+      ])
+      insert({
         HomePage: {
-          selectedTab,
+          tabNames: [...tabs],
         },
       })
-    )
-    .enact({
-      then: ({ Session: { token }, HomePage: { selectedTab } }) => {
-        const tabs = new Set([
-          HOME_TAB.GLOBAL_FEED,
-          selectedTab,
-          ...(token !== undefined ? [HOME_TAB.YOUR_FEED] : []),
-        ]);
-        insert({
-          HomePage: {
-            tabNames: [...tabs],
-          },
-        });
-      },
-    });
+    },
+  })
 
-  // =================== \\
-  // Home Queries             \\
-  // =================== \\
-  const homePageRule = session
-    .rule('Home page', ({ selectedTab, tagList, tabNames, currentPage }) => ({
+  const homePageRule = rule(
+    'Home page',
+    ({ selectedTab, tagList, tabNames, currentPage }) => ({
       HomePage: {
         selectedTab,
         tabNames,
@@ -456,109 +410,90 @@ export const initializeSession = (autoFire = true) => {
       Tags: {
         tagList,
       },
-    }))
-    .enact();
+    })
+  ).enact()
 
-  // =================== \\
-  // Home Insert/Retracts     \\
-  // =================== \\
   const changeHomeTab = (tab: string) =>
     insert({
       HomePage: {
         selectedTab: tab,
       },
-    });
+    })
 
-  // Profile
   const insertProfile = (profile: Profile) => {
-    insert({ [ID.PROFILE(profile)]: { ...profile, isSubmitting: false } });
-  };
+    insert({ [ID.PROFILE(profile)]: { ...profile, isSubmitting: false } })
+  }
 
-  // Auth session
-  const sessionRule = session
-    .rule('Session', ({ token, username }) => ({
-      Session: {
-        token,
-        username,
-      },
-    }))
-    .enact();
+  const sessionRule = rule('Auth Session', ({ token, username }) => ({
+    Session: {
+      token,
+      username,
+    },
+  })).enact()
 
   const updateProfileSettings = (args: {
-    username: string;
-    password: string;
-    image: string;
-    bio: string;
-    email: string;
+    username: string
+    password: string
+    image: string
+    bio: string
+    email: string
   }) => {
     insert({
       UpdateSettings: args,
-    });
-  };
+    })
+  }
 
-  // Tags
   const insertAllTags = (tags: string[]) => {
     insert({
       Tags: {
         tagList: tags,
       },
-    });
-  };
+    })
+  }
 
-  session
-    .rule('Fetch Tags', ({ fetchState }) => ({
-      Tags: {
-        fetchState: { match: FetchState.QUEUED },
-      },
-    }))
-    .enact({
-      then: () => {
+  rule('Fetch Tags', ({ fetchState }) => ({
+    Tags: {
+      fetchState: { match: FetchState.QUEUED },
+    },
+  })).enact({
+    then: () => {
+      insert({
+        Tags: {
+          fetchState: FetchState.SENT,
+        },
+      })
+      loadTagsIntoSession().then(() => {
         insert({
           Tags: {
-            fetchState: FetchState.SENT,
+            fetchState: FetchState.DONE,
           },
-        });
-        loadTagsIntoSession().then(() => {
-          insert({
-            Tags: {
-              fetchState: FetchState.DONE,
-            },
-          });
-        });
-      },
-    });
+        })
+      })
+    },
+  })
 
-  const tagList = session
-    .rule('Tag List', ({ tagList }) => ({
-      Tags: {
-        tagList,
-      },
-    }))
-    .enact();
-
-  const loadTagsIntoSession = async () => {
-    const tags = await getTags();
-    insertAllTags(tags.tags);
-  };
-
-  // User
+  const tagList = rule('Tag List', ({ tagList }) => ({
+    Tags: {
+      tagList,
+    },
+  })).enact()
 
   const publicUserConditions = conditions(({ username, image, bio }) => ({
     username,
     image,
     bio,
-  }));
+  }))
 
   const userConditions = conditions(({ email, token }) => ({
     ...publicUserConditions,
     email,
-  }));
+  }))
 
   const userProfileConditions = conditions(({ following, isSubmitting }) => ({
     ...publicUserConditions,
     following,
     isSubmitting,
-  }));
+  }))
 
   const insertUser = (
     user: User,
@@ -571,17 +506,17 @@ export const initializeSession = (autoFire = true) => {
         isSubmitting: isSubmitting ?? false,
         following: following ?? false,
       },
-    });
-  };
+    })
+  }
 
   const updateFollowing = (username: string, following: boolean) => {
-    session.insert({
+    insert({
       [username]: {
         following,
         fetchState: FetchState.QUEUED,
       },
-    });
-  };
+    })
+  }
 
   rule('Update following status', ({ following, username, token }) => ({
     $user: {
@@ -594,61 +529,58 @@ export const initializeSession = (autoFire = true) => {
   })).enact({
     then: ({ $user: { id, following }, Session: { token } }) => {
       if (!token) {
-        windowRedirect('register');
-        return;
+        windowRedirect('register')
+        return
       }
-      const toggledFollow = !following;
+      const toggledFollow = !following
       insert({
         [id]: {
           fetchState: FetchState.SENT,
           following: toggledFollow,
         },
-      });
-
-      (following ? unfollowUser : followUser)(id).then((result) => {
+      })
+      ;(following ? unfollowUser : followUser)(id).then((result) => {
         insert({
           [id]: {
             fetchState: FetchState.DONE,
             following: result.following,
           },
-        });
-      });
+        })
+      })
     },
-  });
+  })
 
-  session
-    .rule(
-      'Setting a token persists the token, and sets the headers for axios',
-      ({ token }) => ({
+  rule(
+    'Setting a token persists the token, and sets the headers for axios',
+    ({ token }) => ({
+      Session: {
+        token,
+      },
+    })
+  ).enact({
+    when: ({ Session: { token } }) => token !== undefined,
+    then: async ({ Session: { token } }) => {
+      if (!token)
+        throw new Error('Token should never be undefined in this rule!')
+      const decoded = decodeJwt.default<{ username: string }>(token)
+      localStorage.setItem('token', token)
+
+      axios.defaults.headers.common['Authorization'] = `Token ${token}`
+      insert({
         Session: {
-          token,
+          username: decoded.username,
         },
       })
-    )
-    .enact({
-      when: ({ Session: { token } }) => token !== undefined,
-      then: async ({ Session: { token } }) => {
-        if (!token)
-          throw new Error('Token should never be undefined in this rule!');
-        const decoded = decodeJwt.default<{ username: string }>(token);
-        localStorage.setItem('token', token);
-
-        axios.defaults.headers.common['Authorization'] = `Token ${token}`;
-        insert({
-          Session: {
-            username: decoded.username,
-          },
-        });
-      },
-    });
+    },
+  })
 
   const setToken = (token?: string) => {
     insert({
       Session: {
         token,
       },
-    });
-  };
+    })
+  }
 
   const loginRule = rule(
     'Successful Login using email and password loads the user',
@@ -660,18 +592,18 @@ export const initializeSession = (autoFire = true) => {
     })
   ).enact({
     then: async ({ Login: { email, password } }) => {
-      const result = await login(email, password!);
-      retract('Login', 'email', 'password');
+      const result = await login(email, password!)
+      retract('Login', 'email', 'password')
       result.match({
         ok: (user) => {
-          setToken(user.token);
-          insertUser(user);
-          windowRedirect('#/');
+          setToken(user.token)
+          insertUser(user)
+          windowRedirect('#/')
         },
         err: (e) => insertError(e),
-      });
+      })
     },
-  });
+  })
 
   const startRegistrationRule = rule(
     'Starting registration',
@@ -688,91 +620,20 @@ export const initializeSession = (autoFire = true) => {
         username,
         email,
         password: password ?? '',
-      });
-      retract('StartRegistration', 'email', 'password', 'username');
+      })
+      retract('StartRegistration', 'email', 'password', 'username')
       result.match({
         err: (e) => {
-          insertError(e);
+          insertError(e)
         },
         ok: (user) => {
-          setToken(user.token);
-          insertUser(user);
-          windowRedirect('#/');
+          setToken(user.token)
+          insertUser(user)
+          windowRedirect('#/')
         },
-      });
+      })
     },
-  });
-
-  /*
-  // rewritten using new typesafe syntax
-
-  export const startRegistrationRule = rule(
-    'Starting registration',
-    ({StartRegistration: { email, password, username }}) => ({
-      StartRegistration: {
-        email,
-        password,
-        username,
-      },
-    })
-  ).enact({
-    then: async ({ StartRegistration: { email, password, username } }) => {
-      const result = await signUp({
-        username,
-        email,
-        password: password ?? '',
-      });
-      session.StartRegistration.retract.email()
-      session.StartRegistration.retract.password()
-      session.StartRegistration.retract.username()
-      result.match({
-        err: (e) => {
-          insertError(e);
-        },
-        ok: (user) => {
-          session.Session.insert({
-            token: user.token,
-            username: user.username
-          })
-          session.$user(user.username).insert(user)
-          windowRedirect('#/');
-        },
-      });
-    },
-  });
-
-
-
-  export const updateSettingsRule = rule(
-    'Update users information when it changes ',
-    ($user) => ({
-      $user,
-      Session: {
-        username: { join: '$user' },
-      },
-      SettingsPage: {
-        fetchState: { match: FetchState.QUEUED },
-      },
-    })
-  ).enact({
-    then: async ({ $user }) => {
-      session.SettingsPage.insert({
-          fetchState: FetchState.SENT,
-        })
-      const result = await updateSettings($user);
-      result.match({
-        err: (e) => insertError(e),
-        ok: (user) => {
-          setToken(user.token);
-          session.$user(user.username).insert(user)
-          session.SettingsPage.insert({
-              fetchState: FetchState.DONE,
-            })
-        },
-      });
-    },
-  });
-   */
+  })
 
   const updateSettingsRule = rule(
     'Update users information when it changes ',
@@ -787,134 +648,105 @@ export const initializeSession = (autoFire = true) => {
     })
   ).enact({
     then: async ({ UpdateSettings }) => {
-      const result = await updateSettings(UpdateSettings);
+      const result = await updateSettings(UpdateSettings)
       result.match({
         err: (e) => insertError(e),
         ok: (user) => {
-          setToken(user.token);
-          insertUser(user);
-        },
-      });
-      retract(
-        'UpdateSettings',
-        'username',
-        'password',
-        'image',
-        'bio',
-        'email'
-      );
-    },
-  });
-
-  session
-    .rule(
-      'When the auth token is set to undefined, logout the user',
-      ({ token }) => ({
-        Session: {
-          token,
-          username: { then: false },
+          setToken(user.token)
+          insertUser(user)
         },
       })
-    )
-    .enact({
-      when: ({ Session: { token } }) => token === undefined,
-      then: ({ Session: { username } }) => {
-        /*
-        session.$user(username).retract.all()
-        session.HomePage.insert({
+      retract('UpdateSettings', 'username', 'password', 'image', 'bio', 'email')
+    },
+  })
+
+  rule(
+    'When the auth token is set to undefined, logout the user',
+    ({ token }) => ({
+      Session: {
+        token,
+        username: { then: false },
+      },
+    })
+  ).enact({
+    when: ({ Session: { token } }) => token === undefined,
+    then: ({ Session: { username } }) => {
+      retractByConditions(username, userConditions)
+      insert({
+        HomePage: {
           tabNames: [HOME_TAB.GLOBAL_FEED],
           selectedTab: HOME_TAB.GLOBAL_FEED,
-        })
-        session.Session.insert({
-          username: undefined
-          })
-       */
-        retractByConditions(username, userConditions);
-        insert({
-          HomePage: {
-            tabNames: [HOME_TAB.GLOBAL_FEED],
-            selectedTab: HOME_TAB.GLOBAL_FEED,
-          },
-          Session: {
-            username: undefined,
-          },
-        });
-        delete axios.defaults.headers.common['Authorization'];
-        localStorage.removeItem('token');
-        windowRedirect('/');
-      },
-    });
+        },
+        Session: {
+          username: undefined,
+        },
+      })
+      delete axios.defaults.headers.common['Authorization']
+      localStorage.removeItem('token')
+      windowRedirect('/')
+    },
+  })
 
   const startRegistration = ({
     username,
     email,
     password,
   }: {
-    username: string;
-    email: string;
-    password: string;
+    username: string
+    email: string
+    password: string
   }) => {
-    session.insert({
+    insert({
       StartRegistration: {
         username,
         email,
         password,
       },
-    });
-  };
+    })
+  }
 
   const updateCurrentCommentBody = (commentBody: string) => {
     insert({
       CurrentComment: {
         commentBody,
       },
-    });
-  };
+    })
+  }
   const windowRedirect = (location: string) => {
-    // session.Page.insert({location})
     insert({
       Page: {
         location,
       },
-    });
-  };
+    })
+  }
 
-  session
-    .rule('Redirect when location changes', ({ location }) => ({
-      Page: {
-        location,
-      },
-    }))
-    .enact({
-      then: ({ Page: { location } }) => {
-        window.location.hash = location;
-      },
-    });
+  rule('Redirect when location changes', ({ location }) => ({
+    Page: {
+      location,
+    },
+  })).enact({
+    then: ({ Page: { location } }) => {
+      window.location.hash = location
+    },
+  })
 
   const userRule = rule('User', () => ({
     $user: userConditions,
-  })).enact();
-
-  /*
-    playing with typesafe api examples
-  export const userProfileRule = rule('User Profile', ({$userProfile}) => ({
-    $userProfile,
-  })).enact();
-
-   */
+  })).enact()
 
   const userProfileRule = rule('User Profile', () => ({
     $userProfile: userProfileConditions,
-  })).enact();
+  })).enact()
 
-  const followingUsersRule = session
-    .rule('Authors the user follows', ({ following, username }) => ({
+  const followingUsersRule = rule(
+    'Authors the user follows',
+    ({ following, username }) => ({
       $following: {
         following,
         username,
       },
-    }))
-    .enact();
+    })
+  ).enact()
 
   const startLogin = (email: string, password: string) => {
     insert({
@@ -922,11 +754,16 @@ export const initializeSession = (autoFire = true) => {
         email,
         password,
       },
-    });
-  };
+    })
+  }
 
-  // Initialize Facts
-  session.insert({
+  const loadTagsIntoSession = async () => {
+    const tags = await getTags()
+    insertAllTags(tags.tags)
+  }
+
+  // Initial Facts
+  insert({
     App: {
       token: undefined,
       username: undefined,
@@ -955,31 +792,31 @@ export const initializeSession = (autoFire = true) => {
     Tags: {
       tagList: [],
     },
-  });
+  })
 
   return {
     ARTICLE: {
       HOOKS: {
         useArticles: () => {
-          const articles = useRule(articleRules);
-          const articleCount = useRuleOne(articleListRule);
+          const articles = useRule(articleRules)
+          const articleCount = useRuleOne(articleListRule)
           const fetchState = useRuleOne(fetchStateRule, {
             $thing: { ids: ['ArticleList'] },
-          });
+          })
           return {
             articles: articles.map((a) => ({
               article: a.$article,
             })),
             articleCount: articleCount?.ArticleList.articleCount ?? 0,
             fetchState: fetchState?.$thing.fetchState ?? FetchState.QUEUED,
-          };
+          }
         },
 
         useArticle: (slug: string) => {
           const article = useRuleOne(articleRules, {
             $article: { ids: [slug] },
-          });
-          return article;
+          })
+          return article
         },
 
         useArticleMeta: (slug: string) => {
@@ -987,8 +824,8 @@ export const initializeSession = (autoFire = true) => {
             $articleMeta: {
               ids: [slug],
             },
-          });
-          return articleMeta?.$articleMeta;
+          })
+          return articleMeta?.$articleMeta
         },
       },
       RULES: {
@@ -1044,9 +881,6 @@ export const initializeSession = (autoFire = true) => {
     },
     SESSION: {
       RULES: { sessionRule },
-      HOOKS: {
-        useSession: () => useRuleOne(sessionRule)?.Session.token,
-      },
     },
     TAG: {
       QUERIES: { tagList },
@@ -1073,17 +907,17 @@ export const initializeSession = (autoFire = true) => {
       },
       HOOKS: {
         useUser: () => {
-          const [user, setUser] = useState(userRule.queryOne()?.$user);
+          const [user, setUser] = useState(userRule.queryOne()?.$user)
           useEffect(() => {
-            return userRule.subscribeOne((u) => setUser(u?.$user));
-          });
+            return userRule.subscribeOne((u) => setUser(u?.$user))
+          })
 
-          return user;
+          return user
         },
       },
     },
     ENGINE: session,
-  };
-};
+  }
+}
 
-export type EdictSession = ReturnType<typeof initializeSession>;
+export type EdictSession = ReturnType<typeof initializeSession>
