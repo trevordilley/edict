@@ -1,15 +1,5 @@
 # Roadmap
 ## 2022
-### Regression pass on realworld
-Categorize all the issues
-
-### Fix the issues in realworld
-If the UX isn't perfect that's okay, just fix the outstanding bugs
-
-### Comment out/rename test files that rely on mocking in realworld
-Put a big fat TODO to figure out how to mock the conduit.ts file so
-we can finish the tests
-
 ### Update documentation in README.md for project and actual examples 
 Such that they are useful to a wider audience
 
