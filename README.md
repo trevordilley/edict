@@ -68,12 +68,12 @@ early mornings to keep on this work!
 
 ## Project Breakdown
 
-* [@edict/core](packages/core/README.md) is the main library used by other applications
-* [@edict/rete](packages/rete/README.md) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
-* [examples](packages/examples) are where I keep my running versions of apps that use this library for testing.
-  * [phaser](packages/examples/phaser-game/README.md) A perf test using phaser. Also shows how to incorporate the edict library into your game logic (in a basic way)
-  * [cities](packages/examples/react-perf/README.md) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
-  * [realworld](packages/examples/react-realworld/README.md) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
+* [@edict/core](packages/core/) is the main library used by other applications
+* [@edict/rete](packages/rete/) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
+* [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
+  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the edict library into your game logic (in a basic way)
+  * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
+  * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
 ## Usage
 We'll explore usage by example. 
