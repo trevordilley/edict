@@ -515,6 +515,10 @@ Future changes in this space will be visualizations of rule
 execution, and delta's between the fact database before a `fire()` and after a
 `fire()` completes. 
 
+# Roadmap
+The project roadmap can be found [here](docs/Roadmap.md). Core goals are
+adding more type-safety and improving debugging facilities to reach 1.0.0 
+
 ## Contributing and setup
 
 Execute the following

@@ -1,37 +1,32 @@
 # Roadmap
 ## 2022
-### Update documentation in README.md for project and actual examples 
-Such that they are useful to a wider audience
-
-### Create @edict/react library....
-The useRule and provider are complex enough folks shouldn't expect to do this 
-themselves. 
 
 ### Release "0.1.0-alpha" and ensure README makes it clear it's in alpha
 Mention future potential API changes, specifically typesafe
 id's, inserts, and retractions
 
-### Garner feedback in a drip
-Share with some folks, see if they "get it"
-
-### Post on social media
-Once it's docs are nice and refined
-
 ## Q1 - 2023
 
-### Implement new API
-Implement the above typesafe API
+### Create @edict/react library....
+The useRule and provider are complex enough folks shouldn't expect to do this
+themselves. 
 
-### Update documentation and examples with new API
-Get it all running again
+### Improve Debugging Tooling
+Specifically, visualizations around how rules are being triggered, and why
 
-### Figure out mocking an finish out Realworld App tests 
-Really want to have a good example of mocking
+### Make Id's part of the schema 
+Right now it's possible to make a typo in an Id. I have an API that I think
+would fix this. It'll be a breaking change to a pretty different API, but I
+think it'll be worth it.
 
 ### Release 0.1.0-beta 
 Do the last bits of sprucing up
 
 ## Q2 - 2023
+
+### Gather feedback and bug fixing
+
+## Q3 - 2023
 
 ### Release 1.0.0
 Yay!!!
