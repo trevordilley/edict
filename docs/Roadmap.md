@@ -3,12 +3,19 @@
 ### Update documentation in README.md for project and actual examples 
 Such that they are useful to a wider audience
 
-### Garner feedback in a drip
-Share with some folks, see if they "get it"
+### Create @edict/react library....
+The useRule and provider are complex enough folks shouldn't expect to do this 
+themselves. 
 
 ### Release "0.1.0-alpha" and ensure README makes it clear it's in alpha
 Mention future potential API changes, specifically typesafe
 id's, inserts, and retractions
+
+### Garner feedback in a drip
+Share with some folks, see if they "get it"
+
+### Post on social media
+Once it's docs are nice and refined
 
 ## Q1 - 2023
 
