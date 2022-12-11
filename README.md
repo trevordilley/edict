@@ -2,9 +2,6 @@
 Organize your business logic in terms of rules which trigger reactively
 
 ```typescript
-// Contrived foobar example, more interesting 
-// examples below! Just wanna be sure you see the code
-// right away!
 
 // Shape of the data you'll work with
 type Schema = {
