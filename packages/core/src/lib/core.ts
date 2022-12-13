@@ -39,7 +39,7 @@ const valueKey = ({
   attr: string | number | symbol
 }) => `${VALUE_PREFIX}${id}_${String(attr)}`
 
-export const edict = <SCHEMA>(
+export const edict = <SCHEMA extends object>(
   autoFire = false,
   debug: DebugOptions = {
     enabled: false,

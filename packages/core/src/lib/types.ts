@@ -1,104 +1,116 @@
 // trick the type-system so we can use the schema like an object
 // TODO: If the new API works, maybe we don't need to do this?
 
-import { Debug, PRODUCTION_ALREADY_EXISTS_BEHAVIOR } from '@edict/rete';
+import { Debug, PRODUCTION_ALREADY_EXISTS_BEHAVIOR } from '@edict/rete'
 
-export type ConditionOptions<T> = { then?: boolean; match?: T; join?: string };
-export type Condition<SCHEMA> = {
-  [ATTR in keyof SCHEMA]: ConditionOptions<SCHEMA[ATTR]>;
-};
-export type ConditionArgs<SCHEMA> = {
+export type ConditionOptions<T> = { then?: boolean; match?: T; join?: string }
+export type Condition<SCHEMA extends object> = {
+  [ATTR in keyof SCHEMA]: ConditionOptions<SCHEMA[ATTR]>
+}
+export type ConditionArgs<SCHEMA extends object> = {
   [key: string]: {
-    [ATTR in keyof Partial<SCHEMA>]: ConditionOptions<SCHEMA[ATTR]> | undefined;
-  };
-};
+    [ATTR in keyof Partial<SCHEMA>]: ConditionOptions<SCHEMA[ATTR]> | undefined
+  }
+}
 
-export type EnactArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
+export type EnactArgs<
+  SCHEMA extends object,
+  T extends ConditionArgs<SCHEMA>
+> = {
   [Key in keyof T]: {
     [ATTR in keyof Required<T[Key]>]: ATTR extends keyof SCHEMA
       ? SCHEMA[ATTR]
-      : never;
-  } & { id: string };
-};
+      : never
+  } & { id: string }
+}
 
-export type QueryArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
+export type QueryArgs<
+  SCHEMA extends object,
+  T extends ConditionArgs<SCHEMA>
+> = {
   [Key in keyof T]?: {
     [ATTR in keyof Partial<T[Key]>]: ATTR extends keyof SCHEMA
       ? SCHEMA[ATTR][]
-      : never;
-  } & { ids?: string[] };
-};
+      : never
+  } & { ids?: string[] }
+}
 
 /// Wrap the entire what in a function that return something we can enact? Instead of one at a time?
-export type InsertEdictFact<SCHEMA> = {
-  [key: string]: { [Key in keyof Partial<SCHEMA>]: SCHEMA[Key] };
-};
+export type InsertEdictFact<SCHEMA extends object> = {
+  [key: string]: { [Key in keyof Partial<SCHEMA>]: SCHEMA[Key] }
+}
 
 export type EdictArgs = {
-  autoFire?: boolean;
-};
+  autoFire?: boolean
+}
 
-export type EnactionArgs<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
-  then?: (args: EnactArgs<SCHEMA, T>) => Promise<void> | void;
-  when?: (args: EnactArgs<SCHEMA, T>) => boolean;
+export type EnactionArgs<
+  SCHEMA extends object,
+  T extends ConditionArgs<SCHEMA>
+> = {
+  then?: (args: EnactArgs<SCHEMA, T>) => Promise<void> | void
+  when?: (args: EnactArgs<SCHEMA, T>) => boolean
   thenFinally?: (
     getResults: () => EnactArgs<SCHEMA, T>[]
-  ) => Promise<void> | void;
-};
+  ) => Promise<void> | void
+}
 
 export interface QueryOneOptions {
-  shouldThrowExceptionOnMoreThanOne?: boolean;
+  shouldThrowExceptionOnMoreThanOne?: boolean
 }
-export type EnactionResults<SCHEMA, T extends ConditionArgs<SCHEMA>> = {
-  query: (filter?: QueryArgs<SCHEMA, T>) => EnactArgs<SCHEMA, T>[];
+export type EnactionResults<
+  SCHEMA extends object,
+  T extends ConditionArgs<SCHEMA>
+> = {
+  query: (filter?: QueryArgs<SCHEMA, T>) => EnactArgs<SCHEMA, T>[]
   queryOne: (
     filter?: QueryArgs<SCHEMA, T>,
     options?: QueryOneOptions
-  ) => EnactArgs<SCHEMA, T> | undefined;
+  ) => EnactArgs<SCHEMA, T> | undefined
   subscribe: (
     fn: (results: EnactArgs<SCHEMA, T>[]) => void,
     filter?: QueryArgs<SCHEMA, T>
-  ) => () => void;
+  ) => () => void
 
   subscribeOne: (
     fn: (results: EnactArgs<SCHEMA, T> | undefined) => void,
     filter?: QueryArgs<SCHEMA, T>,
     options?: QueryOneOptions
-  ) => () => void;
-};
-export type Enact<SCHEMA, T extends ConditionArgs<SCHEMA>> = (
+  ) => () => void
+}
+export type Enact<SCHEMA extends object, T extends ConditionArgs<SCHEMA>> = (
   enaction?: EnactionArgs<SCHEMA, T>
-) => EnactionResults<SCHEMA, T>;
+) => EnactionResults<SCHEMA, T>
 
-export interface IEdict<SCHEMA> {
-  insert: (args: InsertEdictFact<SCHEMA>) => void;
-  retract: (id: string, ...attrs: (keyof SCHEMA)[]) => void;
+export interface IEdict<SCHEMA extends object> {
+  insert: (args: InsertEdictFact<SCHEMA>) => void
+  retract: (id: string, ...attrs: (keyof SCHEMA)[]) => void
   retractByConditions: (
     id: string,
     conditions: { [key in keyof SCHEMA]?: any }
-  ) => void;
-  fire: (recursionLimit?: number) => void;
-  reset: () => void;
+  ) => void
+  fire: (recursionLimit?: number) => void
+  reset: () => void
   conditions: <
     T extends {
       [ATTR in keyof Partial<SCHEMA>]:
         | ConditionOptions<SCHEMA[ATTR]>
-        | undefined;
+        | undefined
     }
   >(
     conds: (schema: Condition<SCHEMA>) => T
-  ) => T;
+  ) => T
   rule: <T extends ConditionArgs<SCHEMA>>(
     name: string,
     conditions: (schema: Condition<SCHEMA>) => T,
     onAlreadyExistsBehaviour?: PRODUCTION_ALREADY_EXISTS_BEHAVIOR
-  ) => { enact: Enact<SCHEMA, T> };
+  ) => { enact: Enact<SCHEMA, T> }
   debug: {
-    dotFile: () => string;
-    engineDebug?: Debug<SCHEMA>;
+    dotFile: () => string
+    engineDebug?: Debug<SCHEMA>
     perf: () => {
-      frames: PerformanceEntryList[];
-      capture: () => PerformanceEntryList;
-    };
-  };
+      frames: PerformanceEntryList[]
+      capture: () => PerformanceEntryList
+    }
+  }
 }
