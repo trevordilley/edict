@@ -1,7 +1,7 @@
-# Edict
+# `edict` 
 Organize your business logic in terms of rules which trigger reactively!
 
-With Edict, you can express your business logic as a set of rules. Rules have several compelling properties. 
+With `edict`, you can express your business logic as a set of rules. Rules have several compelling properties. 
 
  * Rules act on data, not execution flow
  * Rules are independent of other rules
@@ -10,7 +10,7 @@ With Edict, you can express your business logic as a set of rules. Rules have se
 
 > Why `edict`? What makes this library special? 
 > 
-> First it is built upon the Rete algorithm (see [acknowledgements](#Acknowledgements!)!), which enables efficient rule execution on large databases of facts.
+> First it is built upon the Rete algorithm (see [acknowledgements](#acknowledgements)!), which enables efficient rule execution on large databases of facts.
 > 
 > Second, it takes advantage of javascripts syntax to write rules decoratively. Generally, rule engines need to create a new syntax entirely to make writing rules less cumbersome. Javascript has a couple key syntax features which we use liberally to make writing rules enjoyable.  
 
@@ -25,7 +25,7 @@ More robust examples though can be helpful. Below are several examples using `ed
  
 * [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
   * [password validation](packages/examples/react-password) is a really clear and concise example of using rules implementing a familiar requirement!
-  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the edict library into your game logic (in a basic way)
+  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the `edict` library into your game logic (in a basic way)
   * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
   * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
@@ -45,10 +45,10 @@ npm i @edict/core @edict/types @edict/rete lodash typescript-collections
 
 ## Acknowledgements!
 
-Edict is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle rules](https://github.com/oakes/odoyle-rules) and [Pararules](https://github.com/oakes/pararules)!
-Edict aims to bring their ideas into the TypeScript ecosystem!
+`edict` is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle rules](https://github.com/oakes/odoyle-rules) and [Pararules](https://github.com/oakes/pararules)!
+`edict` aims to bring their ideas into the TypeScript ecosystem!
 
-Edict leverages the powerful and efficient Rete Algorithm. The [@edict/rete](https://github.com/trevordilley/edict/tree/main/packages/rete) package used in Edict
+`edict` leverages the powerful and efficient Rete Algorithm. The [@edict/rete](https://github.com/trevordilley/edict/tree/main/packages/rete) package used in `edict` 
 is an extremely literal port of [Pararules engine.nim](https://github.com/paranim/pararules/blob/master/src/pararules/engine.nim). This library wouldn't have been
 remotely possible without Zach's work. This library stands on his shoulders in every way!
 
@@ -84,12 +84,12 @@ type Schema = {
 // This `session` will maintain it's own database of facts and rules. It also will
 // expose functions to add/remove new rules and facts, query the facts etc.
 //
-// Edict does not create "global" data, each invocation of `edict()` creates
+// `edict` does not create "global" data, each invocation of `edict()` creates
 // new independent sessions
 const mySession = edict<Schema>();
 ```
 
-One the key benefits to having an attribute schema is type-safety. Edict will not allow you to insert
+One the key benefits to having an attribute schema is type-safety. `edict` will not allow you to insert
 facts with attributes not declared in the schema for that session. The other really nice benefit is that
 with proper editor tooling (auto-completion!) it's trivial to explore the space of possible facts and attributes!
 
@@ -179,7 +179,7 @@ insert({
 > entry "bob" above is internally stored as
 > ["bob", "name", "Bob Johnson"], ["bob", "email", "bob@hotmail.com"], etc.
 > This enables maximum flexibility for rule definition and engine implementation.
-> However a design goal of Edict is to expose an idiomatic javascript API
+> However a design goal of `edict` is to expose an idiomatic javascript API
 > to keep usage ergonomic.
 
 ### Queries
