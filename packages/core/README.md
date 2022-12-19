@@ -1,46 +1,33 @@
-# Edict
-Organize your business logic in terms of rules which trigger reactively
+# `edict` 
+Organize your business logic in terms of rules which trigger reactively!
 
-```typescript
+With `edict`, you can express your business logic as a set of rules. Rules have several compelling properties. 
 
-// Shape of the data you'll work with
-type Schema = {
-  count: number
-  message: string
-}
+ * Rules act on data, not execution flow
+ * Rules are independent of other rules
+ * Rules are expressive
+ * Rules are scalable
 
-// Start a session, `true` turns on autofiring!
-const {insert, rule, fire} = edict<Schema>(true) 
+> Why `edict`? What makes this library special? 
+> 
+> First it is built upon the Rete algorithm (see [acknowledgements](#acknowledgements)!), which enables efficient rule execution on large databases of facts.
+> 
+> Second, it takes advantage of javascripts syntax to write rules decoratively. Generally, rule engines need to create a new syntax entirely to make writing rules less cumbersome. Javascript has a couple key syntax features which we use liberally to make writing rules enjoyable.  
 
-// Rules capturiing your business logic, select only the relevant data!
-rule("multiples of 5 are foo, multiples of 7 are bar, multiples of both are foobar, otherwise it's just the count", 
-  ({count,}) => ({
-  current: {
-    count,
-  }
-})).enact({
-  then: ({current}) =>   {
-    const foo = current.count % 5 === 0 ? "foo" : ""
-    const bar = current.count % 7 === 0 ? "bar" : ""
-    const message = `${foo}${bar}`
-    insert({print: { message: message === "" ? `${current.count}` : message }})
-  } 
-})
+## Examples
+One challenge I've found when describing the benefits of using a rules based approach to application development, is most of the "Hello, world!" examples (such as counter incrementing for client apps) don't properly capture the compelling value rules offer. Usually, it just looks like I've written way more code to increment a value with a button click than should be needed.
 
-rule("console.log when count changes", ({message}) => ({
-  print: {
-    message
-  }
-})).enact({
-  then: ({print}) => console.log(print.message)
-})
+More robust examples though can be helpful. Below are several examples using `edict` leveraging rules as the main driver of business logic. 
 
-// Insert facts for your rules!
-insert({current: {count: 1}}) // "1"
-insert({current: {count: 5}}) // "foo"
-insert({current: {count: 7}}) // "bar"
-insert({current: {count: 35}}) // "foobar"
-```
+> Personally, I always enjoy "seeing the code" before actually learning how to use a library. That's usually fine for most libraries, but `edict` does 
+> use some unfamiliar patterns, so jumping right in might be a little confusing. A little further down this README.md is the [Usage](#Usage) section
+> explains how to use `edict` step by step (using a contrived example set of business rules)
+ 
+* [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
+  * [password validation](packages/examples/react-password) is a really clear and concise example of using rules implementing a familiar requirement!
+  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the `edict` library into your game logic (in a basic way)
+  * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
+  * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
 ## Installation
 
@@ -52,12 +39,16 @@ yarn add @edict/core @edict/types @edict/rete lodash typescript-collections
 npm i @edict/core @edict/types @edict/rete lodash typescript-collections
 ```
 
+## Project Breakdown
+* [@edict/core](packages/core/) is the main library used by other applications
+* [@edict/rete](packages/rete/) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
+
 ## Acknowledgements!
 
-Edict is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle rules](https://github.com/oakes/odoyle-rules) and [Pararules](https://github.com/oakes/pararules)!
-Edict aims to bring their ideas into the TypeScript ecosystem!
+`edict` is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle rules](https://github.com/oakes/odoyle-rules) and [Pararules](https://github.com/oakes/pararules)!
+`edict` aims to bring their ideas into the TypeScript ecosystem!
 
-Edict leverages the powerful and efficient Rete Algorithm. The [@edict/rete](https://github.com/trevordilley/edict/tree/main/packages/rete) package used in Edict
+`edict` leverages the powerful and efficient Rete Algorithm. The [@edict/rete](https://github.com/trevordilley/edict/tree/main/packages/rete) package used in `edict` 
 is an extremely literal port of [Pararules engine.nim](https://github.com/paranim/pararules/blob/master/src/pararules/engine.nim). This library wouldn't have been
 remotely possible without Zach's work. This library stands on his shoulders in every way!
 
@@ -65,6 +56,7 @@ remotely possible without Zach's work. This library stands on his shoulders in e
 
 I'd also like to thank my youngest child for waking me up at god-awful early hours to "flatten his blanket" and "turn his pillow the other way", allowing me plenty of
 early mornings to keep on this work!
+
 
 ## Usage
 We'll explore usage by example. 
@@ -92,12 +84,12 @@ type Schema = {
 // This `session` will maintain it's own database of facts and rules. It also will
 // expose functions to add/remove new rules and facts, query the facts etc.
 //
-// Edict does not create "global" data, each invocation of `edict()` creates
+// `edict` does not create "global" data, each invocation of `edict()` creates
 // new independent sessions
 const mySession = edict<Schema>();
 ```
 
-One the key benefits to having an attribute schema is type-safety. Edict will not allow you to insert
+One the key benefits to having an attribute schema is type-safety. `edict` will not allow you to insert
 facts with attributes not declared in the schema for that session. The other really nice benefit is that
 with proper editor tooling (auto-completion!) it's trivial to explore the space of possible facts and attributes!
 
@@ -187,7 +179,7 @@ insert({
 > entry "bob" above is internally stored as
 > ["bob", "name", "Bob Johnson"], ["bob", "email", "bob@hotmail.com"], etc.
 > This enables maximum flexibility for rule definition and engine implementation.
-> However a design goal of Edict is to expose an idiomatic javascript API
+> However a design goal of `edict` is to expose an idiomatic javascript API
 > to keep usage ergonomic.
 
 ### Queries
@@ -372,7 +364,9 @@ because `$user` starts with a `$`, this rule will apply to all facts which
 have an entry for `birthDay`. 
 
 #### Attribute joins to relate ids
-**TODO: Make a test for these examples**
+> **TODO: Make a test for these examples**
+>
+> There might be issues in the code below, but the spirit of it is correct!
 
 Sometimes, you may want to match facts based on their relationship to
 each other. The example below illustrates such a condition 
@@ -406,7 +400,7 @@ the `{match: someValue}` option on an attribute
 const bobsBirthDay = rule("Users born on 2008-01-19", ({name}) => ({
   $user: {
     name,
-    birthDay: {match: "2008-01-19"}
+    birthDay: {match: new Date("2008-01-19")}
   }
 })).enact()
 
