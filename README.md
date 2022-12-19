@@ -1,6 +1,8 @@
 # `edict` 
 Organize your business logic in terms of rules which trigger reactively!
 
+> "Cool, show me the code!" Well jump to the [usage](#usage) to see how things work or check out the [examples](#examples) to dive right in!
+
 With `edict`, you can express your business logic as a set of rules. Rules have several compelling properties. 
 
  * Rules act on data, not execution flow
