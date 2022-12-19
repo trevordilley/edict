@@ -1,46 +1,23 @@
 # Edict
-Organize your business logic in terms of rules which trigger reactively
+Organize your business logic in terms of rules which trigger reactively!
 
-```typescript
+With Edict, you can express your business logic as a set of rules. Rules have several compelling properties. 
 
-// Shape of the data you'll work with
-type Schema = {
-  count: number
-  message: string
-}
+ * Rules act on data, not execution flow
+ * Rules are independent of other rules
+ * Rules are expressive
+ * Rules are scalable
 
-// Start a session, `true` turns on autofiring!
-const {insert, rule, fire} = edict<Schema>(true) 
+## Examples
+One challenge I've found when describing the benefits of using a rules based approach to application development, is most of the "Hello, world!" examples (such as counter incrementing for client apps) don't properly capture the compelling value rules offer. Usually, it just looks like I've written way more code to increment a value with a button click than should be needed.
 
-// Rules capturiing your business logic, select only the relevant data!
-rule("multiples of 5 are foo, multiples of 7 are bar, multiples of both are foobar, otherwise it's just the count", 
-  ({count,}) => ({
-  current: {
-    count,
-  }
-})).enact({
-  then: ({current}) =>   {
-    const foo = current.count % 5 === 0 ? "foo" : ""
-    const bar = current.count % 7 === 0 ? "bar" : ""
-    const message = `${foo}${bar}`
-    insert({print: { message: message === "" ? `${current.count}` : message }})
-  } 
-})
+More robust examples though can be helpful. Below are several examples using `edict` leveraging rules as the main driver of business logic. 
 
-rule("console.log when count changes", ({message}) => ({
-  print: {
-    message
-  }
-})).enact({
-  then: ({print}) => console.log(print.message)
-})
-
-// Insert facts for your rules!
-insert({current: {count: 1}}) // "1"
-insert({current: {count: 5}}) // "foo"
-insert({current: {count: 7}}) // "bar"
-insert({current: {count: 35}}) // "foobar"
-```
+* [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
+  * [password validation](packages/examples/react-password) is a really clear and concise example of using rules implementing a familiar requirement!
+  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the edict library into your game logic (in a basic way)
+  * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
+  * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
 ## Installation
 
@@ -51,6 +28,10 @@ yarn add @edict/core @edict/types @edict/rete lodash typescript-collections
 
 npm i @edict/core @edict/types @edict/rete lodash typescript-collections
 ```
+
+## Project Breakdown
+* [@edict/core](packages/core/) is the main library used by other applications
+* [@edict/rete](packages/rete/) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
 
 ## Acknowledgements!
 
@@ -66,14 +47,6 @@ remotely possible without Zach's work. This library stands on his shoulders in e
 I'd also like to thank my youngest child for waking me up at god-awful early hours to "flatten his blanket" and "turn his pillow the other way", allowing me plenty of
 early mornings to keep on this work!
 
-## Project Breakdown
-
-* [@edict/core](packages/core/) is the main library used by other applications
-* [@edict/rete](packages/rete/) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
-* [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
-  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the edict library into your game logic (in a basic way)
-  * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
-  * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
 ## Usage
 We'll explore usage by example. 
