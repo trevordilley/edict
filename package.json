@@ -7,6 +7,7 @@
     "example:phaser": "nx serve examples-phaser-game",
     "example:cities": "nx serve examples-react-perf",
     "example:todo": "nx serve examples-react-todo",
+    "example:password": "nx serve examples-react-password",
     "example:realworld": "nx serve examples-react-realworld",
     "build": "nx run-many --all --target=build",
     "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' nx run-many --all --target=test",

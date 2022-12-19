@@ -8,11 +8,21 @@ With Edict, you can express your business logic as a set of rules. Rules have se
  * Rules are expressive
  * Rules are scalable
 
+> Why `edict`? What makes this library special? 
+> 
+> First it is built upon the Rete algorithm (see [acknowledgements](#Acknowledgements!)!), which enables efficient rule execution on large databases of facts.
+> 
+> Second, it takes advantage of javascripts syntax to write rules decoratively. Generally, rule engines need to create a new syntax entirely to make writing rules less cumbersome. Javascript has a couple key syntax features which we use liberally to make writing rules enjoyable.  
+
 ## Examples
 One challenge I've found when describing the benefits of using a rules based approach to application development, is most of the "Hello, world!" examples (such as counter incrementing for client apps) don't properly capture the compelling value rules offer. Usually, it just looks like I've written way more code to increment a value with a button click than should be needed.
 
 More robust examples though can be helpful. Below are several examples using `edict` leveraging rules as the main driver of business logic. 
 
+> Personally, I always enjoy "seeing the code" before actually learning how to use a library. That's usually fine for most libraries, but `edict` does 
+> use some unfamiliar patterns, so jumping right in might be a little confusing. A little further down this README.md is the [Usage](#Usage) section
+> explains how to use `edict` step by step (using a contrived example set of business rules)
+ 
 * [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
   * [password validation](packages/examples/react-password) is a really clear and concise example of using rules implementing a familiar requirement!
   * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the edict library into your game logic (in a basic way)
@@ -354,7 +364,9 @@ because `$user` starts with a `$`, this rule will apply to all facts which
 have an entry for `birthDay`. 
 
 #### Attribute joins to relate ids
-**TODO: Make a test for these examples**
+> **TODO: Make a test for these examples**
+>
+> There might be issues in the code below, but the spirit of it is correct!
 
 Sometimes, you may want to match facts based on their relationship to
 each other. The example below illustrates such a condition 
@@ -388,7 +400,7 @@ the `{match: someValue}` option on an attribute
 const bobsBirthDay = rule("Users born on 2008-01-19", ({name}) => ({
   $user: {
     name,
-    birthDay: {match: "2008-01-19"}
+    birthDay: {match: new Date("2008-01-19")}
   }
 })).enact()
 
@@ -504,6 +516,7 @@ npm i
 npm run test # runs all the tests
 npm run  build # builds all the things
 npm run example:phaser # Run the phaser example
+npm run example:password # Run the password example!
 npm run example:react # Run the react example!
 npm run example:realworld # Run the conduit realworld example!
 ```
