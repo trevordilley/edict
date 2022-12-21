@@ -2,7 +2,7 @@
 Organize your business logic in terms of rules which trigger reactively!
 
 <details>
-<summary>:star:Show me the code!:star:</summary>
+<summary>:point_left: Show me the code!:star:</summary>
 
 The example below defines password validation as a series of rules.
 For this use-case, using `edict` might be a bit like [using a flamethrower to clear snow off your driveway](https://abc7ny.com/kentucky-flamethrower-cousin-eddie-flamethower-video-national-lampoons-christmas-vacation/9126313/). However, password validation
