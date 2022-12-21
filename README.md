@@ -623,7 +623,7 @@ rule("Updating the date",({todaysDate}) => ({
   }
 })
 ```
-To rememedy this, you can use the `{then: false}` option on an attribute
+To remedy this, you can use the `{then: false}` option on an attribute
 to ensure the rule can't re-trigger itself in the same `fire()` if that
 specific attribute is changed
 
