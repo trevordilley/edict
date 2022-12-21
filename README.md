@@ -1,7 +1,6 @@
 # `edict` 
 Organize your business logic in terms of rules which trigger reactively!
 
-<<<<<<< HEAD
 <details>
 <summary>:point_left: Show me the code!:star:</summary>
 
