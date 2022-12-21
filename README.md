@@ -456,7 +456,7 @@ const justJack = usersCelebratingBirthdays.queryOne({
 ```
 
 ### Subscriptions
-To make integrating with reactive frameworks like React or RxJs, `edict` also provides
+To make integrating with reactive frameworks like React or RxJs easy, `edict` also provides
 subscription functions. They follow the same patterns as `query()` and `queryOne()`,
 exposing `subscribe()` and `subscribeOne()`. These functions also take filter objects
 just like `query()`
