@@ -1,6 +1,7 @@
 # `edict` 
 Organize your business logic in terms of rules which trigger reactively!
 
+<<<<<<< HEAD
 <details>
 <summary>:point_left: Show me the code!:star:</summary>
 
@@ -193,6 +194,14 @@ With `edict`, you can express your business logic as a set of rules. Rules have 
 > Second, it takes advantage of javascripts syntax to write rules declaratively. Generally, rule engines need to create a new syntax entirely to make writing rules less cumbersome. Javascript has a couple key syntax features which we use liberally to make writing rules enjoyable.  
 
 ## Examples
+
+* [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
+  * [password validation](packages/examples/react-password) is a really clear and concise example of using rules implementing a familiar requirement!
+  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the `edict` library into your game logic (in a basic way)
+  * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
+  * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
+
+
 One challenge I've found when describing the benefits of using a rules based approach to application development, is most of the "Hello, world!" examples (such as counter incrementing for client apps) don't properly capture the compelling value rules offer. Usually, it just looks like I've written way more code to increment a value with a button click than should be needed.
 
 More robust examples though can be helpful. Below are several examples using `edict` leveraging rules as the main driver of business logic. 
@@ -201,11 +210,6 @@ More robust examples though can be helpful. Below are several examples using `ed
 > use some unfamiliar patterns, so jumping right in might be a little confusing. A little further down this README.md is the [Usage](#Usage) section
 > explains how to use `edict` step by step (using a contrived example set of business rules)
  
-* [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
-  * [password validation](packages/examples/react-password) is a really clear and concise example of using rules implementing a familiar requirement!
-  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the `edict` library into your game logic (in a basic way)
-  * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
-  * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
 ## Installation
 
