@@ -1,33 +1,5 @@
-# `edict` 
+# `edict`
 Organize your business logic in terms of rules which trigger reactively!
-
-With `edict`, you can express your business logic as a set of rules. Rules have several compelling properties. 
-
- * Rules act on data, not execution flow
- * Rules are independent of other rules
- * Rules are expressive
- * Rules are scalable
-
-> Why `edict`? What makes this library special? 
-> 
-> First it is built upon the Rete algorithm (see [acknowledgements](#acknowledgements)!), which enables efficient rule execution on large databases of facts.
-> 
-> Second, it takes advantage of javascripts syntax to write rules decoratively. Generally, rule engines need to create a new syntax entirely to make writing rules less cumbersome. Javascript has a couple key syntax features which we use liberally to make writing rules enjoyable.  
-
-## Examples
-One challenge I've found when describing the benefits of using a rules based approach to application development, is most of the "Hello, world!" examples (such as counter incrementing for client apps) don't properly capture the compelling value rules offer. Usually, it just looks like I've written way more code to increment a value with a button click than should be needed.
-
-More robust examples though can be helpful. Below are several examples using `edict` leveraging rules as the main driver of business logic. 
-
-> Personally, I always enjoy "seeing the code" before actually learning how to use a library. That's usually fine for most libraries, but `edict` does 
-> use some unfamiliar patterns, so jumping right in might be a little confusing. A little further down this README.md is the [Usage](#Usage) section
-> explains how to use `edict` step by step (using a contrived example set of business rules)
- 
-* [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
-  * [password validation](packages/examples/react-password) is a really clear and concise example of using rules implementing a familiar requirement!
-  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the `edict` library into your game logic (in a basic way)
-  * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
-  * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
 ## Installation
 
@@ -39,27 +11,8 @@ yarn add @edict/core @edict/types @edict/rete lodash typescript-collections
 npm i @edict/core @edict/types @edict/rete lodash typescript-collections
 ```
 
-## Project Breakdown
-* [@edict/core](packages/core/) is the main library used by other applications
-* [@edict/rete](packages/rete/) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
-
-## Acknowledgements!
-
-`edict` is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle rules](https://github.com/oakes/odoyle-rules) and [Pararules](https://github.com/oakes/pararules)!
-`edict` aims to bring their ideas into the TypeScript ecosystem!
-
-`edict` leverages the powerful and efficient Rete Algorithm. The [@edict/rete](https://github.com/trevordilley/edict/tree/main/packages/rete) package used in `edict` 
-is an extremely literal port of [Pararules engine.nim](https://github.com/paranim/pararules/blob/master/src/pararules/engine.nim). This library wouldn't have been
-remotely possible without Zach's work. This library stands on his shoulders in every way!
-
-(Also, if Javascript didn't allow `$` in the variable names, or allow the simple syntax of json attribute names, this libraries API wouldn't have worked either.)
-
-I'd also like to thank my youngest child for waking me up at god-awful early hours to "flatten his blanket" and "turn his pillow the other way", allowing me plenty of
-early mornings to keep on this work!
-
-
 ## Usage
-We'll explore usage by example. 
+We'll explore usage by example.
 
 In this example we'll build an application that figures out which users are
 having a birthday!
@@ -114,23 +67,23 @@ const results = rule('When a birthday is today, celebrate the birthday!',
         birthDay,
       },
     }))
-    // `rule()` returns an object with `enact()` 
-    // `enact()` let's you apply reactions to the
-    // rule you've defined, and adds it to the session
-    .enact({
-      // "when" filters out facts, runs before "then"
-      when: ({ $user, today }) => {
-        // Match users who have a birthday today!
-        return (
-          $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
-          $user.birthDay.getDate() === today.todaysDate.getDate()
-        )
-     },
+  // `rule()` returns an object with `enact()` 
+  // `enact()` let's you apply reactions to the
+  // rule you've defined, and adds it to the session
+  .enact({
+    // "when" filters out facts, runs before "then"
+    when: ({ $user, today }) => {
+      // Match users who have a birthday today!
+      return (
+        $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
+        $user.birthDay.getDate() === today.todaysDate.getDate()
+      )
+    },
 
-     then: ({ $user }) => {
+    then: ({ $user }) => {
       insert({ [$user.id]: { isCelebratingBirthDay: true } });
-     },
-});
+    },
+  });
 ```
 
 ### Inserting Facts
@@ -200,7 +153,7 @@ of the rule!
 const usersCelebratingBirthdays = rule("All users celebrating their birthday", ({ name, isCelebratingBirthDay }) =>
   ({
     $user: {
-      name, 
+      name,
       isCelebratingBirthDay,
     },
   })
@@ -224,9 +177,9 @@ users.forEach(({$user}) => console.log(`${$user.name} is celebrating their birth
 #### Use filters to get specific results
 Sometimes we want to get very specific subsets of facts, say all the data for
 a particular user, but we don't want to make a whole rule specifically for that
-user. 
+user.
 
-To achieve this, we can pass arguments to `query()` to narrow the results to 
+To achieve this, we can pass arguments to `query()` to narrow the results to
 the fact we want
 
 ```typescript
@@ -234,7 +187,7 @@ the fact we want
 
 const jack = usersCelebratingBirthdays.query({
   $name: {
-      ids: ["jack"]
+    ids: ["jack"]
   }
 })
 ```
@@ -249,7 +202,7 @@ The object passed into `query` has this shape:
 }
 ```
 
-It can be cumbersome to deal with an array of results if you _know_ there 
+It can be cumbersome to deal with an array of results if you _know_ there
 will just be a single result. In that case you can use `queryOne()`
 ```typescript
 
@@ -257,9 +210,9 @@ will just be a single result. In that case you can use `queryOne()`
 // just one result (say for an id you know is unique). Returns `undefined`
 // if nothing matches
 const justJack = usersCelebratingBirthdays.queryOne({
-    $name: {
-        ids: ["jack"]
-    }
+  $name: {
+    ids: ["jack"]
+  }
 }) 
 ```
 
@@ -273,7 +226,7 @@ just like `query()`
 // Whenever facts which would trigger this rule are inserted, the callback
 // passed into subscribe will be called. 
 const unsub = usersCelebratingBirthdays.subscribe(users => {
-    console.log(users)
+  console.log(users)
 })
 
 // To stop subscribing, just call the returned callback
@@ -283,12 +236,12 @@ unsub()
 // is a `subscribeOne` variation
 const unsubOne = usersCelebratingBirthdays.subscribeOne(jack => {
     console.log(jack)
-},
+  },
   { // The filter arg is the second argument
     $users: {
-        ids: ["jack"]
+      ids: ["jack"]
     }
-})
+  })
 
 // Then unsub later:
 unsubOne()
@@ -301,15 +254,15 @@ complex one to integrate with). Below is an example `useBirthdayCelebrators` hoo
 
 ```typescript
 const useBirthdayCelebrators = () => {
-    const [celebrators, setCelebrators] = useState(usersCelebratingBirthdays.query())
-    useEffect(() => {
-        return usersCelebratingBirthdays.subscribe(users => setCelebrators(users))
-    })
-    return celebrators
+  const [celebrators, setCelebrators] = useState(usersCelebratingBirthdays.query())
+  useEffect(() => {
+    return usersCelebratingBirthdays.subscribe(users => setCelebrators(users))
+  })
+  return celebrators
 }
 ```
 
-You'll probably be making quite a few hooks, and it can get tedious doing the above, 
+You'll probably be making quite a few hooks, and it can get tedious doing the above,
 here's a general hook you can use with a given rule so you can focus on data transforming
 in hooks instead of plumbing
 
@@ -345,23 +298,23 @@ const useBirthdayCelebrators = () => useRule(usersCelebratingBirthdays)
 ### Complex Conditions (joins and matches)
 
 #### Id joins with $
-In a rules conditions, any id starting with a `$` is considered a 
+In a rules conditions, any id starting with a `$` is considered a
 _joined id_. Instead of matching on a _specific_ id, the rule will
-any set of facts which have the same id AND have an entry for each 
+any set of facts which have the same id AND have an entry for each
 attribute.
 
 The above examples already leverage this, but let's look in a bit more detail
 ```typescript
 const results = rule('All users with a birtday', ({ birthDay }) =>
-    ({
-      $user: {
-        birthDay,
-      },
-    })).enact()
+  ({
+    $user: {
+      birthDay,
+    },
+  })).enact()
 ```
 
 because `$user` starts with a `$`, this rule will apply to all facts which
-have an entry for `birthDay`. 
+have an entry for `birthDay`.
 
 #### Attribute joins to relate ids
 > **TODO: Make a test for these examples**
@@ -369,7 +322,7 @@ have an entry for `birthDay`.
 > There might be issues in the code below, but the spirit of it is correct!
 
 Sometimes, you may want to match facts based on their relationship to
-each other. The example below illustrates such a condition 
+each other. The example below illustrates such a condition
 
 ```typescript
 rule("Users with same birthday", ({ name, birthDay }) =>
@@ -379,7 +332,7 @@ rule("Users with same birthday", ({ name, birthDay }) =>
       birthDay,
       sibling: { join: "$userB" }
     },
-    $userB: { 
+    $userB: {
       name,
       birthDay,
       sibling: { join: "$userA" }
@@ -413,21 +366,21 @@ console.log(bob.$user.name)
 ## Avoiding infinite loops
 Sometimes a rule may run an `insert` or `retract` that causes
 a rule (or several) to re-trigger infinitely. The solution to this is to mark
-which attributes in your conditions should not cause a retrigger. 
+which attributes in your conditions should not cause a retrigger.
 
 ```typescript
 rule("Updating the date",({todaysDate}) => ({
   today: {
-      todaysDate
-  } 
+    todaysDate
+  }
 })).enact({
   then: ({today}) => {
-      // This rule will trigger infinitely 
-      insert({
-        today: {
-            todaysDate: `${new Date()}`
-        }
-      })
+    // This rule will trigger infinitely 
+    insert({
+      today: {
+        todaysDate: `${new Date()}`
+      }
+    })
   }
 })
 ```
@@ -454,7 +407,7 @@ rule("Updating the date",() => ({
   }
 })
 ```
-## Debugging 
+## Debugging
 > The tooling around this is still very much under active development!
 
 When creating a new `edict` session, you can pass in an option to enable debugging
@@ -464,8 +417,8 @@ When creating a new `edict` session, you can pass in an option to enable debuggi
 ```typescript
 const session = edict<Schema>(
   // Autofire defaults to false 
-  false, 
-  
+  false,
+
   // `enabled: true` turns on debug profiling
   { enabled: true}
 )
@@ -490,7 +443,7 @@ session.engineDebug.numFramesSinceInit
 session.engineDebug.mutationsSinceLastFire
 
 // Returns a ton of `performance` API data 
-session.perf() 
+session.perf()
 
 // Dumps a string that is a graphviz dotfile which diagrams
 // the rete network. Probably not that useful to you

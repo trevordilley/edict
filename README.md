@@ -200,16 +200,6 @@ With `edict`, you can express your business logic as a set of rules. Rules have 
   * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
   * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
-
-One challenge I've found when describing the benefits of using a rules based approach to application development, is most of the "Hello, world!" examples (such as counter incrementing for client apps) don't properly capture the compelling value rules offer. Usually, it just looks like I've written way more code to increment a value with a button click than should be needed.
-
-More robust examples though can be helpful. Below are several examples using `edict` leveraging rules as the main driver of business logic. 
-
-> Personally, I always enjoy "seeing the code" before actually learning how to use a library. That's usually fine for most libraries, but `edict` does 
-> use some unfamiliar patterns, so jumping right in might be a little confusing. A little further down this README.md is the [Usage](#Usage) section
-> explains how to use `edict` step by step (using a contrived example set of business rules)
- 
-
 ## Installation
 
 ```bash
@@ -220,9 +210,6 @@ yarn add @edict/core @edict/types @edict/rete lodash typescript-collections
 npm i @edict/core @edict/types @edict/rete lodash typescript-collections
 ```
 
-## Project Breakdown
-* [@edict/core](packages/core/) is the main library used by other applications
-* [@edict/rete](packages/rete/) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
 
 ## Acknowledgements!
 
@@ -238,6 +225,9 @@ remotely possible without Zach's work. This library stands on his shoulders in e
 I'd also like to thank my youngest child for waking me up at god-awful early hours to "flatten his blanket" and "turn his pillow the other way", allowing me plenty of
 early mornings to keep on this work!
 
+## Project Breakdown
+* [@edict/core](packages/core/) is the main library used by other applications
+* [@edict/rete](packages/rete/) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
 
 ## Usage
 We'll explore usage by example. 
