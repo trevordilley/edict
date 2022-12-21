@@ -422,7 +422,7 @@ To achieve this, we can pass arguments to `query()` to narrow the results to
 the fact we want
 
 ```typescript
-// Continueing the example above, let's get jack's facts
+// Continuing the example above, let's get jack's facts
 
 const jack = usersCelebratingBirthdays.query({
   $name: {
