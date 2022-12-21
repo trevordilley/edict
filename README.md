@@ -1,6 +1,9 @@
 # `edict` 
 Organize your business logic in terms of rules which trigger reactively!
 
+
+
+
 <details>
 <summary>:point_left: Show me the code!:star:</summary>
 
@@ -178,6 +181,24 @@ session.fire()
 console.log(passwordQuery.queryOne()?.Password.valid) // true
 ```
 </details>
+
+* [Examples](#examples)
+* [Installation](#installation)
+* [Acknowledgements!](#acknowledgements-)
+* [Project Breakdown](#project-breakdown)
+* [Usage](#usage)
+  + [The Schema](#the-schema)
+  + [Inserting Facts](#inserting-facts)
+  + [Queries](#queries)
+    - [Use filters to get specific results](#use-filters-to-get-specific-results)
+  + [Subscriptions](#subscriptions)
+    - [Integrating with React](#integrating-with-react)
+  + [Complex Conditions (joins and matches)](#complex-conditions--joins-and-matches-)
+    - [Id joins with $](#id-joins-with--)
+    - [Attribute joins to relate ids](#attribute-joins-to-relate-ids)
+    - [Constraining matches to a specific value](#constraining-matches-to-a-specific-value)
+* [Avoiding infinite loops](#avoiding-infinite-loops)
+* [Debugging](#debugging)
 
 With `edict`, you can express your business logic as a set of rules. Rules have several compelling properties. 
 
