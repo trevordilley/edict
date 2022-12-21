@@ -681,23 +681,3 @@ Future changes in this space will be visualizations of rule
 execution, and delta's between the fact database before a `fire()` and after a
 `fire()` completes. 
 
-# Roadmap
-The project roadmap can be found [here](docs/Roadmap.md). Core goals are
-adding more type-safety and improving debugging facilities to reach 1.0.0 
-
-## Contributing and setup
-
-Execute the following
-
-```
-# Install the things from root
-npm i
-
-# Now you can do things
-npm run test # runs all the tests
-npm run  build # builds all the things
-npm run example:phaser # Run the phaser example
-npm run example:password # Run the password example!
-npm run example:react # Run the react example!
-npm run example:realworld # Run the conduit realworld example!
-```
