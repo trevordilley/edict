@@ -1,6 +1,19 @@
 # `edict`
 Organize your business logic in terms of rules which trigger reactively!
 
+With `edict`, you can express your business logic as a set of rules. Rules have several compelling properties.
+
+* Rules act on data, not execution flow
+* Rules are independent of other rules
+* Rules are expressive
+* Rules are scalable
+
+> Why `edict`? What makes this library special?
+>
+> First it is built upon the Rete algorithm (see [acknowledgements](#acknowledgements)!), which enables efficient rule execution on large databases of facts.
+>
+> Second, it takes advantage of javascripts syntax to write rules declaratively. Generally, rule engines need to create a new syntax entirely to make writing rules less cumbersome. Javascript has a couple key syntax features which we use liberally to make writing rules enjoyable.
+
 ## Installation
 
 ```bash
@@ -46,6 +59,13 @@ One the key benefits to having an attribute schema is type-safety. `edict` will 
 facts with attributes not declared in the schema for that session. The other really nice benefit is that
 with proper editor tooling (auto-completion!) it's trivial to explore the space of possible facts and attributes!
 
+### The Session
+The value returned from `edict()` is your _session_. With this session you can
+add rules, insert facts, and query the current state of its fact database. All of this
+is contained to the instance of the session, which means you can have several `edict` sessions
+running at once. Perhaps you have a core session managing global application state, and smaller more
+specific sessions managing the state of a component, or a session accumulating facts along some request middleware.
+`edict` is helpful at any scale!
 
 Now let's create our first rule!
 
@@ -67,23 +87,23 @@ const results = rule('When a birthday is today, celebrate the birthday!',
         birthDay,
       },
     }))
-  // `rule()` returns an object with `enact()` 
-  // `enact()` let's you apply reactions to the
-  // rule you've defined, and adds it to the session
-  .enact({
-    // "when" filters out facts, runs before "then"
-    when: ({ $user, today }) => {
-      // Match users who have a birthday today!
-      return (
-        $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
-        $user.birthDay.getDate() === today.todaysDate.getDate()
-      )
-    },
+    // `rule()` returns an object with `enact()` 
+    // `enact()` let's you apply reactions to the
+    // rule you've defined, and adds it to the session
+    .enact({
+      // "when" filters out facts, runs before "then"
+      when: ({ $user, today }) => {
+        // Match users who have a birthday today!
+        return (
+          $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
+          $user.birthDay.getDate() === today.todaysDate.getDate()
+        )
+     },
 
-    then: ({ $user }) => {
+     then: ({ $user }) => {
       insert({ [$user.id]: { isCelebratingBirthDay: true } });
-    },
-  });
+     },
+});
 ```
 
 ### Inserting Facts
@@ -153,7 +173,7 @@ of the rule!
 const usersCelebratingBirthdays = rule("All users celebrating their birthday", ({ name, isCelebratingBirthDay }) =>
   ({
     $user: {
-      name,
+      name, 
       isCelebratingBirthDay,
     },
   })
@@ -183,11 +203,11 @@ To achieve this, we can pass arguments to `query()` to narrow the results to
 the fact we want
 
 ```typescript
-// Continueing the example above, let's get jack's facts
+// Continuing the example above, let's get jack's facts
 
 const jack = usersCelebratingBirthdays.query({
   $name: {
-    ids: ["jack"]
+      ids: ["jack"]
   }
 })
 ```
@@ -210,14 +230,14 @@ will just be a single result. In that case you can use `queryOne()`
 // just one result (say for an id you know is unique). Returns `undefined`
 // if nothing matches
 const justJack = usersCelebratingBirthdays.queryOne({
-  $name: {
-    ids: ["jack"]
-  }
+    $name: {
+        ids: ["jack"]
+    }
 }) 
 ```
 
 ### Subscriptions
-To make integrating with reactive frameworks like React or RxJs, `edict` also provides
+To make integrating with reactive frameworks like React or RxJs easy, `edict` also provides
 subscription functions. They follow the same patterns as `query()` and `queryOne()`,
 exposing `subscribe()` and `subscribeOne()`. These functions also take filter objects
 just like `query()`
@@ -226,7 +246,7 @@ just like `query()`
 // Whenever facts which would trigger this rule are inserted, the callback
 // passed into subscribe will be called. 
 const unsub = usersCelebratingBirthdays.subscribe(users => {
-  console.log(users)
+    console.log(users)
 })
 
 // To stop subscribing, just call the returned callback
@@ -236,12 +256,12 @@ unsub()
 // is a `subscribeOne` variation
 const unsubOne = usersCelebratingBirthdays.subscribeOne(jack => {
     console.log(jack)
-  },
+},
   { // The filter arg is the second argument
     $users: {
-      ids: ["jack"]
+        ids: ["jack"]
     }
-  })
+})
 
 // Then unsub later:
 unsubOne()
@@ -254,11 +274,11 @@ complex one to integrate with). Below is an example `useBirthdayCelebrators` hoo
 
 ```typescript
 const useBirthdayCelebrators = () => {
-  const [celebrators, setCelebrators] = useState(usersCelebratingBirthdays.query())
-  useEffect(() => {
-    return usersCelebratingBirthdays.subscribe(users => setCelebrators(users))
-  })
-  return celebrators
+    const [celebrators, setCelebrators] = useState(usersCelebratingBirthdays.query())
+    useEffect(() => {
+        return usersCelebratingBirthdays.subscribe(users => setCelebrators(users))
+    })
+    return celebrators
 }
 ```
 
@@ -306,11 +326,11 @@ attribute.
 The above examples already leverage this, but let's look in a bit more detail
 ```typescript
 const results = rule('All users with a birtday', ({ birthDay }) =>
-  ({
-    $user: {
-      birthDay,
-    },
-  })).enact()
+    ({
+      $user: {
+        birthDay,
+      },
+    })).enact()
 ```
 
 because `$user` starts with a `$`, this rule will apply to all facts which
@@ -332,7 +352,7 @@ rule("Users with same birthday", ({ name, birthDay }) =>
       birthDay,
       sibling: { join: "$userB" }
     },
-    $userB: {
+    $userB: { 
       name,
       birthDay,
       sibling: { join: "$userA" }
@@ -371,20 +391,20 @@ which attributes in your conditions should not cause a retrigger.
 ```typescript
 rule("Updating the date",({todaysDate}) => ({
   today: {
-    todaysDate
-  }
+      todaysDate
+  } 
 })).enact({
   then: ({today}) => {
-    // This rule will trigger infinitely 
-    insert({
-      today: {
-        todaysDate: `${new Date()}`
-      }
-    })
+      // This rule will trigger infinitely 
+      insert({
+        today: {
+            todaysDate: `${new Date()}`
+        }
+      })
   }
 })
 ```
-To rememedy this, you can use the `{then: false}` option on an attribute
+To remedy this, you can use the `{then: false}` option on an attribute
 to ensure the rule can't re-trigger itself in the same `fire()` if that
 specific attribute is changed
 
@@ -417,8 +437,8 @@ When creating a new `edict` session, you can pass in an option to enable debuggi
 ```typescript
 const session = edict<Schema>(
   // Autofire defaults to false 
-  false,
-
+  false, 
+  
   // `enabled: true` turns on debug profiling
   { enabled: true}
 )
