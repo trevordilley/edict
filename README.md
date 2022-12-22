@@ -199,12 +199,7 @@ console.log(passwordQuery.queryOne()?.Password.valid) // true
 * [Avoiding infinite loops](#avoiding-infinite-loops)
 * [Debugging](#debugging)
 
-With `edict`, you can express your business logic as a set of rules. Rules have several compelling properties. 
-
- * Rules act on data, not execution flow
- * Rules are independent of other rules
- * Rules are expressive
- * Rules are scalable
+With `edict`, you can express your business logic as a set of rules. 
 
 > Why `edict`? What makes this library special? 
 > 
