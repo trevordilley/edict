@@ -2,8 +2,6 @@
 Organize your business logic in terms of rules which trigger reactively!
 
 
-
-
 <details>
 <summary>:point_left: Show me the code!:star:</summary>
 
@@ -188,6 +186,7 @@ console.log(passwordQuery.queryOne()?.Password.valid) // true
 * [Project Breakdown](#project-breakdown)
 * [Usage](#usage)
   + [The Schema](#the-schema)
+  + [The Session](#the-session)
   + [Inserting Facts](#inserting-facts)
   + [Queries](#queries)
     - [Use filters to get specific results](#use-filters-to-get-specific-results)
@@ -285,6 +284,13 @@ One the key benefits to having an attribute schema is type-safety. `edict` will 
 facts with attributes not declared in the schema for that session. The other really nice benefit is that
 with proper editor tooling (auto-completion!) it's trivial to explore the space of possible facts and attributes!
 
+### The Session
+The value returned from `edict()` is your _session_. With this session you can
+add rules, insert facts, and query the current state of its fact database. All of this
+is contained to the instance of the session, which means you can have several `edict` sessions
+running at once. Perhaps you have a core session managing global application state, and smaller more
+specific sessions managing the state of a component, or a session accumulating facts along some request middleware. 
+`edict` is helpful at any scale!
 
 Now let's create our first rule!
 
