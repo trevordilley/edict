@@ -428,7 +428,7 @@ To achieve this, we can pass arguments to `query()` to narrow the results to
 the fact we want
 
 ```typescript
-// Continueing the example above, let's get jack's facts
+// Continuing the example above, let's get jack's facts
 
 const jack = usersCelebratingBirthdays.query({
   $name: {
@@ -462,7 +462,7 @@ const justJack = usersCelebratingBirthdays.queryOne({
 ```
 
 ### Subscriptions
-To make integrating with reactive frameworks like React or RxJs, `edict` also provides
+To make integrating with reactive frameworks like React or RxJs easy, `edict` also provides
 subscription functions. They follow the same patterns as `query()` and `queryOne()`,
 exposing `subscribe()` and `subscribeOne()`. These functions also take filter objects
 just like `query()`
@@ -629,7 +629,7 @@ rule("Updating the date",({todaysDate}) => ({
   }
 })
 ```
-To rememedy this, you can use the `{then: false}` option on an attribute
+To remedy this, you can use the `{then: false}` option on an attribute
 to ensure the rule can't re-trigger itself in the same `fire()` if that
 specific attribute is changed
 
