@@ -188,6 +188,7 @@ console.log(passwordQuery.queryOne()?.Password.valid) // true
   + [The Schema](#the-schema)
   + [The Session](#the-session)
   + [Inserting Facts](#inserting-facts)
+    + [Triggering your rules with `fire`](#triggering-your-rules-with-fire)
   + [Queries](#queries)
     - [Use filters to get specific results](#use-filters-to-get-specific-results)
   + [Subscriptions](#subscriptions)
