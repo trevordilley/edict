@@ -10,7 +10,7 @@ For this use-case, using `edict` might be a bit like [using a flamethrower to cl
 really illustrates in a clear, self-contained way what using `edict` is like. 
 
 ```typescript
-import { edict } from '@edict/core'
+import { edict } from '@edict/edict'
 
 interface Schema {
   meetsCriteria: boolean
@@ -218,11 +218,11 @@ With `edict`, you can express your business logic as a set of rules.
 ## Installation
 
 ```bash
-yarn add @edict/core 
+yarn add @edict/edict 
 
 # or...
 
-npm i @edict/core 
+npm i @edict/edict 
 ```
 
 
@@ -241,7 +241,7 @@ I'd also like to thank my youngest child for waking me up at god-awful early hou
 early mornings to keep on this work!
 
 ## Project Breakdown
-* [@edict/core](packages/core/) is the main library used by other applications
+* [@edict/edict](packages/edict/) is the main library used by other applications
 * [@edict/rete](packages/rete/) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
 
 ## Usage
