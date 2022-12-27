@@ -28,7 +28,7 @@ type Schema = {
 
 describe('edict...', () => {
   it('test', () => {
-    const { rule, insert, fire } = edict<Schema>()
+    const { rule, insert, fire } = edict<Schema>(false)
     const results = rule(
       'number of conditions != number of facts',
       ({ LeftOf, RightOf, Height }) => ({
@@ -303,7 +303,7 @@ describe('edict...', () => {
   })
 
   it('Async then and thenFinally work', async () => {
-    const { rule, insert, fire } = edict<Schema>()
+    const { rule, insert, fire } = edict<Schema>(false)
     let thenFinallyCount = 0
     rule('Filters work', ({ Color }) => ({
       $person: {
@@ -535,7 +535,7 @@ it('Reusable conditions can be used to retract', () => {
 })
 
 it('Async then and thenFinally work', async () => {
-  const { rule, insert, fire } = edict<Schema>()
+  const { rule, insert, fire } = edict<Schema>(false)
   let thenFinallyCount = 0
   rule('Filters work', ({ Color }) => ({
     $person: {

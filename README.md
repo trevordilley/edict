@@ -375,6 +375,36 @@ insert({
 > However a design goal of `edict` is to expose an idiomatic javascript API
 > to keep usage ergonomic.
 
+#### Triggering your rules with `fire()`
+
+By default, a session will execute the appropriate rules after every `insert()` or `retract()`. For event driven
+applications like web apps this works well. For some use-cases though this can be really inefficient. A good example where 
+firing after every insert would be inefficient is the core update loop in a game.
+
+```typescript
+const session = edict<Schema>()
+
+const update = (dt: number) => {
+    handleInput(dt, session)
+    runLogic(dt)
+    render(dt)
+}
+```
+
+Usually in a game loop you want to trigger your rules _once_ per `update`, to do this you can set `autoFire` to false when
+creating a session:
+
+```typescript
+const session = edict<Schema>(false) // Rules will not trigger on insert/retract
+
+const update = (dt: number) => {
+  handleInput(dt, session)
+  session.fire() // This will fire the relevant rules based on insert/retracts!
+  runLogic(dt)
+  render(dt)
+}
+```
+
 ### Queries
 
 The object returned from calling `rule()` contains a function named `enact()`.

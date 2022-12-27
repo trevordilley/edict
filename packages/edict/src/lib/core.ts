@@ -40,7 +40,7 @@ const valueKey = ({
 }) => `${VALUE_PREFIX}${id}_${String(attr)}`
 
 export const edict = <SCHEMA extends object>(
-  autoFire = false,
+  autoFire = true,
   debug: DebugOptions = {
     enabled: false,
     maxFrameDumps: DEFAULT_MAX_FRAME_DUMPS,
