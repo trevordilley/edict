@@ -1,4 +1,4 @@
-import { edict } from '@edict/core'
+import { edict } from '@edict/edict'
 
 interface Schema {
   meetsCriteria: boolean

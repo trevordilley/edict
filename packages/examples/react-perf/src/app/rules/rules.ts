@@ -1,5 +1,5 @@
-import { edict } from '@edict/core';
-import { Sex } from '@faker-js/faker';
+import { edict } from '@edict/edict'
+import { Sex } from '@faker-js/faker'
 
 export enum ProvinceClassification {
   TINY = 'tiny',
@@ -8,9 +8,9 @@ export enum ProvinceClassification {
 }
 
 export interface Province {
-  provinceName: string;
-  provinceClassification: ProvinceClassification;
-  provincePopulation: number;
+  provinceName: string
+  provinceClassification: ProvinceClassification
+  provincePopulation: number
 }
 
 export enum LocationClassification {
@@ -26,18 +26,18 @@ export enum LocationHappiness {
 }
 
 export interface Location {
-  locationName: string;
-  locationClassification: LocationClassification;
-  locationHappiness: LocationHappiness;
-  locationProvinceId: string;
-  locationPopulation: number;
-  locationFarmers: number;
-  locationCivics: number;
-  locationPolice: number;
-  locationWorkers: number;
-  locationIsHungry: boolean;
-  locationIsInDisrepair: boolean;
-  locationIsCrimeRidden: boolean;
+  locationName: string
+  locationClassification: LocationClassification
+  locationHappiness: LocationHappiness
+  locationProvinceId: string
+  locationPopulation: number
+  locationFarmers: number
+  locationCivics: number
+  locationPolice: number
+  locationWorkers: number
+  locationIsHungry: boolean
+  locationIsInDisrepair: boolean
+  locationIsCrimeRidden: boolean
 }
 
 export enum CivilianJob {
@@ -48,21 +48,21 @@ export enum CivilianJob {
 }
 
 export interface Civilian {
-  civilianFirstName: string;
-  civilianLastName: string;
-  civilianLocationId: string;
-  civilianSex: Sex;
-  civilianJob: CivilianJob;
+  civilianFirstName: string
+  civilianLastName: string
+  civilianLocationId: string
+  civilianSex: Sex
+  civilianJob: CivilianJob
 }
 
-export type Schema = Location & Civilian & Province;
+export type Schema = Location & Civilian & Province
 
-const session = edict<Schema>(true);
+const session = edict<Schema>(true)
 
-const { rule } = session;
-export const { insert, retract, fire, debug } = session;
+const { rule } = session
+export const { insert, retract, fire, debug } = session
 
-const CRIME_RATIO = 0.05;
+const CRIME_RATIO = 0.05
 
 rule(
   'Locations without the right number of locationPolice are crime ridden',
@@ -75,16 +75,16 @@ rule(
 ).enact({
   then: ({ $location: { id, locationPopulation, locationPolice } }) => {
     const locationIsCrimeRidden =
-      locationPolice / locationPopulation < CRIME_RATIO;
+      locationPolice / locationPopulation < CRIME_RATIO
     insert({
       [id]: {
         locationIsCrimeRidden,
       },
-    });
+    })
   },
-});
+})
 
-const FARMER_RATIO = 0.1;
+const FARMER_RATIO = 0.1
 rule(
   'Locations with too few locationFarmers need food',
   ({ locationPopulation, locationFarmers }) => ({
@@ -95,15 +95,14 @@ rule(
   })
 ).enact({
   then: ({ $location: { id, locationPopulation, locationFarmers } }) => {
-    const locationIsHungry =
-      locationFarmers / locationPopulation < FARMER_RATIO;
+    const locationIsHungry = locationFarmers / locationPopulation < FARMER_RATIO
     insert({
       [id]: {
         locationIsHungry,
       },
-    });
+    })
   },
-});
+})
 
 rule(
   'Unincorporated territory has a small locationPopulation',
@@ -118,7 +117,7 @@ rule(
     insert({
       [id]: { locationClassification: LocationClassification.UNINCORPORATED },
     }),
-});
+})
 
 rule(
   'Villages have a sizeable locationPopulation',
@@ -134,7 +133,7 @@ rule(
     insert({
       [id]: { locationClassification: LocationClassification.VILLAGE },
     }),
-});
+})
 
 rule('Cities have a large locationPopulation', ({ locationPopulation }) => ({
   $location: {
@@ -144,7 +143,7 @@ rule('Cities have a large locationPopulation', ({ locationPopulation }) => ({
   when: ({ $location: { locationPopulation } }) => locationPopulation >= 100,
   then: ({ $location: { id } }) =>
     insert({ [id]: { locationClassification: LocationClassification.CITY } }),
-});
+})
 
 rule(
   'Locations locationHappiness is determined by their problems',
@@ -168,23 +167,23 @@ rule(
       locationIsHungry,
       locationIsCrimeRidden,
       locationIsInDisrepair,
-    ].filter(Boolean).length;
+    ].filter(Boolean).length
 
-    let locationHappiness: LocationHappiness;
+    let locationHappiness: LocationHappiness
     if (numProblems === 0) {
-      locationHappiness = LocationHappiness.HAPPY;
+      locationHappiness = LocationHappiness.HAPPY
     } else if (numProblems === 1) {
-      locationHappiness = LocationHappiness.INDIFFERENT;
+      locationHappiness = LocationHappiness.INDIFFERENT
     } else {
-      locationHappiness = LocationHappiness.MISERAABLE;
+      locationHappiness = LocationHappiness.MISERAABLE
     }
     insert({
       [id]: {
         locationHappiness,
       },
-    });
+    })
   },
-});
+})
 
 rule(
   "A locations workforce is the sum of it's civilians",
@@ -196,42 +195,42 @@ rule(
   })
 ).enact({
   thenFinally: (getCivilians) => {
-    const locToCount = new Map<string, Map<CivilianJob, number>>();
+    const locToCount = new Map<string, Map<CivilianJob, number>>()
 
     getCivilians().forEach(
       ({ $civilian: { civilianLocationId, civilianJob } }) => {
         if (!locToCount.has(civilianLocationId))
-          locToCount.set(civilianLocationId, new Map<CivilianJob, number>());
+          locToCount.set(civilianLocationId, new Map<CivilianJob, number>())
         if (!locToCount.get(civilianLocationId)?.has(civilianJob))
-          locToCount.get(civilianLocationId)?.set(civilianJob, 0);
-        const count = locToCount.get(civilianLocationId)?.get(civilianJob) ?? 0;
-        locToCount.get(civilianLocationId)?.set(civilianJob, count + 1);
+          locToCount.get(civilianLocationId)?.set(civilianJob, 0)
+        const count = locToCount.get(civilianLocationId)?.get(civilianJob) ?? 0
+        locToCount.get(civilianLocationId)?.set(civilianJob, count + 1)
       }
-    );
+    )
 
     locToCount.forEach((jobToCount, locationId) => {
       jobToCount.forEach((count, job) => {
-        let jobKey: keyof Location;
+        let jobKey: keyof Location
         if (job === CivilianJob.CIVIC) {
-          jobKey = 'locationCivics';
+          jobKey = 'locationCivics'
         } else if (job === CivilianJob.FARMER) {
-          jobKey = 'locationFarmers';
+          jobKey = 'locationFarmers'
         } else if (job === CivilianJob.POLICE) {
-          jobKey = 'locationPolice';
+          jobKey = 'locationPolice'
         } else if (job === CivilianJob.WORKER) {
-          jobKey = 'locationWorkers';
-        } else throw new Error(`Unrecognized job! ${job}`);
+          jobKey = 'locationWorkers'
+        } else throw new Error(`Unrecognized job! ${job}`)
 
         insert({
           [locationId]: {
             // I admit, this is kinda sketch...
             [jobKey]: count,
           },
-        });
-      });
-    });
+        })
+      })
+    })
   },
-});
+})
 
 rule(
   "A Locations population is the sum of it's parts",
@@ -258,9 +257,9 @@ rule(
         locationPopulation:
           locationFarmers + locationCivics + locationPolice + locationWorkers,
       },
-    });
+    })
   },
-});
+})
 
 rule(
   "A Provinces population is the sum of it's parts",
@@ -272,24 +271,24 @@ rule(
   })
 ).enact({
   thenFinally: (getResults) => {
-    const locations = getResults();
-    const provinceToPop = new Map<string, number>();
+    const locations = getResults()
+    const provinceToPop = new Map<string, number>()
     locations.forEach((loc) => {
-      const curPop = provinceToPop.get(loc.$location.locationProvinceId) ?? 0;
+      const curPop = provinceToPop.get(loc.$location.locationProvinceId) ?? 0
       provinceToPop.set(
         loc.$location.locationProvinceId,
         loc.$location.locationPopulation + curPop
-      );
-    });
+      )
+    })
     provinceToPop.forEach((pop, id) => {
       insert({
         [id]: {
           provincePopulation: pop,
         },
-      });
-    });
+      })
+    })
   },
-});
+})
 
 // These rules are just queries
 export const provinces = rule(
@@ -301,7 +300,7 @@ export const provinces = rule(
       provinceClassification,
     },
   })
-).enact();
+).enact()
 
 export const locations = rule(
   'Locations',
@@ -334,7 +333,7 @@ export const locations = rule(
       locationIsHungry,
     },
   })
-).enact();
+).enact()
 
 export const civilians = rule(
   'Civilians',
@@ -353,4 +352,4 @@ export const civilians = rule(
       civilianJob,
     },
   })
-).enact();
+).enact()

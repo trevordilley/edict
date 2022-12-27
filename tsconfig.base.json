@@ -17,7 +17,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@edict/core": ["packages/core/src/index.ts"],
+      "@edict/edict": ["packages/edict/src/index.ts"],
       "@edict/react": ["packages/react/src/index.ts"],
       "@edict/rete": ["packages/rete/src/index.ts"],
       "@edict/rete-debug": ["packages/rete-debug/src/index.ts"],

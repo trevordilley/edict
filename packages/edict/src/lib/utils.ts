@@ -1,4 +1,4 @@
-import { InsertEdictFact } from '@edict/core'
+import { InsertEdictFact } from '@edict/edict'
 import { InternalFactRepresentation } from '@edict/types'
 
 export const insertFactToFact = <SCHEMA extends object>(

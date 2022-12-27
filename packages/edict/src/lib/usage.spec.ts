@@ -1,56 +1,56 @@
-import { edict } from './core';
-import { Schema } from 'inspector';
+import { edict } from './core'
+import { Schema } from 'inspector'
 
-type Characters = [id: number, x: number, y: number][];
+type Characters = [id: number, x: number, y: number][]
 
 type Schema = {
-  DeltaTime: number;
-  TotalTime: number;
-  X: number;
-  Y: number;
-  WindowWidth: number;
-  WindowHeight: number;
-  Width: number;
-  Height: number;
-  PressedKeys: Set<number>;
-  XVelocity: number;
-  YVelocity: number;
-  XChange: number;
-  YChange: number;
-  AllCharacters: Characters;
-};
+  DeltaTime: number
+  TotalTime: number
+  X: number
+  Y: number
+  WindowWidth: number
+  WindowHeight: number
+  Width: number
+  Height: number
+  PressedKeys: Set<number>
+  XVelocity: number
+  YVelocity: number
+  XChange: number
+  YChange: number
+  AllCharacters: Characters
+}
 
 describe('Basic Usage', () => {
   it('queries', () => {
-    const { rule, insert, fire } = edict<Schema>();
-    const br = performance.now();
+    const { rule, insert, fire } = edict<Schema>()
+    const br = performance.now()
     const r = rule('queries', ({ X, Y }) => ({
       Player: {
         X,
         Y,
       },
-    }));
-    const enacted = r.enact();
+    }))
+    const enacted = r.enact()
 
     insert({
       Player: {
         X: 0.0,
         Y: 1.0,
       },
-    });
-    fire();
-    const results = enacted.query();
+    })
+    fire()
+    const results = enacted.query()
 
-    expect(results.length).toBe(1);
+    expect(results.length).toBe(1)
 
-    const { Player } = results[0];
+    const { Player } = results[0]
 
-    expect(Player.X).toBe(0.0);
-    expect(Player.Y).toBe(1.0);
-  });
+    expect(Player.X).toBe(0.0)
+    expect(Player.Y).toBe(1.0)
+  })
 
   it('avoiding infinite loops', () => {
-    const { rule, insert, fire } = edict<Schema>();
+    const { rule, insert, fire } = edict<Schema>()
 
     const notInfinite = rule('avoiding infiniite loops', ({ DeltaTime }) => ({
       Player: {
@@ -61,10 +61,10 @@ describe('Basic Usage', () => {
       },
     })).enact({
       then: ({ Player, Global }) => {
-        console.log('firing');
-        insert({ [Player.id]: { X: Player.X + Global.DeltaTime } });
+        console.log('firing')
+        insert({ [Player.id]: { X: Player.X + Global.DeltaTime } })
       },
-    });
+    })
 
     insert({
       Player: {
@@ -74,14 +74,14 @@ describe('Basic Usage', () => {
       Global: {
         DeltaTime: 0.5,
       },
-    });
-    fire();
+    })
+    fire()
 
-    expect(notInfinite.query()[0].Player.X).toBe(0.5);
-  });
+    expect(notInfinite.query()[0].Player.X).toBe(0.5)
+  })
 
   it('conditions', () => {
-    const { rule, insert } = edict<Schema>(true);
+    const { rule, insert } = edict<Schema>(true)
 
     const movePlayer = rule(
       'movePlayer',
@@ -96,14 +96,14 @@ describe('Basic Usage', () => {
     ).enact({
       then: (args) =>
         insert({ Player: { X: args.Player.X + args.Global.DeltaTime } }),
-    });
+    })
 
     const getPlayer = rule('getPlayer', ({ X, Y }) => ({
       Player: {
         X,
         Y,
       },
-    })).enact();
+    })).enact()
 
     const stopPlayer = rule('stopPlayer', ({ WindowWidth, X }) => ({
       Global: {
@@ -116,7 +116,7 @@ describe('Basic Usage', () => {
       when: ({ Player, Global }) =>
         Player.X >= Global.WindowWidth && Global.WindowWidth > 0,
       then: ({ Player }) => insert({ Player: { X: 0 } }),
-    });
+    })
 
     insert({
       Player: {
@@ -127,13 +127,13 @@ describe('Basic Usage', () => {
         WindowWidth: 100,
         DeltaTime: 100,
       },
-    });
+    })
 
-    expect(getPlayer.query()[0].Player.X).toBe(0);
-  });
+    expect(getPlayer.query()[0].Player.X).toBe(0)
+  })
 
   it('complex types', () => {
-    const { rule, insert } = edict<Schema>(true);
+    const { rule, insert } = edict<Schema>(true)
 
     const movePlayer = rule('movePlayer', ({ DeltaTime }) => ({
       Global: {
@@ -146,25 +146,25 @@ describe('Basic Usage', () => {
     })).enact({
       then: ({ Player, Global }) => {
         if (Global.PressedKeys.has(263)) {
-          insert({ Player: { X: Player.X - 1 } });
+          insert({ Player: { X: Player.X - 1 } })
         } else if (Global.PressedKeys.has(262)) {
-          insert({ Player: { X: Player.X + 1 } });
+          insert({ Player: { X: Player.X + 1 } })
         }
       },
-    });
+    })
 
     const getPlayer = rule('getPlayer', ({ X, Y }) => ({
       Player: {
         X,
         Y,
       },
-    })).enact();
+    })).enact()
 
     const getKeys = rule('getKeys', ({ PressedKeys }) => ({
       Global: {
         PressedKeys,
       },
-    })).enact();
+    })).enact()
 
     const stopPlayer = rule('stopPlayer', ({ WindowWidth, X }) => ({
       Global: { WindowWidth },
@@ -173,7 +173,7 @@ describe('Basic Usage', () => {
       when: ({ Global, Player }) =>
         Player.X >= Global.WindowWidth && Global.WindowWidth > 0,
       then: () => insert({ Player: { X: 0 } }),
-    });
+    })
 
     insert({
       Player: {
@@ -185,27 +185,27 @@ describe('Basic Usage', () => {
         DeltaTime: 100,
         PressedKeys: new Set([262]),
       },
-    });
+    })
 
-    expect(getPlayer.query()[0].Player.X).toBe(1);
-  });
+    expect(getPlayer.query()[0].Player.X).toBe(1)
+  })
 
   it('joins and advanced queries', () => {
-    const { rule, insert } = edict<Schema>(true);
+    const { rule, insert } = edict<Schema>(true)
 
     const getPlayer = rule('getPlayer', ({ X, Y }) => ({
       Player: {
         X,
         Y,
       },
-    })).enact();
+    })).enact()
 
     const getCharacter = rule('getCharacter', ({ X, Y }) => ({
       $character: {
         X,
         Y,
       },
-    })).enact();
+    })).enact()
 
     const stopPlayer = rule('stopPlayer', ({ WindowWidth, X }) => ({
       Global: {
@@ -218,7 +218,7 @@ describe('Basic Usage', () => {
       when: ({ Player, Global }) =>
         Player.X >= Global.WindowWidth && Global.WindowWidth > 0,
       then: ({ Player }) => insert({ Player: { X: 0 } }),
-    });
+    })
 
     insert({
       Global: {
@@ -228,12 +228,12 @@ describe('Basic Usage', () => {
         X: 0,
         Y: 1,
       },
-    });
-    const results = getCharacter.query();
-    expect(results.length).toBe(1);
-    const [{ $character }] = results;
-    expect($character.id).toBe('Player');
-    expect($character.X).toBe(0);
-    expect($character.Y).toBe(1);
-  });
-});
+    })
+    const results = getCharacter.query()
+    expect(results.length).toBe(1)
+    const [{ $character }] = results
+    expect($character.id).toBe('Player')
+    expect($character.X).toBe(0)
+    expect($character.Y).toBe(1)
+  })
+})

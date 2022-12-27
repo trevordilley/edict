@@ -1,4 +1,4 @@
-import { ConditionArgs, EnactionResults, QueryArgs } from '@edict/core'
+import { ConditionArgs, EnactionResults, QueryArgs } from '@edict/edict'
 import { useEffect, useState } from 'react'
 
 // Make sure to add this to Edict's README

@@ -1,5 +1,5 @@
 export default {
-  displayName: 'core',
+  displayName: 'edict',
   preset: '../../jest.preset.js',
   globals: {
     'ts-jest': {
@@ -10,5 +10,5 @@ export default {
     '^.+\\.[tj]s$': 'ts-jest',
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../coverage/packages/core',
-};
+  coverageDirectory: '../../coverage/packages/edict',
+}

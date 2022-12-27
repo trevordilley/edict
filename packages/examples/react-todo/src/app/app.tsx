@@ -1,6 +1,6 @@
-import { edict } from '@edict/core';
-import { FC, useEffect, useState } from 'react';
-import { ITodo } from './types';
+import { edict } from '@edict/edict'
+import { FC, useEffect, useState } from 'react'
+import { ITodo } from './types'
 
 // Edict is a simple state management library leveraging a reactive rule-based
 // approach to simplify and decouple logic from data
@@ -20,7 +20,7 @@ import { ITodo } from './types';
 const { rule, retract, insert } = edict<{ isComplete: boolean; title: string }>(
   true,
   { enabled: true }
-);
+)
 
 const { subscribe, query } = rule('All Todos', ({ title, isComplete }) => ({
   // `$todo` is a _bound_ id. What that means is we're not matching on a
@@ -30,7 +30,7 @@ const { subscribe, query } = rule('All Todos', ({ title, isComplete }) => ({
     title,
     isComplete,
   },
-})).enact();
+})).enact()
 
 // the `useEdict()` function exposes the api of the Edict library.
 // Here we're defining a rule which grabs all facts in the fact database
@@ -39,24 +39,24 @@ const { subscribe, query } = rule('All Todos', ({ title, isComplete }) => ({
 // There are a few important elements here, which we'll go over line by line
 // below.
 export const useTodosRule = () => {
-  const [todos, setTodos] = useState(query());
+  const [todos, setTodos] = useState(query())
   useEffect(() => {
     return subscribe((results) => {
-      console.log(results);
-      setTodos(results);
-    });
-  });
-  return todos;
-};
+      console.log(results)
+      setTodos(results)
+    })
+  })
+  return todos
+}
 
 const NewTodo: FC = () => {
-  const [title, setTitle] = useState('');
-  const id = (title: string) => title.replace(' ', '-').toLowerCase();
+  const [title, setTitle] = useState('')
+  const id = (title: string) => title.replace(' ', '-').toLowerCase()
 
   return (
     <form
       onSubmit={(e) => {
-        e.preventDefault();
+        e.preventDefault()
 
         // Here we use the `insert` function to add a new fact.
         insert({
@@ -66,8 +66,8 @@ const NewTodo: FC = () => {
             title: title,
             isComplete: false,
           },
-        });
-        setTitle('');
+        })
+        setTitle('')
       }}
     >
       <input
@@ -75,13 +75,13 @@ const NewTodo: FC = () => {
         placeholder={'New Todo'}
         value={title}
         onChange={(e) => {
-          setTitle(e.target.value);
+          setTitle(e.target.value)
         }}
       />
       <input type={'submit'} value={'Add Todo!'} />
     </form>
-  );
-};
+  )
+}
 
 const Todo: FC<ITodo> = ({ id, isComplete, title }) => {
   return (
@@ -94,7 +94,7 @@ const Todo: FC<ITodo> = ({ id, isComplete, title }) => {
           onChange={() => {
             // Using the `id` of the todo, we update it's `isComplete` attribute.
             // Insertions are _upserts_
-            insert({ [id]: { isComplete: !isComplete } });
+            insert({ [id]: { isComplete: !isComplete } })
           }}
         />
         {title}
@@ -113,19 +113,19 @@ const Todo: FC<ITodo> = ({ id, isComplete, title }) => {
         </button>
       </label>
     </li>
-  );
-};
+  )
+}
 
 const TodoList: FC = () => {
   // the `useRule()` (which `useTodosRule()` composes) hook returns
   // the results of the firing of the rule.
-  const todos = useTodosRule();
+  const todos = useTodosRule()
 
   // The results of a rule is always an array of objects with attributes
   // matching the id's used in the `what` block.
-  const el = todos.map(({ $todo }) => <Todo key={$todo.id} {...$todo} />);
-  return <ul>{el}</ul>;
-};
+  const el = todos.map(({ $todo }) => <Todo key={$todo.id} {...$todo} />)
+  return <ul>{el}</ul>
+}
 
 export function App() {
   return (
@@ -136,7 +136,7 @@ export function App() {
         <TodoList />
       </div>
     </>
-  );
+  )
 }
 
-export default App;
+export default App

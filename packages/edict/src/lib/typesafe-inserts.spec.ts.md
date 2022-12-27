@@ -1,5 +1,5 @@
 ```typescript
-import { attr } from '@edict/core';
+import { attr } from '@edict/core'
 
 const schema = {
   Unique: {
@@ -24,52 +24,52 @@ const schema = {
       username: attr<string>(),
     },
   },
-};
+}
 
 // Given the above schema passed into a function, we want to return something with the
 // following type:
 interface Result {
   Session: {
-    insert: (attrs: { token?: string }) => void;
+    insert: (attrs: { token?: string }) => void
     retract: {
-      all: () => void;
-      token: () => void;
-    };
-  };
+      all: () => void
+      token: () => void
+    }
+  }
   HomePage: {
-    insert: (attrs: { selectedTab?: string; tabs?: string[] }) => void;
+    insert: (attrs: { selectedTab?: string; tabs?: string[] }) => void
     retract: {
-      all: () => void;
-      selectedTab: () => void;
-      tabs: () => void;
-    };
-  };
+      all: () => void
+      selectedTab: () => void
+      tabs: () => void
+    }
+  }
   $article: (id: string) => {
     insert: (attrs: {
-      name?: string;
-      slug?: string;
-      createDate?: Date;
-      updateDate?: Date;
-    }) => void;
+      name?: string
+      slug?: string
+      createDate?: Date
+      updateDate?: Date
+    }) => void
     retract: {
-      all: () => void;
-      name: () => void;
-      slug: () => void;
-      createDate: () => void;
-      updateDate: () => void;
-    };
-  };
+      all: () => void
+      name: () => void
+      slug: () => void
+      createDate: () => void
+      updateDate: () => void
+    }
+  }
   $author: (id: string) => {
-    insert: (attrs: { username?: string }) => void;
+    insert: (attrs: { username?: string }) => void
     retract: {
-      all: () => void;
-      username: () => void;
-    };
-  };
+      all: () => void
+      username: () => void
+    }
+  }
 }
 
 const crazyTypeFn = <T>(schema: T) => {
-  const ret = z.object({});
+  const ret = z.object({})
   Object.keys(schema).forEach((k) => {
     if (k.startsWith('$')) {
       ret.extend({
@@ -81,12 +81,12 @@ const crazyTypeFn = <T>(schema: T) => {
               insert: z.function().args(),
             })
           ),
-      });
+      })
     }
-  });
-};
+  })
+}
 
-const position = { position: z.object({ x: z.number(), y: z.number() }) };
+const position = { position: z.object({ x: z.number(), y: z.number() }) }
 const gameDevSchema = {
   Player: {
     xp: z.number(),
@@ -101,26 +101,24 @@ const gameDevSchema = {
     ...position,
     money: z.number(),
   },
-};
+}
 
 describe('TypeSafe inserts...', () => {
-  const fakeEdict = <SCHEMA>(args: SCHEMA) => args;
+  const fakeEdict = <SCHEMA>(args: SCHEMA) => args
   it('simple insert', () => {
-    const session = fakeEdict(schema);
-    session.$article('id').name.insert('bob');
-    session.$npc(23).hitPoints.insert(24);
+    const session = fakeEdict(schema)
+    session.$article('id').name.insert('bob')
+    session.$npc(23).hitPoints.insert(24)
     session.$npc(23).insert({
       hitPoints: 20,
       position: { x: 10, y: 12 },
-    });
+    })
 
     const then = ({ $treasure }) => {
-      $treasure.actions.hitPoints.insert();
-    };
+      $treasure.actions.hitPoints.insert()
+    }
 
-    expect(2).toBe(4);
-  });
-});
-
-
+    expect(2).toBe(4)
+  })
+})
 ```

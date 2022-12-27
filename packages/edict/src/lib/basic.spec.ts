@@ -1,6 +1,6 @@
-import { edict } from './core';
+import { edict } from './core'
 
-type People = [id: number, color: string, leftOf: number, height: number][];
+type People = [id: number, color: string, leftOf: number, height: number][]
 enum Id {
   Alice = 'Alice',
   Bob = 'Bob',
@@ -16,19 +16,19 @@ enum Id {
 }
 
 type Schema = {
-  Color: string;
-  LeftOf: Id;
-  RightOf: Id;
-  Height: number;
-  On: string;
-  Age: number;
-  Self: Id;
-  AllPeople: People;
-};
+  Color: string
+  LeftOf: Id
+  RightOf: Id
+  Height: number
+  On: string
+  Age: number
+  Self: Id
+  AllPeople: People
+}
 
 describe('edict...', () => {
   it('test', () => {
-    const { rule, insert, fire } = edict<Schema>();
+    const { rule, insert, fire } = edict<Schema>()
     const results = rule(
       'number of conditions != number of facts',
       ({ LeftOf, RightOf, Height }) => ({
@@ -47,15 +47,15 @@ describe('edict...', () => {
     ).enact({
       then: (arg) => {
         // Todo: Need to have a schema for `id`, it's lame that I cast things to strings...
-        expect(arg.$a.id).toBe(Id.Alice);
-        expect(arg.$y.RightOf).toBe(Id.Bob);
-        expect(arg.$y.LeftOf).toBe(Id.Zach);
-        expect(arg.$y.id).toBe(Id.Yair);
+        expect(arg.$a.id).toBe(Id.Alice)
+        expect(arg.$y.RightOf).toBe(Id.Bob)
+        expect(arg.$y.LeftOf).toBe(Id.Zach)
+        expect(arg.$y.id).toBe(Id.Yair)
       },
-    });
+    })
     results.subscribe((results) => {
-      expect(results.length).toBe(3);
-    });
+      expect(results.length).toBe(3)
+    })
     insert({
       [Id.Bob]: {
         Color: 'blue',
@@ -76,16 +76,16 @@ describe('edict...', () => {
       [Id.George]: {
         Height: 72,
       },
-    });
+    })
 
-    fire();
+    fire()
 
-    const allResults = results.query();
-    expect(allResults.length).toBe(3);
-  });
+    const allResults = results.query()
+    expect(allResults.length).toBe(3)
+  })
 
   it('out-of-order joins between id and value', () => {
-    const { rule, insert, fire } = edict<Schema>();
+    const { rule, insert, fire } = edict<Schema>()
     const results = rule('out-of-order', ({ Color }) => ({
       $b: {
         RightOf: { match: Id.Alice },
@@ -94,7 +94,7 @@ describe('edict...', () => {
       $y: {
         RightOf: { join: '$b' },
       },
-    })).enact();
+    })).enact()
 
     insert({
       [Id.Bob]: {
@@ -104,18 +104,18 @@ describe('edict...', () => {
       [Id.Yair]: {
         RightOf: Id.Bob,
       },
-    });
+    })
 
-    fire();
+    fire()
 
-    expect(results.query().length).toBe(1);
-  });
+    expect(results.query().length).toBe(1)
+  })
 
   // this was failing because we weren't testing conditions
   // in join nodes who are children of the root memory node
   it('simple conditions', () => {
-    const { rule, insert, fire } = edict<Schema>();
-    let count = 0;
+    const { rule, insert, fire } = edict<Schema>()
+    let count = 0
     const results = rule('simple', ({ Color }) => ({
       $b: {
         Color: { match: 'blue' },
@@ -123,23 +123,23 @@ describe('edict...', () => {
     })).enact({
       when: () => false,
       then: () => {
-        count += 1;
+        count += 1
       },
-    });
+    })
 
     insert({
       [Id.Bob]: {
         Color: 'blue',
       },
-    });
+    })
 
-    fire();
+    fire()
 
-    expect(count).toBe(0);
-  });
+    expect(count).toBe(0)
+  })
 
   it('join value with id', () => {
-    const { insert, fire, rule } = edict<Schema>(true);
+    const { insert, fire, rule } = edict<Schema>(true)
 
     const results = rule('join', ({ Color, Height }) => ({
       [Id.Bob]: {
@@ -149,7 +149,7 @@ describe('edict...', () => {
         Color,
         Height,
       },
-    })).enact();
+    })).enact()
 
     insert({
       [Id.Alice]: {
@@ -159,7 +159,7 @@ describe('edict...', () => {
       [Id.Bob]: {
         LeftOf: Id.Alice,
       },
-    });
+    })
 
     insert({
       [Id.Charlie]: {
@@ -169,13 +169,13 @@ describe('edict...', () => {
       [Id.Bob]: {
         LeftOf: Id.Charlie,
       },
-    });
+    })
 
-    expect(results.query().length).toBe(1);
-  });
+    expect(results.query().length).toBe(1)
+  })
 
   it('adding facts out of order', () => {
-    const { rule, insert, fire } = edict<Schema>();
+    const { rule, insert, fire } = edict<Schema>()
 
     const results = rule(
       'adding facts out of order',
@@ -209,34 +209,34 @@ describe('edict...', () => {
       })
     ).enact({
       then: (args) => {
-        expect(args.$a.id).toBe(Id.Alice);
-        expect(args.$b.id).toBe(Id.Bob);
-        expect(args.$y.id).toBe(Id.Yair);
-        expect(args.$z.id).toBe(Id.Zach);
+        expect(args.$a.id).toBe(Id.Alice)
+        expect(args.$b.id).toBe(Id.Bob)
+        expect(args.$y.id).toBe(Id.Yair)
+        expect(args.$z.id).toBe(Id.Zach)
       },
-    });
-    insert({ [Id.Xavier]: { RightOf: Id.Yair } });
-    insert({ [Id.Yair]: { LeftOf: Id.Zach } });
-    insert({ [Id.Zach]: { Color: 'red' } });
-    insert({ [Id.Alice]: { Color: 'maize' } });
-    insert({ [Id.Bob]: { Color: 'blue' } });
-    insert({ [Id.Charlie]: { Color: 'green' } });
-    insert({ [Id.Seth]: { On: 'table' } });
-    insert({ [Id.Yair]: { RightOf: Id.Bob } });
-    insert({ [Id.Alice]: { LeftOf: Id.David } });
-    insert({ [Id.David]: { Color: 'white' } });
-    fire();
-    expect(results.query().length).toBe(1);
-  });
+    })
+    insert({ [Id.Xavier]: { RightOf: Id.Yair } })
+    insert({ [Id.Yair]: { LeftOf: Id.Zach } })
+    insert({ [Id.Zach]: { Color: 'red' } })
+    insert({ [Id.Alice]: { Color: 'maize' } })
+    insert({ [Id.Bob]: { Color: 'blue' } })
+    insert({ [Id.Charlie]: { Color: 'green' } })
+    insert({ [Id.Seth]: { On: 'table' } })
+    insert({ [Id.Yair]: { RightOf: Id.Bob } })
+    insert({ [Id.Alice]: { LeftOf: Id.David } })
+    insert({ [Id.David]: { Color: 'white' } })
+    fire()
+    expect(results.query().length).toBe(1)
+  })
 
   it('Filters work', () => {
-    const { rule, insert, fire } = edict<Schema>();
+    const { rule, insert, fire } = edict<Schema>()
 
     const results = rule('Filters work', ({ Color }) => ({
       $person: {
         Color,
       },
-    })).enact();
+    })).enact()
 
     insert({
       bob: {
@@ -251,23 +251,23 @@ describe('edict...', () => {
       tom: {
         Color: 'orange',
       },
-    });
+    })
 
-    fire();
-    expect(results.query().length).toBe(4);
+    fire()
+    expect(results.query().length).toBe(4)
 
     const filteredById = results.query({
       $person: {
         ids: ['bob'],
       },
-    });
-    expect(filteredById[0].$person.id).toBe('bob');
+    })
+    expect(filteredById[0].$person.id).toBe('bob')
     const filteredByAttribute = results.query({
       $person: {
         Color: ['red'],
       },
-    });
-    expect(filteredByAttribute[0].$person.id).toBe('joe');
+    })
+    expect(filteredByAttribute[0].$person.id).toBe('joe')
 
     /// Oi...I feel like the useful thing to do is to treat these as an AND instead of an OR
     /// currently this is an OR....
@@ -276,35 +276,35 @@ describe('edict...', () => {
         ids: ['jimmy'],
         Color: ['blue'],
       },
-    });
-    expect(filteredByIdAndAttr[0].$person.id).toBe('jimmy');
+    })
+    expect(filteredByIdAndAttr[0].$person.id).toBe('jimmy')
 
     const filterWithMultipleQueries = results.query({
       $person: {
         Color: ['blue', 'red'],
       },
-    });
+    })
     expect(
       filterWithMultipleQueries.map(({ $person }) => $person.id).sort()
-    ).toStrictEqual(['bob', 'jimmy', 'joe'].sort());
+    ).toStrictEqual(['bob', 'jimmy', 'joe'].sort())
 
     const filterWhichMatchesEveryone = results.query({
       $person: {
         Color: ['blue', 'red', 'orange'],
       },
-    });
-    expect(filterWhichMatchesEveryone.length).toBe(4);
+    })
+    expect(filterWhichMatchesEveryone.length).toBe(4)
     const filterWhichMatchesNoOne = results.query({
       $person: {
         Color: ['chair'],
       },
-    });
-    expect(filterWhichMatchesNoOne.length).toBe(0);
-  });
+    })
+    expect(filterWhichMatchesNoOne.length).toBe(0)
+  })
 
   it('Async then and thenFinally work', async () => {
-    const { rule, insert, fire } = edict<Schema>();
-    let thenFinallyCount = 0;
+    const { rule, insert, fire } = edict<Schema>()
+    let thenFinallyCount = 0
     rule('Filters work', ({ Color }) => ({
       $person: {
         Color,
@@ -317,37 +317,37 @@ describe('edict...', () => {
               [id]: {
                 Height: 10,
               },
-            });
+            })
           } else if (Color === 'blue') {
             insert({
               [id]: {
                 Height: 20,
               },
-            });
+            })
           } else if (Color === 'orange') {
             insert({
               [id]: {
                 Height: 30,
               },
-            });
+            })
           }
-          resolve();
-        });
+          resolve()
+        })
       },
       thenFinally: async () => {
         await new Promise<void>((resolve) => {
-          thenFinallyCount++;
-          resolve();
-        });
+          thenFinallyCount++
+          resolve()
+        })
       },
-    });
+    })
 
     const heightQuery = rule('Heights from Color', ({ Color, Height }) => ({
       $person: {
         Color,
         Height,
       },
-    })).enact();
+    })).enact()
 
     insert({
       bob: {
@@ -362,28 +362,28 @@ describe('edict...', () => {
       tom: {
         Color: 'orange',
       },
-    });
+    })
 
-    fire();
-    await new Promise((r) => setTimeout(r, 0));
-    const results = heightQuery.query();
-    expect(results.length).toBe(4);
+    fire()
+    await new Promise((r) => setTimeout(r, 0))
+    const results = heightQuery.query()
+    expect(results.length).toBe(4)
     results.forEach(({ $person: { Color, Height } }) => {
-      if (Color === 'red') expect(Height).toBe(10);
-      if (Color === 'blue') expect(Height).toBe(20);
-      if (Color === 'orange') expect(Height).toBe(30);
-    });
-    expect(thenFinallyCount).toBe(1);
-  });
-});
+      if (Color === 'red') expect(Height).toBe(10)
+      if (Color === 'blue') expect(Height).toBe(20)
+      if (Color === 'orange') expect(Height).toBe(30)
+    })
+    expect(thenFinallyCount).toBe(1)
+  })
+})
 
 it('Reusable conditions with conditions()', () => {
-  const { rule, insert, fire, conditions } = edict<Schema>();
+  const { rule, insert, fire, conditions } = edict<Schema>()
 
   const personConds = conditions(({ Color, Height }) => ({
     Color,
     Height,
-  }));
+  }))
 
   rule('red color folks are 70 years old', () => ({
     $person: {
@@ -396,9 +396,9 @@ it('Reusable conditions with conditions()', () => {
         [id]: {
           Age: 70,
         },
-      });
+      })
     },
-  });
+  })
 
   rule('blue color  are 50 years old', () => ({
     $person: {
@@ -411,9 +411,9 @@ it('Reusable conditions with conditions()', () => {
         [id]: {
           Age: 50,
         },
-      });
+      })
     },
-  });
+  })
 
   rule('orange color  are 30 years old', () => ({
     $person: {
@@ -426,16 +426,16 @@ it('Reusable conditions with conditions()', () => {
         [id]: {
           Age: 30,
         },
-      });
+      })
     },
-  });
+  })
 
   const people = rule('People', ({ Age }) => ({
     $person: {
       ...personConds,
       Age,
     },
-  })).enact();
+  })).enact()
 
   insert({
     bob: {
@@ -454,51 +454,51 @@ it('Reusable conditions with conditions()', () => {
       Color: 'orange',
       Height: 34,
     },
-  });
+  })
 
-  fire();
-  expect(people.query().length).toBe(4);
+  fire()
+  expect(people.query().length).toBe(4)
 
   const red = people.query({
     $person: {
       Color: ['red'],
     },
-  });
+  })
   red.forEach((r) => {
-    expect(r.$person.Age).toBe(70);
-  });
+    expect(r.$person.Age).toBe(70)
+  })
 
   const blue = people.query({
     $person: {
       Color: ['blue'],
     },
-  });
+  })
   blue.map((b) => {
-    expect(b.$person.Age).toBe(50);
-  });
+    expect(b.$person.Age).toBe(50)
+  })
 
   const orange = people.query({
     $person: {
       Color: ['orange'],
     },
-  });
+  })
   orange.map((o) => {
-    expect(o.$person.Age).toBe(30);
-  });
-});
+    expect(o.$person.Age).toBe(30)
+  })
+})
 
 it('Reusable conditions can be used to retract', () => {
   const { rule, insert, fire, retractByConditions, conditions } =
-    edict<Schema>();
+    edict<Schema>()
 
   const personConds = conditions(({ Color, Height }) => ({
     Color,
     Height,
-  }));
+  }))
 
   const people = rule('People', () => ({
     $person: personConds,
-  })).enact();
+  })).enact()
 
   insert({
     bob: {
@@ -517,26 +517,26 @@ it('Reusable conditions can be used to retract', () => {
       Color: 'orange',
       Height: 34,
     },
-  });
+  })
 
-  fire();
-  expect(people.query().length).toBe(4);
+  fire()
+  expect(people.query().length).toBe(4)
   const tom = () =>
     people.query({
       $person: {
         ids: ['tom'],
       },
-    });
-  expect(tom().length).toBe(1);
-  retractByConditions('tom', personConds);
-  fire();
-  expect(tom().length).toBe(0);
-  expect(people.query().length).toBe(3);
-});
+    })
+  expect(tom().length).toBe(1)
+  retractByConditions('tom', personConds)
+  fire()
+  expect(tom().length).toBe(0)
+  expect(people.query().length).toBe(3)
+})
 
 it('Async then and thenFinally work', async () => {
-  const { rule, insert, fire } = edict<Schema>();
-  let thenFinallyCount = 0;
+  const { rule, insert, fire } = edict<Schema>()
+  let thenFinallyCount = 0
   rule('Filters work', ({ Color }) => ({
     $person: {
       Color,
@@ -549,37 +549,37 @@ it('Async then and thenFinally work', async () => {
             [id]: {
               Height: 10,
             },
-          });
+          })
         } else if (Color === 'blue') {
           insert({
             [id]: {
               Height: 20,
             },
-          });
+          })
         } else if (Color === 'orange') {
           insert({
             [id]: {
               Height: 30,
             },
-          });
+          })
         }
-        resolve();
-      });
+        resolve()
+      })
     },
     thenFinally: async () => {
       await new Promise<void>((resolve) => {
-        thenFinallyCount++;
-        resolve();
-      });
+        thenFinallyCount++
+        resolve()
+      })
     },
-  });
+  })
 
   const heightQuery = rule('Heights from Color', ({ Color, Height }) => ({
     $person: {
       Color,
       Height,
     },
-  })).enact();
+  })).enact()
 
   insert({
     bob: {
@@ -594,16 +594,16 @@ it('Async then and thenFinally work', async () => {
     tom: {
       Color: 'orange',
     },
-  });
+  })
 
-  fire();
-  await new Promise((r) => setTimeout(r, 0));
-  const results = heightQuery.query();
-  expect(results.length).toBe(4);
+  fire()
+  await new Promise((r) => setTimeout(r, 0))
+  const results = heightQuery.query()
+  expect(results.length).toBe(4)
   results.forEach(({ $person: { Color, Height } }) => {
-    if (Color === 'red') expect(Height).toBe(10);
-    if (Color === 'blue') expect(Height).toBe(20);
-    if (Color === 'orange') expect(Height).toBe(30);
-  });
-  expect(thenFinallyCount).toBe(1);
-});
+    if (Color === 'red') expect(Height).toBe(10)
+    if (Color === 'blue') expect(Height).toBe(20)
+    if (Color === 'orange') expect(Height).toBe(30)
+  })
+  expect(thenFinallyCount).toBe(1)
+})

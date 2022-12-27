@@ -1,4 +1,4 @@
-import { edict } from '@edict/core'
+import { edict } from '@edict/edict'
 import * as decodeJwt from 'jwt-decode'
 import { FetchState, HOME_TAB, ID, Schema } from './schema'
 import {
