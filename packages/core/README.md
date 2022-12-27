@@ -291,7 +291,7 @@ in hooks instead of plumbing
 // These examples should help expose the types you'll need to
 // work with if you want to make general purpose subscriptions
 // to rules in other frameworks like RxJs
-export const useRuleOne = <SCHEMA, T extends ConditionArgs<SCHEMA>>(
+export const useRuleOne = <SCHEMA extends object, T extends ConditionArgs<SCHEMA>>(
   rule: EnactionResults<SCHEMA, T>,
   filter?: QueryArgs<SCHEMA, T>
 ) => {
@@ -300,7 +300,7 @@ export const useRuleOne = <SCHEMA, T extends ConditionArgs<SCHEMA>>(
   return match
 }
 
-export const useRule = <SCHEMA, T extends ConditionArgs<SCHEMA>>(
+export const useRule = <SCHEMA extends object, T extends ConditionArgs<SCHEMA>>(
   rule: EnactionResults<SCHEMA, T>,
   filter?: QueryArgs<SCHEMA, T>
 ) => {
