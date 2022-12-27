@@ -218,11 +218,11 @@ With `edict`, you can express your business logic as a set of rules.
 ## Installation
 
 ```bash
-yarn add @edict/core @edict/types @edict/rete lodash typescript-collections
+yarn add @edict/core 
 
 # or...
 
-npm i @edict/core @edict/types @edict/rete lodash typescript-collections
+npm i @edict/core 
 ```
 
 
