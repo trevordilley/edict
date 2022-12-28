@@ -1,4 +1,7 @@
 # rete
+The implementation of the core algorithm which makes `edict` possible.
+
+> **Current Goal:** Improve performance, please read [Performance-Optimization.md](docs/Performance-Optimization.md) to learn how to contribute!
 
 ## Resources
 The [1995 paper](docs/CMU-CS-95-113.pdf) Oakes references for O'doyle Rules 
