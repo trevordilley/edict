@@ -36,57 +36,60 @@ import {
   Token,
   TokenKind,
   Var,
-} from './types';
-import { Dictionary, Set as TSet } from 'typescript-collections';
-import * as _ from 'lodash';
+} from './types'
+import { Dictionary, Set as TSet } from 'typescript-collections'
+import * as _ from 'lodash'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { performance } from 'perf_hooks'
 
 declare const process: {
   env: {
-    NODE_ENV: string;
-  };
-};
+    NODE_ENV: string
+  }
+}
 
-export const newSet = <T>() => new TSet<T>();
-export const newDict = <K, V>() => new Dictionary<K, V>();
+export const newSet = <T>() => new TSet<T>()
+export const newDict = <K, V>() => new Dictionary<K, V>()
 // NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
 export const getIdAttr = <SCHEMA>(
   fact: InternalFactRepresentation<SCHEMA>
 ): IdAttr<SCHEMA> => {
   // TODO: Good way to assert that fact[1] is actually keyof T at compile time?
-  return [fact[0], fact[1] as keyof SCHEMA];
-};
+  return [fact[0], fact[1] as keyof SCHEMA]
+}
 
 const addNode = <T>(
   node: AlphaNode<T>,
   newNode: AlphaNode<T>
 ): AlphaNode<T> => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('addNode_start');
+    performance.mark('addNode_start')
   }
   for (let i = 0; i < node.children.length; i++) {
     if (
       node.children[i].testField === newNode.testField &&
       node.children[i].testValue === newNode.testValue
     ) {
-      return node.children[i];
+      return node.children[i]
     }
   }
-  node.children.push(newNode);
+  node.children.push(newNode)
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('addNode_end');
-    performance.measure('addNode', 'addNode_start', 'addNode_end');
+    performance.mark('addNode_end')
+    performance.measure('addNode', 'addNode_start', 'addNode_end')
   }
-  return newNode;
-};
+  return newNode
+}
 
 const addNodes = <T>(
   session: Session<T>,
   nodes: [Field, keyof T | FactId][]
 ): AlphaNode<T> => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('addNodes_start');
+    performance.mark('addNodes_start')
   }
-  let result = session.alphaNode;
+  let result = session.alphaNode
   nodes.forEach(([testField, testValue]) => {
     result = addNode(result, {
       id: session.nextId(),
@@ -95,17 +98,17 @@ const addNodes = <T>(
       successors: [],
       children: [],
       facts: new Dictionary(),
-    });
-  });
+    })
+  })
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('addNodes_end');
-    performance.measure('addNodes', 'addNodes_start', 'addNodes_end');
+    performance.mark('addNodes_end')
+    performance.measure('addNodes', 'addNodes_start', 'addNodes_end')
   }
-  return result;
-};
+  return result
+}
 
 function isVar(obj: any): obj is Var {
-  return obj.name !== undefined && obj.field !== undefined;
+  return obj.name !== undefined && obj.field !== undefined
 }
 
 // To figure out MatchT we need to understand how Vars are treated (so we can understand how MatchT is mapped)
@@ -119,65 +122,65 @@ const addConditionsToProduction = <T, U>(
   then: boolean
 ) => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('addConditionsToProduction_start');
+    performance.mark('addConditionsToProduction_start')
   }
-  const condition: Condition<T> = { shouldTrigger: then, nodes: [], vars: [] };
-  const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE];
+  const condition: Condition<T> = { shouldTrigger: then, nodes: [], vars: [] }
+  const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE]
 
   fieldTypes.forEach((fieldType) => {
     if (fieldType === Field.IDENTIFIER) {
       if (isVar(id)) {
-        const temp = id;
-        temp.field = fieldType;
-        condition.vars.push(temp);
+        const temp = id
+        temp.field = fieldType
+        condition.vars.push(temp)
       } else {
-        condition.nodes.push([fieldType, id]);
+        condition.nodes.push([fieldType, id])
       }
     } else if (fieldType === Field.ATTRIBUTE) {
-      condition.nodes.push([fieldType, attr]);
+      condition.nodes.push([fieldType, attr])
     } else if (fieldType === Field.VALUE) {
       if (isVar(value)) {
-        const temp = value;
-        temp.field = fieldType;
-        condition.vars.push(temp);
+        const temp = value
+        temp.field = fieldType
+        condition.vars.push(temp)
       } else {
-        condition.nodes.push([fieldType, value]);
+        condition.nodes.push([fieldType, value])
       }
     }
-  });
-  production.conditions.push(condition);
+  })
+  production.conditions.push(condition)
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('addConditionsToProduction_end');
+    performance.mark('addConditionsToProduction_end')
     performance.measure(
       'addConditionsToProduction',
       'addConditionsToProduction_start',
       'addConditionsToProduction_end'
-    );
+    )
   }
-};
+}
 
 const isAncestor = <T>(x: JoinNode<T>, y: JoinNode<T>): boolean => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('isAncestor_start');
+    performance.mark('isAncestor_start')
   }
-  let node = y;
+  let node = y
   while (node !== undefined && node.parent) {
     if (node.parent.parent === x) {
       if (process.env.NODE_ENV === 'development') {
-        performance.mark('isAncestor_end');
-        performance.measure('isAncestor', 'isAncestor_start', 'isAncestor_end');
+        performance.mark('isAncestor_end')
+        performance.measure('isAncestor', 'isAncestor_start', 'isAncestor_end')
       }
-      return true;
+      return true
     } else {
-      node = node.parent.parent;
+      node = node.parent.parent
     }
   }
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('isAncestor_end');
-    performance.measure('isAncestor', 'isAncestor_start', 'isAncestor_end');
+    performance.mark('isAncestor_end')
+    performance.measure('isAncestor', 'isAncestor_start', 'isAncestor_end')
   }
-  return false;
-};
+  return false
+}
 
 const addProductionToSession = <T, U>(
   session: Session<T>,
@@ -185,34 +188,34 @@ const addProductionToSession = <T, U>(
   alreadyExistsBehaviour = PRODUCTION_ALREADY_EXISTS_BEHAVIOR.ERROR
 ) => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('addProductionToSession_start');
+    performance.mark('addProductionToSession_start')
   }
   if (session.leafNodes.containsKey(production.name)) {
-    const message = `${production.name} already exists in session`;
+    const message = `${production.name} already exists in session`
     if (alreadyExistsBehaviour === PRODUCTION_ALREADY_EXISTS_BEHAVIOR.QUIET)
-      return;
+      return
     else if (
       alreadyExistsBehaviour === PRODUCTION_ALREADY_EXISTS_BEHAVIOR.WARN
     ) {
-      console.warn(message);
-      return;
+      console.warn(message)
+      return
     } else if (
       alreadyExistsBehaviour === PRODUCTION_ALREADY_EXISTS_BEHAVIOR.ERROR
     ) {
-      throw new Error(message);
+      throw new Error(message)
     }
   }
 
-  const memNodes: MemoryNode<T>[] = [];
-  const joinNodes: JoinNode<T>[] = [];
-  const last = production.conditions.length - 1;
-  const bindings = new Set<string>();
-  const joinedBindings = new Set<string>();
+  const memNodes: MemoryNode<T>[] = []
+  const joinNodes: JoinNode<T>[] = []
+  const last = production.conditions.length - 1
+  const bindings = new Set<string>()
+  const joinedBindings = new Set<string>()
   for (let i = 0; i <= last; i++) {
-    const condition = production.conditions[i];
-    const leafAlphaNode = addNodes(session, condition.nodes);
+    const condition = production.conditions[i]
+    const leafAlphaNode = addNodes(session, condition.nodes)
     const parentMemNode =
-      memNodes.length > 0 ? memNodes[memNodes.length - 1] : undefined;
+      memNodes.length > 0 ? memNodes[memNodes.length - 1] : undefined
     const joinNode: JoinNode<T> = {
       id: session.nextId(),
       parent: parentMemNode,
@@ -220,22 +223,22 @@ const addProductionToSession = <T, U>(
       condition,
       ruleName: production.name,
       oldIdAttrs: newSet(),
-    };
+    }
     condition.vars.forEach((v) => {
       if (bindings.has(v.name)) {
-        joinedBindings.add(v.name);
+        joinedBindings.add(v.name)
         if (v.field === Field.IDENTIFIER) {
-          joinNode.idName = v.name;
+          joinNode.idName = v.name
         }
       } else {
-        bindings.add(v.name);
+        bindings.add(v.name)
       }
-    });
+    })
     if (parentMemNode) {
-      parentMemNode.child = joinNode;
+      parentMemNode.child = joinNode
     }
-    leafAlphaNode.successors.push(joinNode);
-    leafAlphaNode.successors.sort((x, y) => (isAncestor(x, y) ? 1 : -1));
+    leafAlphaNode.successors.push(joinNode)
+    leafAlphaNode.successors.sort((x, y) => (isAncestor(x, y) ? 1 : -1))
     const memNode: MemoryNode<T> = {
       id: session.nextId(),
       parent: joinNode,
@@ -245,68 +248,68 @@ const addProductionToSession = <T, U>(
       lastMatchId: -1,
       matches: newDict<IdAttrs<T>, Match<T>>(),
       matchIds: newDict<number, IdAttrs<T>>(),
-    };
+    }
     if (memNode.type === MEMORY_NODE_TYPE.LEAF) {
       memNode.nodeType = {
         condFn: production.condFn,
-      };
+      }
 
-      const pThenFn = production.thenFn;
+      const pThenFn = production.thenFn
       if (pThenFn) {
-        const sess = { ...session, insideRule: true };
+        const sess = { ...session, insideRule: true }
         memNode.nodeType.thenFn = (vars) => {
           pThenFn({
             session: sess,
             rule: production,
             vars: production.convertMatchFn(vars),
-          });
-        };
+          })
+        }
       }
-      const pThenFinallyFn = production.thenFinallyFn;
+      const pThenFinallyFn = production.thenFinallyFn
       if (pThenFinallyFn) {
-        const sess = { ...session, insideRule: true };
+        const sess = { ...session, insideRule: true }
         memNode.nodeType.thenFinallyFn = () => {
-          pThenFinallyFn(sess, production);
-        };
+          pThenFinallyFn(sess, production)
+        }
       }
 
       if (session.leafNodes.containsKey(production.name)) {
         throw new Error(
           `${production.name} already exists in session, this should have been handled above`
-        );
+        )
       }
-      session.leafNodes.setValue(production.name, memNode);
+      session.leafNodes.setValue(production.name, memNode)
     }
-    memNodes.push(memNode);
-    joinNodes.push(joinNode);
-    joinNode.child = memNode;
+    memNodes.push(memNode)
+    joinNodes.push(joinNode)
+    joinNode.child = memNode
   }
 
-  const leafMemNode = memNodes[memNodes.length - 1];
+  const leafMemNode = memNodes[memNodes.length - 1]
   for (let i = 0; i < memNodes.length; i++) {
-    memNodes[i].leafNode = leafMemNode;
+    memNodes[i].leafNode = leafMemNode
   }
 
   for (let i = 0; i < joinNodes.length; i++) {
-    const node = joinNodes[i];
-    const vars = node.condition.vars;
+    const node = joinNodes[i]
+    const vars = node.condition.vars
     for (let j = 0; j < vars.length; j++) {
-      const v = vars[j];
+      const v = vars[j]
       if (v.field === Field.VALUE && joinedBindings.has(v.name)) {
-        node.disableFastUpdates = true;
-        break;
+        node.disableFastUpdates = true
+        break
       }
     }
   }
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('addProductionToSession_end');
+    performance.mark('addProductionToSession_end')
     performance.measure(
       'addProductionToSession',
       'addProductionToSession_start',
       'addProductionToSession_end'
-    );
+    )
   }
-};
+}
 
 const subscribeToProduction = <T, U>(
   session: Session<T>,
@@ -315,33 +318,33 @@ const subscribeToProduction = <T, U>(
   filter?: QueryFilter<T>
 ): (() => void) => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('subscribeToProduction_start');
+    performance.mark('subscribeToProduction_start')
   }
-  const sub = { callback, filter };
-  production.subscriptions.add(sub);
+  const sub = { callback, filter }
+  production.subscriptions.add(sub)
   if (!session.subscriptionsOnProductions.has(production.name)) {
     session.subscriptionsOnProductions.set(production.name, () => {
       production.subscriptions.forEach(({ callback, filter }) =>
         callback(queryAll(session, production, filter))
-      );
-    });
+      )
+    })
   }
   const ret = () => {
-    production.subscriptions.delete(sub);
+    production.subscriptions.delete(sub)
     if (production.subscriptions.size === 0) {
-      session.subscriptionsOnProductions.delete(production.name);
+      session.subscriptionsOnProductions.delete(production.name)
     }
-  };
+  }
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('subscribeToProduction_end');
+    performance.mark('subscribeToProduction_end')
     performance.measure(
       'subscribeToProduction',
       'subscribeToProduction_start',
       'subscribeToProduction_end'
-    );
+    )
   }
-  return ret;
-};
+  return ret
+}
 
 // MatchT represents a mapping from condition key to a value
 // So given this condidtion:
@@ -355,11 +358,11 @@ const getVarFromFact = <T>(
   fact: FactFragment<T>
 ): boolean => {
   if (vars.has(key) && vars.get(key) != fact) {
-    return false;
+    return false
   }
-  vars.set(key, fact);
-  return true;
-};
+  vars.set(key, fact)
+  return true
+}
 
 const getVarsFromFact = <T>(
   vars: MatchT<T>,
@@ -367,21 +370,21 @@ const getVarsFromFact = <T>(
   fact: Fact<T>
 ): boolean => {
   for (let i = 0; i < condition.vars.length; i++) {
-    const v = condition.vars[i];
+    const v = condition.vars[i]
     if (v.field === Field.IDENTIFIER) {
       if (!getVarFromFact(vars, v.name, fact[0])) {
-        return false;
+        return false
       }
     } else if (v.field === Field.ATTRIBUTE) {
-      throw new Error(`Attributes can not contain vars: ${v}`);
+      throw new Error(`Attributes can not contain vars: ${v}`)
     } else if (v.field === Field.VALUE) {
       if (!getVarFromFact(vars, v.name, fact[2])) {
-        return false;
+        return false
       }
     }
   }
-  return true;
-};
+  return true
+}
 
 const leftActivationFromVars = <T>(
   session: Session<T>,
@@ -391,29 +394,29 @@ const leftActivationFromVars = <T>(
   token: Token<T>,
   alphaFact: Fact<T>
 ) => {
-  const newVars: MatchT<T> = new Map(vars);
+  const newVars: MatchT<T> = new Map(vars)
   if (getVarsFromFact(newVars, node.condition, alphaFact)) {
     if (process.env.NODE_ENV === 'development') {
-      performance.mark('leftActivationFromVars_start');
+      performance.mark('leftActivationFromVars_start')
     }
-    const idAttr = getIdAttr<T>(alphaFact);
-    const newIdAttrs = [...idAttrs];
-    newIdAttrs.push(idAttr);
-    const newToken = { fact: alphaFact, kind: token.kind };
-    const isNew = !node.oldIdAttrs?.contains(idAttr);
-    const child = node.child;
+    const idAttr = getIdAttr<T>(alphaFact)
+    const newIdAttrs = [...idAttrs]
+    newIdAttrs.push(idAttr)
+    const newToken = { fact: alphaFact, kind: token.kind }
+    const isNew = !node.oldIdAttrs?.contains(idAttr)
+    const child = node.child
     if (!child) {
-      console.error('Session', JSON.stringify(session));
-      console.error(`Node ${node.idName}`, JSON.stringify(node));
-      throw new Error('Expected node to have child!');
+      console.error('Session', JSON.stringify(session))
+      console.error(`Node ${node.idName}`, JSON.stringify(node))
+      throw new Error('Expected node to have child!')
     }
     if (process.env.NODE_ENV === 'development') {
-      performance.mark('leftActivationFromVars_end');
+      performance.mark('leftActivationFromVars_end')
       performance.measure(
         'leftActivationFromVars',
         'leftActivationFromVars_start',
         'leftActivationFromVars_end'
-      );
+      )
     }
     leftActivationOnMemoryNode(
       session,
@@ -422,9 +425,9 @@ const leftActivationFromVars = <T>(
       newVars,
       newToken,
       isNew
-    );
+    )
   }
-};
+}
 
 const leftActivationWithoutAlpha = <T>(
   session: Session<T>,
@@ -434,27 +437,27 @@ const leftActivationWithoutAlpha = <T>(
   token: Token<T>
 ) => {
   if (node.idName && node.idName != '') {
-    const id = vars.get(node.idName);
+    const id = vars.get(node.idName)
     if (id !== undefined && node.alphaNode.facts.containsKey(id)) {
       const alphaFacts = [
         ...(node.alphaNode.facts.getValue(id)?.values() ?? []),
-      ];
+      ]
       if (!alphaFacts)
-        throw new Error(`Expected to have alpha facts for ${node.idName}`);
+        throw new Error(`Expected to have alpha facts for ${node.idName}`)
       alphaFacts.forEach((alphaFact) => {
-        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact);
-      });
+        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+      })
     }
   } else {
-    const factsForId = [...node.alphaNode.facts.values()];
+    const factsForId = [...node.alphaNode.facts.values()]
     factsForId.forEach((facts) => {
-      const alphas = [...facts.values()];
+      const alphas = [...facts.values()]
       alphas.forEach((alphaFact) => {
-        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact);
-      });
-    });
+        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+      })
+    })
   }
-};
+}
 
 const leftActivationOnMemoryNode = <T>(
   session: Session<T>,
@@ -464,11 +467,12 @@ const leftActivationOnMemoryNode = <T>(
   token: Token<T>,
   isNew: boolean
 ) => {
-  const idAttr = idAttrs[idAttrs.length - 1];
+  const idAttr = idAttrs[idAttrs.length - 1]
 
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('leftActivationOnMemoryNode_start');
+    performance.mark('leftActivationOnMemoryNode_start')
   }
+  performance.mark('leftActivationOnMemoryNode_trigger_start')
   if (
     isNew &&
     (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) &&
@@ -476,62 +480,103 @@ const leftActivationOnMemoryNode = <T>(
     node.leafNode &&
     node.leafNode.nodeType
   ) {
-    node.leafNode.nodeType.trigger = true;
+    node.leafNode.nodeType.trigger = true
   }
+  performance.mark('leftActivationOnMemoryNode_trigger_end')
+  performance.measure(
+    'leftActivationOnMemoryNode_trigger',
+    'leftActivationOnMemoryNode_trigger_start',
+    'leftActivationOnMemoryNode_trigger_end'
+  )
 
   if (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) {
-    let match: Match<T>;
+    performance.mark('leftActivationOnMemoryNode_mutate_start')
+    let match: Match<T>
     if (node.matches.containsKey(idAttrs)) {
-      match = node.matches.getValue(idAttrs)!;
+      match = node.matches.getValue(idAttrs)!
     } else {
-      node.lastMatchId += 1;
-      match = { id: node.lastMatchId };
+      node.lastMatchId += 1
+      match = { id: node.lastMatchId }
     }
-    match.vars = new Map(vars);
+    match.vars = new Map(vars)
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
       !node.nodeType?.condFn ||
-      (node.nodeType?.condFn(vars) ?? true);
-    node.matchIds.setValue(match.id, idAttrs);
-    node.matches.setValue(idAttrs, match);
+      (node.nodeType?.condFn(vars) ?? true)
+    node.matchIds.setValue(match.id, idAttrs)
+    node.matches.setValue(idAttrs, match)
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
-      session.triggeredSubscriptionQueue.add(node.ruleName);
-
+      performance.mark('leftActivationOnMemoryNode_leaftrigger_start')
+      performance.mark('leftActivationOnMemoryNode_leaftrigger__addsub_start')
+      session.triggeredSubscriptionQueue.add(node.ruleName)
+      performance.mark('leftActivationOnMemoryNode_leaftrigger__addsub_end')
+      performance.measure(
+        'leftActivationOnMemoryNode_leaftrigger__addsub',
+        'leftActivationOnMemoryNode_leaftrigger__addsub_start',
+        'leftActivationOnMemoryNode_leaftrigger__addsub_end'
+      )
+      performance.mark('leftActivationOnMemoryNode_leaftrigger__div_start')
+      const x = 2 + 2 === 4
+      performance.mark('leftActivationOnMemoryNode_leaftrigger__div_end')
+      performance.measure(
+        'leftActivationOnMemoryNode_leaftrigger__div',
+        'leftActivationOnMemoryNode_leaftrigger__div_start',
+        'leftActivationOnMemoryNode_leaftrigger__div_end'
+      )
       if (node.nodeType?.thenFn) {
-        session.thenQueue.add([node, idAttrs]);
+        session.thenQueue.add([node, idAttrs])
       }
       if (node.nodeType.thenFinallyFn) {
-        session.thenFinallyQueue.add(node);
+        session.thenFinallyQueue.add(node)
       }
+      performance.mark('leftActivationOnMemoryNode_leaftrigger_end')
+      performance.measure(
+        'leftActivationOnMemoryNode_leaftrigger',
+        'leftActivationOnMemoryNode_leaftrigger_start',
+        'leftActivationOnMemoryNode_leaftrigger_end'
+      )
     }
-    node.parent.oldIdAttrs.add(idAttr);
+    node.parent.oldIdAttrs.add(idAttr)
+    performance.mark('leftActivationOnMemoryNode_mutate_end')
+    performance.measure(
+      'leftActivationOnMemoryNode_mutate',
+      'leftActivationOnMemoryNode_mutate_start',
+      'leftActivationOnMemoryNode_mutate_end'
+    )
   } else if (token.kind === TokenKind.RETRACT) {
-    const idToDelete = node.matches.getValue(idAttrs);
+    performance.mark('leftActivationOnMemoryNode_retract_start')
+    const idToDelete = node.matches.getValue(idAttrs)
     if (idToDelete) {
-      node.matchIds.remove(idToDelete.id);
+      node.matchIds.remove(idToDelete.id)
     }
-    node.matches.remove(idAttrs);
-    node.parent.oldIdAttrs.remove(idAttr);
+    node.matches.remove(idAttrs)
+    node.parent.oldIdAttrs.remove(idAttr)
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType) {
-      session.triggeredSubscriptionQueue.add(node.ruleName);
+      session.triggeredSubscriptionQueue.add(node.ruleName)
       if (node.nodeType.thenFinallyFn) {
-        session.thenFinallyQueue.add(node);
+        session.thenFinallyQueue.add(node)
       }
     }
+    performance.mark('leftActivationOnMemoryNode_retract_end')
+    performance.measure(
+      'leftActivationOnMemoryNode_retract',
+      'leftActivationOnMemoryNode_retract_start',
+      'leftActivationOnMemoryNode_retract_end'
+    )
   }
 
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
-    leftActivationWithoutAlpha(session, node.child, idAttrs, vars, token);
+    leftActivationWithoutAlpha(session, node.child, idAttrs, vars, token)
   }
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('leftActivationOnMemoryNode_end');
+    performance.mark('leftActivationOnMemoryNode_end')
     performance.measure(
       'leftActivationOnMemoryNode',
       'leftActivationOnMemoryNode_start',
       'leftActivationOnMemoryNode_end'
-    );
+    )
   }
-};
+}
 
 const rightActivationWithJoinNode = <T>(
   session: Session<T>,
@@ -540,10 +585,10 @@ const rightActivationWithJoinNode = <T>(
   token: Token<T>
 ) => {
   if (node.parent === undefined) {
-    const vars = session.initMatch();
+    const vars = session.initMatch()
     if (getVarsFromFact(vars, node.condition, token.fact)) {
       if (!node.child) {
-        throw new Error(`Unexpected undefined child for node ${node.idName}`);
+        throw new Error(`Unexpected undefined child for node ${node.idName}`)
       }
       leftActivationOnMemoryNode(
         session,
@@ -552,25 +597,25 @@ const rightActivationWithJoinNode = <T>(
         vars,
         token,
         true
-      );
+      )
     }
   } else {
     node.parent.matches.forEach((idAttrs, match) => {
-      const vars: MatchT<T> = new Map(match.vars);
-      const idName = node.idName;
+      const vars: MatchT<T> = new Map(match.vars)
+      const idName = node.idName
       if (idName && idName !== '' && vars?.get(idName) != token.fact[0]) {
-        return;
+        return
       }
       if (!vars) {
-        throw new Error('Expected vars to not be undefinied???');
+        throw new Error('Expected vars to not be undefinied???')
       }
-      const newVars = new Map(vars);
+      const newVars = new Map(vars)
       if (getVarsFromFact(newVars, node.condition, token.fact)) {
-        const newIdAttrs = [...idAttrs];
-        newIdAttrs.push(idAttr);
-        const child = node.child;
+        const newIdAttrs = [...idAttrs]
+        newIdAttrs.push(idAttr)
+        const child = node.child
         if (!child)
-          throw new Error(`Unexpected null child for node: ${node.idName}`);
+          throw new Error(`Unexpected null child for node: ${node.idName}`)
 
         leftActivationOnMemoryNode(
           session,
@@ -579,90 +624,89 @@ const rightActivationWithJoinNode = <T>(
           newVars,
           token,
           true
-        );
+        )
       }
-    });
+    })
   }
-};
+}
 
 const rightActivationWithAlphaNode = <T>(
   session: Session<T>,
   node: AlphaNode<T>,
   token: Token<T>
 ) => {
-  const idAttr = getIdAttr(token.fact);
-  const [id, attr] = idAttr;
+  const idAttr = getIdAttr(token.fact)
+  const [id, attr] = idAttr
   if (token.kind === TokenKind.INSERT) {
     if (!node.facts.containsKey(id)) {
-      node.facts.setValue(id, new Dictionary<FactFragment<T>, Fact<T>>());
+      node.facts.setValue(id, new Dictionary<FactFragment<T>, Fact<T>>())
     }
-    node.facts.getValue(id)!.setValue(attr, token.fact);
+    node.facts.getValue(id)!.setValue(attr, token.fact)
     if (!session.idAttrNodes.containsKey(idAttr)) {
-      session.idAttrNodes.setValue(idAttr, new Set<AlphaNode<T>>());
+      session.idAttrNodes.setValue(idAttr, new Set<AlphaNode<T>>())
     }
-    session.idAttrNodes.getValue(idAttr)!.add(node);
+    session.idAttrNodes.getValue(idAttr)!.add(node)
   } else if (token.kind === TokenKind.RETRACT) {
-    node.facts.getValue(id)?.remove(attr);
-    session.idAttrNodes.getValue(idAttr)!.delete(node);
+    node.facts.getValue(id)?.remove(attr)
+    session.idAttrNodes.getValue(idAttr)!.delete(node)
     if (session.idAttrNodes.getValue(idAttr)!.size == 0) {
-      session.idAttrNodes.remove(idAttr);
+      session.idAttrNodes.remove(idAttr)
     }
   } else if (token.kind === TokenKind.UPDATE) {
-    const idAttr = node.facts.getValue(id);
-    if (idAttr === undefined)
-      throw new Error(`Expected fact id to exist ${id}`);
-    idAttr.setValue(attr, token.fact);
+    const idAttr = node.facts.getValue(id)
+    if (idAttr === undefined) throw new Error(`Expected fact id to exist ${id}`)
+    idAttr.setValue(attr, token.fact)
   }
   node.successors.forEach((child) => {
     if (token.kind === TokenKind.UPDATE && child.disableFastUpdates) {
       if (token.oldFact === undefined)
-        throw new Error(`Expected token ${token.fact} to have an oldFact`);
+        throw new Error(`Expected token ${token.fact} to have an oldFact`)
       rightActivationWithJoinNode(session, child, idAttr, {
         fact: token.oldFact,
         kind: TokenKind.RETRACT,
-      });
+      })
       rightActivationWithJoinNode(session, child, idAttr, {
         fact: token.fact,
         kind: TokenKind.INSERT,
-      });
+      })
     } else {
-      rightActivationWithJoinNode(session, child, idAttr, token);
+      rightActivationWithJoinNode(session, child, idAttr, token)
     }
-  });
-};
+  })
+}
 
 const raiseRecursionLimitException = (
   limit: number,
   additionalText?: string
 ) => {
-  const msg = `Recursion limit hit. The current limit is ${limit} (set by the recursionLimit param of fireRules).`;
+  const msg = `Recursion limit hit. The current limit is ${limit} (set by the recursionLimit param of fireRules).`
   throw new Error(
     `${msg} ${additionalText}\n Try using the transient_ variants in your schema to prevent triggering rules in an infinite loop.`
-  );
-};
+  )
+}
 
 const raiseRecursionLimit = <T>(
   limit: number,
   executedNodes: ExecutedNodes<T>
 ) => {
-  let nodes = {};
+  let nodes = {}
   for (let i = executedNodes.length - 1; i >= 0; i--) {
-    const currNodes = {};
-    const nodeToTriggeredNodes = executedNodes[i];
+    const currNodes = {}
+    const nodeToTriggeredNodes = executedNodes[i]
     nodeToTriggeredNodes.forEach((triggeredNodes, node) => {
-      const obj = {};
+      const obj = {}
       triggeredNodes.forEach((triggeredNode) => {
         if (triggeredNode.ruleName in nodes) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
-          obj[triggeredNode.ruleName] = nodes[triggeredNode.ruleName];
+          obj[triggeredNode.ruleName] = nodes[triggeredNode.ruleName]
         }
-      });
+      })
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      currNodes[node.ruleName] = obj;
-    });
-    nodes = currNodes;
+      currNodes[node.ruleName] = obj
+    })
+    nodes = currNodes
   }
 
   const findCycles = (
@@ -671,115 +715,115 @@ const raiseRecursionLimit = <T>(
     v: object,
     cyc: string[]
   ) => {
-    const newCyc = cyc;
-    newCyc.push(k);
-    const index = cyc.indexOf(k);
+    const newCyc = cyc
+    newCyc.push(k)
+    const index = cyc.indexOf(k)
     if (index >= 0) {
-      cycles.add(newCyc.splice(index, newCyc.length));
+      cycles.add(newCyc.splice(index, newCyc.length))
     } else {
       Object.keys(v).forEach((key) => {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        findCycles(cycles, key, v[key], newCyc);
-      });
+        findCycles(cycles, key, v[key], newCyc)
+      })
     }
-  };
+  }
 
-  const cycles = newSet<string[]>();
+  const cycles = newSet<string[]>()
   Object.keys(nodes).forEach((key) => {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    findCycles(cycles, key, nodes[key], []);
-  });
-  let text = '';
+    findCycles(cycles, key, nodes[key], [])
+  })
+  let text = ''
   cycles.forEach((cycle) => {
-    text = `${text}\nCycle detected! `;
+    text = `${text}\nCycle detected! `
     if (cycle.length == 2) {
-      text = `${text}${cycle[0]} is triggering itself`;
+      text = `${text}${cycle[0]} is triggering itself`
     } else {
-      text = `${text}${cycle.join(' -> ')}`;
+      text = `${text}${cycle.join(' -> ')}`
     }
-    raiseRecursionLimitException(limit, text);
-  });
-};
+    raiseRecursionLimitException(limit, text)
+  })
+}
 
-const DEFAULT_RECURSION_LIMIT = 16;
+const DEFAULT_RECURSION_LIMIT = 16
 const fireRules = <T>(
   session: Session<T>,
   recursionLimit: number = DEFAULT_RECURSION_LIMIT
 ) => {
   if (session.insideRule) {
-    return;
+    return
   }
-  let debugFrame: DebugFrame<T> | undefined = undefined;
-  let startTs: number | undefined = undefined;
-  let startingFacts: Fact<T>[] = [];
+  let debugFrame: DebugFrame<T> | undefined = undefined
+  let startTs: number | undefined = undefined
+  let startingFacts: Fact<T>[] = []
   if (process.env.NODE_ENV === 'development') {
     if (session.debug.enabled) {
-      startingFacts = queryFullSession(session);
+      startingFacts = queryFullSession(session)
       debugFrame = {
         initialMutations: [...session.debug.mutationsSinceLastFire],
         triggeredRules: [],
         dt: 0,
         startingFacts,
         endingFacts: [],
-      };
-      startTs = performance.now();
+      }
+      startTs = performance.now()
     }
-    performance.mark('fireRules_start');
+    performance.mark('fireRules_start')
   }
   // Only for debugging purposes, should we remove for prod usage?
-  const executedNodes: ExecutedNodes<T> = [];
+  const executedNodes: ExecutedNodes<T> = []
 
-  let recurCount = 0;
+  let recurCount = 0
   // `raiseRecursionLimit(recursionLimit, executedNodes) will explode
   // noinspection InfiniteLoopJS
   // eslint-disable-next-line no-constant-condition
-  let notFinishedExecuting = true;
+  let notFinishedExecuting = true
   while (notFinishedExecuting) {
     if (recursionLimit >= 0) {
       if (recurCount == recursionLimit) {
-        raiseRecursionLimit(recursionLimit, executedNodes);
+        raiseRecursionLimit(recursionLimit, executedNodes)
       }
-      recurCount += 1;
+      recurCount += 1
     }
 
-    const thenQueue = new Array(...session.thenQueue);
-    const thenFinallyQueue = new Array(...session.thenFinallyQueue);
+    const thenQueue = new Array(...session.thenQueue)
+    const thenFinallyQueue = new Array(...session.thenFinallyQueue)
     if (thenQueue.length == 0 && thenFinallyQueue.length == 0) {
-      notFinishedExecuting = false;
-      break;
+      notFinishedExecuting = false
+      break
     }
 
     // reset state
-    session.thenQueue.clear();
-    session.thenFinallyQueue.clear();
+    session.thenQueue.clear()
+    session.thenFinallyQueue.clear()
     thenQueue.forEach(([node]) => {
       if (node.nodeType) {
-        node.nodeType!.trigger = false;
+        node.nodeType!.trigger = false
       }
-    });
+    })
     thenFinallyQueue.forEach((node) => {
       if (node.nodeType) {
-        node.nodeType!.trigger = false;
+        node.nodeType!.trigger = false
       }
-    });
+    })
 
-    const nodeToTriggeredNodeIds = new Map<MemoryNode<T>, Set<MemoryNode<T>>>();
+    const nodeToTriggeredNodeIds = new Map<MemoryNode<T>, Set<MemoryNode<T>>>()
     const add = (
       t: Map<MemoryNode<T>, Set<MemoryNode<T>>>,
       nodeId: MemoryNode<T>,
       s: Set<MemoryNode<T>>
     ) => {
       if (!t.has(nodeId)) {
-        t.set(nodeId, new Set<MemoryNode<T>>());
+        t.set(nodeId, new Set<MemoryNode<T>>())
       }
-      const existing = t.get(nodeId) ?? new Set<MemoryNode<T>>();
-      const ns = new Set<MemoryNode<T>>();
-      s.forEach((e) => ns.add(e));
-      existing.forEach((e) => ns.add(e));
-      t.set(nodeId, ns);
-    };
+      const existing = t.get(nodeId) ?? new Set<MemoryNode<T>>()
+      const ns = new Set<MemoryNode<T>>()
+      s.forEach((e) => ns.add(e))
+      existing.forEach((e) => ns.add(e))
+      t.set(nodeId, ns)
+    }
 
     //  keep a copy of the matches before executing the :then functions.
     //  if we pull the matches from inside the for loop below,
@@ -789,23 +833,23 @@ const fireRules = <T>(
     const nodeToMatches: Map<
       MemoryNode<T>,
       Dictionary<IdAttrs<T>, Match<T>>
-    > = new Map();
+    > = new Map()
 
     thenQueue.forEach(([node]) => {
       if (!nodeToMatches.has(node)) {
-        nodeToMatches.set(node, node.matches);
+        nodeToMatches.set(node, node.matches)
       }
-    });
+    })
 
     // Execute `then` blocks
     thenQueue.forEach(([node, idAttrs]) => {
-      const matches = nodeToMatches.get(node);
+      const matches = nodeToMatches.get(node)
       if (matches !== undefined && matches.containsKey(idAttrs)) {
-        const match = matches.getValue(idAttrs);
+        const match = matches.getValue(idAttrs)
         if (match !== undefined && match.enabled) {
-          session.triggeredNodeIds.clear();
+          session.triggeredNodeIds.clear()
           if (!match.vars) {
-            throw new Error(`expected match ${match.id} to have vars??`);
+            throw new Error(`expected match ${match.id} to have vars??`)
           }
           if (process.env.NODE_ENV === 'development') {
             if (session.debug.enabled) {
@@ -813,31 +857,31 @@ const fireRules = <T>(
                 ruleName: node.ruleName,
                 kind: 'then',
                 vars: match.vars,
-              });
+              })
             }
           }
-          node.nodeType?.thenFn?.(match.vars);
-          add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds);
+          node.nodeType?.thenFn?.(match.vars)
+          add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
       }
-    });
+    })
 
     // Execute `thenFinally` blocks
     thenFinallyQueue.forEach((node) => {
-      session.triggeredNodeIds.clear();
+      session.triggeredNodeIds.clear()
       if (process.env.NODE_ENV === 'development') {
         if (session.debug.enabled) {
           debugFrame?.triggeredRules.push({
             ruleName: node.ruleName,
             kind: 'thenFinally',
-          });
+          })
         }
       }
-      node.nodeType?.thenFinallyFn?.();
-      add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds);
-    });
+      node.nodeType?.thenFinallyFn?.()
+      add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
+    })
 
-    executedNodes.push(nodeToTriggeredNodeIds);
+    executedNodes.push(nodeToTriggeredNodeIds)
   }
 
   if (
@@ -845,29 +889,29 @@ const fireRules = <T>(
     session.triggeredSubscriptionQueue.size > 0
   ) {
     session.triggeredSubscriptionQueue.forEach((ts) => {
-      const fn = session.subscriptionsOnProductions.get(ts);
-      if (fn) fn();
-    });
+      const fn = session.subscriptionsOnProductions.get(ts)
+      if (fn) fn()
+    })
   }
-  session.triggeredSubscriptionQueue.clear();
+  session.triggeredSubscriptionQueue.clear()
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('fireRules_end');
-    performance.measure('fireRules', 'fireRules_start', 'fireRules_end');
+    performance.mark('fireRules_end')
+    performance.measure('fireRules', 'fireRules_start', 'fireRules_end')
     if (session.debug.enabled) {
-      debugFrame!.dt = performance.now() - startTs!;
-      const endingFacts = queryFullSession(session);
-      debugFrame!.endingFacts = endingFacts;
-      session.debug.numFramesSinceInit = session.debug.numFramesSinceInit + 1;
-      session.debug.frames.push(debugFrame!);
-      const maxFrames = session.debug.maxFrameDumps ?? DEFAULT_MAX_FRAME_DUMPS;
+      debugFrame!.dt = performance.now() - startTs!
+      const endingFacts = queryFullSession(session)
+      debugFrame!.endingFacts = endingFacts
+      session.debug.numFramesSinceInit = session.debug.numFramesSinceInit + 1
+      session.debug.frames.push(debugFrame!)
+      const maxFrames = session.debug.maxFrameDumps ?? DEFAULT_MAX_FRAME_DUMPS
       if (maxFrames > -1 && session.debug.frames.length > maxFrames) {
-        session.debug.frames.shift();
+        session.debug.frames.shift()
       }
-      session.debug.mutationsSinceLastFire = [];
+      session.debug.mutationsSinceLastFire = []
     }
   }
-  return { executedNodes, session };
-};
+  return { executedNodes, session }
+}
 
 const getAlphaNodesForFact = <T>(
   session: Session<T>,
@@ -878,18 +922,18 @@ const getAlphaNodesForFact = <T>(
 ) => {
   if (root) {
     if (process.env.NODE_ENV === 'development') {
-      performance.mark('getAlphaNodesForFact_start');
+      performance.mark('getAlphaNodesForFact_start')
     }
     node.children.forEach((child) => {
-      getAlphaNodesForFact(session, child, fact, false, nodes);
-    });
+      getAlphaNodesForFact(session, child, fact, false, nodes)
+    })
     if (process.env.NODE_ENV === 'development') {
-      performance.mark('getAlphaNodesForFact_end');
+      performance.mark('getAlphaNodesForFact_end')
       performance.measure(
         'getAlphaNodesForFact',
         'getAlphaNodesForFact_start',
         'getAlphaNodesForFact_end'
-      );
+      )
     }
   } else {
     const val =
@@ -899,16 +943,16 @@ const getAlphaNodesForFact = <T>(
         ? fact[1]
         : node.testField === Field.VALUE
         ? fact[2]
-        : undefined;
+        : undefined
     if (val != node.testValue) {
-      return;
+      return
     }
-    nodes.add(node);
+    nodes.add(node)
     node.children.forEach((child) => {
-      getAlphaNodesForFact(session, child, fact, false, nodes);
-    });
+      getAlphaNodesForFact(session, child, fact, false, nodes)
+    })
   }
-};
+}
 
 const upsertFact = <T>(
   session: Session<T>,
@@ -916,112 +960,112 @@ const upsertFact = <T>(
   nodes: Set<AlphaNode<T>>
 ) => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('upsertFact_start');
+    performance.mark('upsertFact_start')
   }
-  const idAttr = getIdAttr<T>(fact);
+  const idAttr = getIdAttr<T>(fact)
   if (!session.idAttrNodes.containsKey(idAttr)) {
     nodes.forEach((n) => {
       rightActivationWithAlphaNode(session, n, {
         fact,
         kind: TokenKind.INSERT,
-      });
-    });
+      })
+    })
   } else {
-    const existingNodes = session.idAttrNodes.getValue(idAttr);
+    const existingNodes = session.idAttrNodes.getValue(idAttr)
     if (existingNodes === undefined) {
-      console.warn('Session has no existing nodes?');
-      return;
+      console.warn('Session has no existing nodes?')
+      return
     }
     // retract any facts from nodes that the new fact wasn't inserted in
     // we use toSeq here to make a copy of the existingNodes, because
     // rightActivation will modify it
-    const existingNodesCopy = new Set<AlphaNode<T>>(existingNodes);
+    const existingNodesCopy = new Set<AlphaNode<T>>(existingNodes)
     existingNodesCopy.forEach((n) => {
       if (!nodes.has(n)) {
-        const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1]);
+        const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1])
         if (oldFact === undefined) {
-          console.warn("Old fact doesn't exist?");
-          return;
+          console.warn("Old fact doesn't exist?")
+          return
         }
         rightActivationWithAlphaNode(session, n, {
           fact: oldFact,
           kind: TokenKind.RETRACT,
-        });
+        })
       }
-    });
+    })
 
     // update or insert facts, depending on whether the node already exists
     nodes.forEach((n) => {
       if (existingNodes.has(n)) {
-        const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1]);
+        const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1])
         rightActivationWithAlphaNode(session, n, {
           fact,
           kind: TokenKind.UPDATE,
           oldFact,
-        });
+        })
       } else {
         rightActivationWithAlphaNode(session, n, {
           fact,
           kind: TokenKind.INSERT,
-        });
+        })
       }
-    });
+    })
 
     if (process.env.NODE_ENV === 'development') {
-      performance.mark('upsertFact_end');
-      performance.measure('upsertFact', 'upsertFact_start', 'upsertFact_end');
+      performance.mark('upsertFact_end')
+      performance.measure('upsertFact', 'upsertFact_start', 'upsertFact_end')
     }
   }
-};
+}
 const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
-  const nodes = new Set<AlphaNode<T>>();
-  getAlphaNodesForFact(session, session.alphaNode, fact, true, nodes);
-  upsertFact(session, fact, nodes);
+  const nodes = new Set<AlphaNode<T>>()
+  getAlphaNodesForFact(session, session.alphaNode, fact, true, nodes)
+  upsertFact(session, fact, nodes)
   if (process.env.NODE_ENV === 'development') {
     session.debug.mutationsSinceLastFire.push({
       kind: 'insert',
       fact,
-    });
+    })
   }
   if (session.autoFire) {
-    fireRules(session);
+    fireRules(session)
   }
-};
+}
 
 const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('retractFact_start');
+    performance.mark('retractFact_start')
     session.debug.mutationsSinceLastFire.push({
       kind: 'retract',
       fact,
-    });
+    })
   }
-  const idAttr = getIdAttr(fact);
+  const idAttr = getIdAttr(fact)
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
-  const idAttrNodes = new Set<AlphaNode<T>>();
-  session.idAttrNodes.getValue(idAttr)?.forEach((i) => idAttrNodes.add(i));
+  const idAttrNodes = new Set<AlphaNode<T>>()
+  session.idAttrNodes.getValue(idAttr)?.forEach((i) => idAttrNodes.add(i))
   idAttrNodes.forEach((node) => {
-    const otherFact = node.facts.getValue(idAttr[0])?.getValue(idAttr[1]);
+    const otherFact = node.facts.getValue(idAttr[0])?.getValue(idAttr[1])
     if (!_.isEqual(fact, otherFact)) {
       throw new Error(
         `Expected fact ${fact} to be in node.facts at id: ${idAttr[0]}, attr: ${idAttr[1]}`
-      );
+      )
     }
 
     rightActivationWithAlphaNode(session, node, {
       fact,
       kind: TokenKind.RETRACT,
-    });
-  });
+    })
+  })
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('retractFact_end');
-    performance.measure('retractFact', 'retractFact_start', 'retractFact_end');
+    performance.mark('retractFact_end')
+    performance.measure('retractFact', 'retractFact_start', 'retractFact_end')
   }
 
   if (session.autoFire) {
-    fireRules(session);
+    fireRules(session)
   }
-};
+}
 
 const retractFactByIdAndAttr = <T>(
   session: Session<T>,
@@ -1030,42 +1074,42 @@ const retractFactByIdAndAttr = <T>(
   autoFire?: boolean
 ) => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('retractFactByIdAndAttr_start');
+    performance.mark('retractFactByIdAndAttr_start')
     session.debug.mutationsSinceLastFire.push({
       kind: 'retract',
       fact: [id, attr, undefined],
-    });
+    })
   }
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
-  const idAttrNodes = new Set<AlphaNode<T>>();
-  session.idAttrNodes.getValue([id, attr])?.forEach((i) => idAttrNodes.add(i));
+  const idAttrNodes = new Set<AlphaNode<T>>()
+  session.idAttrNodes.getValue([id, attr])?.forEach((i) => idAttrNodes.add(i))
   idAttrNodes.forEach((node) => {
-    const fact = node.facts.getValue(id)?.getValue(attr);
+    const fact = node.facts.getValue(id)?.getValue(attr)
     if (fact) {
       rightActivationWithAlphaNode(session, node, {
         fact,
         kind: TokenKind.RETRACT,
-      });
+      })
     } else {
-      console.warn('Missing fact during retraction?');
+      console.warn('Missing fact during retraction?')
     }
-  });
+  })
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('retractFactByIdAndAttr_end');
+    performance.mark('retractFactByIdAndAttr_end')
     performance.measure(
       'retractFactByIdAndAttr',
       'retractFactByIdAndAttr_start',
       'retractFactByIdAndAttr_end'
-    );
+    )
   }
   if (autoFire ?? session.autoFire) {
-    fireRules(session);
+    fireRules(session)
   }
-};
+}
 
 const defaultInitMatch = <T>() => {
-  return new Map<string, FactFragment<T>>();
-};
+  return new Map<string, FactFragment<T>>()
+}
 const initSession = <T>(
   autoFire = true,
   debug: DebugOptions = {
@@ -1073,8 +1117,8 @@ const initSession = <T>(
     maxFrameDumps: 40,
   }
 ): Session<T> => {
-  let nodeIdCounter = 0;
-  const nextId = () => nodeIdCounter++;
+  let nodeIdCounter = 0
+  const nextId = () => nodeIdCounter++
   const alphaNode: AlphaNode<T> = {
     id: nodeIdCounter,
     facts: new Dictionary<
@@ -1083,21 +1127,21 @@ const initSession = <T>(
     >(),
     successors: [],
     children: [],
-  };
-  nextId();
-  const leafNodes = newDict<string, MemoryNode<T>>();
+  }
+  nextId()
+  const leafNodes = newDict<string, MemoryNode<T>>()
 
-  const idAttrNodes = newDict<IdAttr<T>, Set<AlphaNode<T>>>();
+  const idAttrNodes = newDict<IdAttr<T>, Set<AlphaNode<T>>>()
 
-  const thenQueue = new Set<[MemoryNode<T>, IdAttrs<T>]>();
+  const thenQueue = new Set<[MemoryNode<T>, IdAttrs<T>]>()
 
-  const thenFinallyQueue = new Set<MemoryNode<T>>();
+  const thenFinallyQueue = new Set<MemoryNode<T>>()
 
-  const triggeredNodeIds = new Set<MemoryNode<T>>();
+  const triggeredNodeIds = new Set<MemoryNode<T>>()
 
-  const subscriptionQueue = new Map<string, () => void>();
+  const subscriptionQueue = new Map<string, () => void>()
 
-  const initMatch = () => defaultInitMatch();
+  const initMatch = () => defaultInitMatch()
 
   return {
     alphaNode,
@@ -1118,22 +1162,22 @@ const initSession = <T>(
       frames: [],
       mutationsSinceLastFire: [],
     },
-  };
-};
+  }
+}
 
 const initProduction = <SCHEMA, U>(production: {
-  name: string;
-  convertMatchFn: ConvertMatchFn<SCHEMA, U>;
-  condFn?: CondFn<SCHEMA>;
-  thenFn?: ThenFn<SCHEMA, U>;
-  thenFinallyFn?: ThenFinallyFn<SCHEMA, U>;
+  name: string
+  convertMatchFn: ConvertMatchFn<SCHEMA, U>
+  condFn?: CondFn<SCHEMA>
+  thenFn?: ThenFn<SCHEMA, U>
+  thenFinallyFn?: ThenFinallyFn<SCHEMA, U>
 }): Production<SCHEMA, U> => {
   return {
     ...production,
     conditions: [],
     subscriptions: new Set(),
-  };
-};
+  }
+}
 
 const queryAll = <T, U>(
   session: Session<T>,
@@ -1141,98 +1185,98 @@ const queryAll = <T, U>(
   filter?: QueryFilter<T>
 ): U[] => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('queryAll_start');
+    performance.mark('queryAll_start')
   }
-  const result: U[] = [];
+  const result: U[] = []
 
   // TODO: Optimize result access?
   // I feel like we should cache the results of these matches until the next `fire()`
   // then make it easy to query the data via key map paths or something. Iterating over all
   // matches could become cumbersome for large data sets
   session.leafNodes.getValue(prod.name)?.matches.forEach((_, match) => {
-    const { enabled, vars } = match;
+    const { enabled, vars } = match
     if (enabled && vars) {
       if (!filter) {
-        result.push(prod.convertMatchFn(vars));
+        result.push(prod.convertMatchFn(vars))
       } else {
-        const filterKeys = filter.keys(); // All keys must be present to match the value
-        let hasAllFilterKeys = true;
+        const filterKeys = filter.keys() // All keys must be present to match the value
+        let hasAllFilterKeys = true
 
         for (const f of filterKeys) {
-          if (!hasAllFilterKeys) break;
+          if (!hasAllFilterKeys) break
           if (!vars.has(f)) {
-            hasAllFilterKeys = false;
-            break;
+            hasAllFilterKeys = false
+            break
           } else {
-            const fVal = filter.get(f);
-            const vVal = vars.get(f);
+            const fVal = filter.get(f)
+            const vVal = vars.get(f)
             if (!fVal || !vVal || !fVal.includes(vVal)) {
-              hasAllFilterKeys = false;
-              break;
+              hasAllFilterKeys = false
+              break
             }
           }
         }
 
         if (hasAllFilterKeys) {
-          result.push(prod.convertMatchFn(vars));
+          result.push(prod.convertMatchFn(vars))
         }
       }
     }
-  });
+  })
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('queryAll_end');
-    performance.measure('queryAll', 'queryAll_start', 'queryAll_end');
+    performance.mark('queryAll_end')
+    performance.measure('queryAll', 'queryAll_start', 'queryAll_end')
   }
-  return result;
-};
+  return result
+}
 
 const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('queryFullSession_start');
+    performance.mark('queryFullSession_start')
   }
-  const result: Fact<T>[] = [];
+  const result: Fact<T>[] = []
   session.idAttrNodes.forEach((idAttr, nodes) => {
-    const nodesArr = new Array(...nodes);
-    if (nodesArr.length <= 0) throw new Error('No nodes in session?');
-    const firstNode = nodesArr[0];
-    const fact = firstNode.facts.getValue(idAttr[0])?.getValue(idAttr[1]);
+    const nodesArr = new Array(...nodes)
+    if (nodesArr.length <= 0) throw new Error('No nodes in session?')
+    const firstNode = nodesArr[0]
+    const fact = firstNode.facts.getValue(idAttr[0])?.getValue(idAttr[1])
     if (fact) {
-      result.push([idAttr[0], idAttr[1], fact[2]]);
+      result.push([idAttr[0], idAttr[1], fact[2]])
     } else {
-      console.warn('Missing fact??');
+      console.warn('Missing fact??')
     }
-  });
+  })
 
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('queryFullSession_end');
+    performance.mark('queryFullSession_end')
     performance.measure(
       'queryFullSession',
       'queryFullSession_start',
       'queryFullSession_end'
-    );
+    )
   }
-  return result;
-};
+  return result
+}
 
 const get = <T, U>(
   session: Session<T>,
   prod: Production<T, U>,
   i: number
 ): U | undefined => {
-  const idAttrs = session.leafNodes.getValue(prod.name)?.matchIds.getValue(i);
-  if (!idAttrs) return;
+  const idAttrs = session.leafNodes.getValue(prod.name)?.matchIds.getValue(i)
+  if (!idAttrs) return
   const vars = session.leafNodes
     .getValue(prod.name)
-    ?.matches.getValue(idAttrs)?.vars;
+    ?.matches.getValue(idAttrs)?.vars
   if (!vars) {
-    console.warn('No vars??');
-    return;
+    console.warn('No vars??')
+    return
   }
-  return prod.convertMatchFn(vars);
-};
+  return prod.convertMatchFn(vars)
+}
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
-  session.idAttrNodes.containsKey([id, attr]);
+  session.idAttrNodes.containsKey([id, attr])
 
 export const rete = {
   get,
@@ -1248,4 +1292,4 @@ export const rete = {
   addProductionToSession,
   addConditionsToProduction,
   subscribeToProduction,
-};
+}

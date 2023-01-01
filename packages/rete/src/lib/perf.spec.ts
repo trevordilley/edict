@@ -1,5 +1,8 @@
 import { rete } from './rete'
 import { Field, MatchT } from '@edict/rete'
+import { performance } from 'perf_hooks'
+// import * as vega from 'vega'
+// import * as fs from 'fs'
 
 const bench = (fn: () => void) => {
   let cycle_n = 1
@@ -70,7 +73,7 @@ const convertMatchFn = (vars: MatchT<Schema>) => vars
 
 describe('rete perf', () => {
   it('packed_5', () => {
-    const session = rete.initSession<Schema>(false)
+    const session = rete.initSession<Schema>(false, { enabled: true })
     const makeProduction = (name: keyof Schema) => {
       const valName = name.toLowerCase()
       const entJoin = '$ent'
@@ -120,6 +123,43 @@ describe('rete perf', () => {
       rete.insertFact(session, ['Delta', 'delta', 1])
       rete.fireRules(session)
     })
+
+    const entries = performance
+      .getEntriesByType('measure')
+      .sort((a, b) => {
+        if (a.duration > b.duration) return -1
+        else return 1
+      })
+      .filter((a) => a.name === 'leftActivationOnMemoryNode_leaftrigger')
+      .map((a) => `${a.startTime ?? 0},${a.duration}`)
+      .join('\n')
+    console.log(entries)
+    // const view = new vega.View(
+    //   vega.parse({
+    //     $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
+    //     description: "Google's stock price over time.",
+    //     // @ts-ignore
+    //     data: {
+    //       values: entries,
+    //     },
+    //     mark: 'line',
+    //     encoding: {
+    //       x: { field: 'startTime', type: 'quantitative' },
+    //       y: { field: 'duration', type: 'quantitative' },
+    //     },
+    //   })
+    // )
+    //   .renderer('none')
+    //   .initialize()
+    //
+    // view.toCanvas().then((canvas) => {
+    //   console.log('write perf data')
+    //   const file = fs.createWriteStream('perf.png')
+    //   // @ts-ignore
+    //   const stream = canvas.createPNGStream()
+    //   stream.pipe(file)
+    // })
+
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
     // expect(NUM_ENTITIES).toBeGreaterThan(999)
