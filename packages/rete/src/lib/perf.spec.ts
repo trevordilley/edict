@@ -171,7 +171,7 @@ describe('rete perf', () => {
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
     // expect(NUM_ENTITIES).toBeGreaterThan(999)
-    // expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(100)
     // expect(hz).toBeGreaterThan(1000)
     // expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)
