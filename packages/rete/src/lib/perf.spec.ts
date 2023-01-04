@@ -3,6 +3,7 @@ import { Field, MatchT } from '@edict/rete'
 import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
 import * as fs from 'fs'
+import { Dictionary } from 'typescript-collections'
 
 v8Profiler.setGenerateType(1)
 
@@ -112,6 +113,94 @@ describe('baseline measure of time', () => {
 
     expect(2).toBe(2)
   })
+
+  it('Using Dictionary vs using native map', () => {
+    profile('nativeMap', 'profiles', () => {
+      const match = {
+        id: 0,
+        match: new Map<string, string | number>([
+          ['Delta', 'Delta'],
+          ['dt', 1],
+        ]),
+        enabled: true,
+      }
+      const idAttrs = [
+        ['bob', 'age'],
+        ['sally', 'age'],
+        ['jim', 'age'],
+        ['tim', 'age'],
+        ['bob', 'name'],
+        ['sally', 'name'],
+        ['jim', 'name'],
+        ['tim', 'name'],
+      ]
+
+      const iterCount = 1_000_000
+
+      performance.mark('map_start')
+      for (let i = 0; i < iterCount; i++) {
+        const m = new Map<string, Map<string, typeof match>>()
+        for (const [id, attr] of idAttrs) {
+          if (!m.get(id)) m.set(id, new Map([[attr, match]]))
+          else m.get(id)?.set(attr, match)
+        }
+        for (const [id, attr] of idAttrs) {
+          m.get(id)?.delete(attr)
+          if (m.get(id)?.size === 0) m.delete(id)
+        }
+      }
+      performance.mark('map_end')
+      performance.measure('map', 'map_start', 'map_end')
+      performance.mark('dict_start')
+      for (let i = 0; i < iterCount; i++) {
+        const d = new Dictionary<typeof idAttrs, typeof match>()
+        d.setValue(idAttrs, match)
+        d.getValue(idAttrs)
+        d.remove(idAttrs)
+      }
+      performance.mark('dict_end')
+      performance.measure('dict', 'dict_start', 'dict_end')
+
+      const charsum = function (s: string) {
+        var i,
+          sum = 0
+        for (i = 0; i < s.length; i++) {
+          sum += s.charCodeAt(i) * (i + 1)
+        }
+        return sum
+      }
+
+      const array_hash = function (a: string[][]) {
+        var i,
+          sum = 0
+        for (i = 0; i < a.length; i++) {
+          var cs = charsum(a[i][0]) + charsum(a[i][1])
+          sum = sum + 65027 / cs
+        }
+        return ('' + sum).slice(0, 16)
+      }
+      performance.mark('hash_start')
+      for (let i = 0; i < iterCount; i++) {
+        array_hash(idAttrs)
+      }
+      performance.mark('hash_end')
+      performance.measure('hash', 'hash_start', 'hash_end')
+
+      performance.mark('toStr_start')
+      for (let i = 0; i < iterCount; i++) {
+        idAttrs.toString()
+      }
+      performance.mark('toStr_end')
+      performance.measure('toStr', 'toStr_start', 'toStr_end')
+
+      const entries = performance
+        .getEntriesByType('measure')
+        .map((e) => `${e.name}: ${e.duration}`)
+        .join('\n')
+      console.log(entries)
+      expect(2).toBe(2)
+    })
+  })
 })
 
 describe('rete perf', () => {
@@ -153,7 +242,7 @@ describe('rete perf', () => {
     makeProduction('E')
 
     rete.insertFact(session, ['Delta', 'delta', 1])
-    const NUM_ENTITIES = 10
+    const NUM_ENTITIES = 1000
     for (let i = 0; i < NUM_ENTITIES; i++) {
       rete.insertFact(session, [i, 'A', 1])
       rete.insertFact(session, [i, 'B', 1])
@@ -170,8 +259,7 @@ describe('rete perf', () => {
 
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
-    // expect(NUM_ENTITIES).toBeGreaterThan(999)
-    expect(hz).toBeGreaterThan(100)
+    // expect(hz).toBeGreaterThan(100)
     // expect(hz).toBeGreaterThan(1000)
     // expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)

@@ -9,6 +9,7 @@
     "example:todo": "nx serve examples-react-todo",
     "example:password": "nx serve examples-react-password",
     "example:realworld": "nx serve examples-react-realworld",
+    "profile:packed5": "npx speedscope profiles/packages/rete/packed5.cpuprofile",
     "build": "nx run-many --all --target=build",
     "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' nx run-many --all --target=test",
     "nx": "nx"
