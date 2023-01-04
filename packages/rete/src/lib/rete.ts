@@ -73,14 +73,37 @@ const hashIdAttrs = <T>(idAttrs: string[][]): number => {
     }
   }
   return hash
-
-  // const hash = MurmurHash3()
-  // for (const [id, attr] of idAttrs) {
-  //   hash.hash(id as string).hash(attr as string)
-  // }
-  // return hash.result()
 }
 
+const hashIdAttr = <T>(idAttr: string[]): number => {
+  let hash = 0,
+    i,
+    j,
+    chr
+  for (i = 0; i < idAttr.length; i++) {
+    for (j = 0; j < idAttr[i].length; j++) {
+      chr = idAttr[i].charCodeAt(j)
+      hash = (hash << 5) - hash + chr
+      hash |= 0 // Convert to 32bit integer
+    }
+  }
+  return hash
+}
+
+const hashVar = <T>(v: Var): number => {
+  let hash = 0,
+    i,
+    j,
+    chr
+  for (i = 0; i < v.name.length; i++) {
+    chr = v.name.charCodeAt(i)
+    hash = (hash << 5) - hash + chr
+    hash |= 0 // Convert to 32bit integer
+  }
+  hash = (hash << 5) - hash + v.field
+  hash |= 0 // Convert to 32bit integer
+  return hash
+}
 const addNode = <T>(
   node: AlphaNode<T>,
   newNode: AlphaNode<T>
@@ -109,7 +132,7 @@ const addNodes = <T>(
       testValue: testValue,
       successors: [],
       children: [],
-      facts: new Dictionary(),
+      facts: new Map(),
     })
   })
   return result
@@ -422,9 +445,6 @@ const leftActivationOnMemoryNode = <T>(
 ) => {
   const idAttr = idAttrs[idAttrs.length - 1]
   const idAttrsHash = hashIdAttrs(idAttrs as string[][])
-  const idAttrsString = idAttrs.map((a) => a.join(',')).join('\n')
-
-  console.log(idAttrsHash, ': ', idAttrsString)
 
   if (
     isNew &&
@@ -539,6 +559,7 @@ const rightActivationWithAlphaNode = <T>(
   token: Token<T>
 ) => {
   const idAttr = getIdAttr(token.fact)
+  const hash = hashIdAttr(idAttr as string[])
   const [id, attr] = idAttr
   if (token.kind === TokenKind.INSERT) {
     if (!node.facts.containsKey(id)) {

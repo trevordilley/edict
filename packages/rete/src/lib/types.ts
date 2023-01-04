@@ -79,7 +79,7 @@ export interface AlphaNode<T> {
   testField?: Field
   testValue?: keyof T | FactId
 
-  facts: Dictionary<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>
+  facts: Map<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>
   successors: JoinNode<T>[]
   children: AlphaNode<T>[]
 }
