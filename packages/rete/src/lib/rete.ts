@@ -21,6 +21,7 @@ import {
   Field,
   IdAttr,
   IdAttrs,
+  IdAttrsHash,
   InternalFactRepresentation,
   JoinNode,
   Match,
@@ -54,6 +55,30 @@ export const getIdAttr = <SCHEMA>(
 ): IdAttr<SCHEMA> => {
   // TODO: Good way to assert that fact[1] is actually keyof T at compile time?
   return [fact[0], fact[1] as keyof SCHEMA]
+}
+
+const hashIdAttrs = <T>(idAttrs: string[][]): number => {
+  let hash = 0,
+    i,
+    j,
+    k,
+    chr
+  for (i = 0; i < idAttrs.length; i++) {
+    for (j = 0; j < idAttrs[i].length; j++) {
+      for (k = 0; k < idAttrs[i][j].length; k++) {
+        chr = idAttrs[i][j].charCodeAt(k)
+        hash = (hash << 5) - hash + chr
+        hash |= 0 // Convert to 32bit integer
+      }
+    }
+  }
+  return hash
+
+  // const hash = MurmurHash3()
+  // for (const [id, attr] of idAttrs) {
+  //   hash.hash(id as string).hash(attr as string)
+  // }
+  // return hash.result()
 }
 
 const addNode = <T>(
@@ -204,7 +229,7 @@ const addProductionToSession = <T, U>(
       condition,
       ruleName: production.name,
       lastMatchId: -1,
-      matches: newDict<IdAttrs<T>, Match<T>>(),
+      matches: new Map<IdAttrsHash, { idAttrs: IdAttrs<T>; match: Match<T> }>(),
       matchIds: new Map<number, IdAttrs<T>>(),
     }
     if (memNode.type === MEMORY_NODE_TYPE.LEAF) {
@@ -396,6 +421,10 @@ const leftActivationOnMemoryNode = <T>(
   isNew: boolean
 ) => {
   const idAttr = idAttrs[idAttrs.length - 1]
+  const idAttrsHash = hashIdAttrs(idAttrs as string[][])
+  const idAttrsString = idAttrs.map((a) => a.join(',')).join('\n')
+
+  console.log(idAttrsHash, ': ', idAttrsString)
 
   if (
     isNew &&
@@ -409,8 +438,8 @@ const leftActivationOnMemoryNode = <T>(
 
   if (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) {
     let match: Match<T>
-    if (node.matches.containsKey(idAttrs)) {
-      match = node.matches.getValue(idAttrs)!
+    if (node.matches.has(idAttrsHash)) {
+      match = node.matches.get(idAttrsHash)!.match!
     } else {
       node.lastMatchId += 1
       match = { id: node.lastMatchId }
@@ -421,11 +450,11 @@ const leftActivationOnMemoryNode = <T>(
       !node.nodeType?.condFn ||
       (node.nodeType?.condFn(vars) ?? true)
     node.matchIds.set(match.id, idAttrs)
-    node.matches.setValue(idAttrs, match)
+    node.matches.set(idAttrsHash, { idAttrs, match })
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
       session.triggeredSubscriptionQueue.add(node.ruleName)
       if (node.nodeType?.thenFn) {
-        session.thenQueue.add([node, idAttrs])
+        session.thenQueue.add([node, idAttrsHash])
       }
       if (node.nodeType.thenFinallyFn) {
         session.thenFinallyQueue.add(node)
@@ -433,11 +462,11 @@ const leftActivationOnMemoryNode = <T>(
     }
     node.parent.oldIdAttrs.add(idAttr)
   } else if (token.kind === TokenKind.RETRACT) {
-    const idToDelete = node.matches.getValue(idAttrs)
+    const idToDelete = node.matches.get(idAttrsHash)
     if (idToDelete) {
-      node.matchIds.delete(idToDelete.id)
+      node.matchIds.delete(idToDelete.match.id)
     }
-    node.matches.remove(idAttrs)
+    node.matches.delete(idAttrsHash)
     node.parent.oldIdAttrs.remove(idAttr)
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType) {
       session.triggeredSubscriptionQueue.add(node.ruleName)
@@ -474,8 +503,8 @@ const rightActivationWithJoinNode = <T>(
       )
     }
   } else {
-    node.parent.matches.forEach((idAttrs, match) => {
-      const vars: MatchT<T> = new Map(match.vars)
+    node.parent.matches.forEach((match) => {
+      const vars: MatchT<T> = new Map(match.match.vars)
       const idName = node.idName
       if (idName && idName !== '' && vars?.get(idName) != token.fact[0]) {
         return
@@ -485,7 +514,7 @@ const rightActivationWithJoinNode = <T>(
       }
       const newVars = new Map(vars)
       if (getVarsFromFact(newVars, node.condition, token.fact)) {
-        const newIdAttrs = [...idAttrs]
+        const newIdAttrs = [...match.idAttrs]
         newIdAttrs.push(idAttr)
         const child = node.child
         if (!child)
@@ -630,7 +659,6 @@ const fireRules = <T>(
     return
   }
   let debugFrame: DebugFrame<T> | undefined = undefined
-  const startTs: number | undefined = undefined
   let startingFacts: Fact<T>[] = []
   if (process.env.NODE_ENV === 'development') {
     if (session.debug.enabled) {
@@ -704,7 +732,7 @@ const fireRules = <T>(
 
     const nodeToMatches: Map<
       MemoryNode<T>,
-      Dictionary<IdAttrs<T>, Match<T>>
+      Map<IdAttrsHash, { idAttrs: IdAttrs<T>; match: Match<T> }>
     > = new Map()
 
     thenQueue.forEach(([node]) => {
@@ -714,25 +742,29 @@ const fireRules = <T>(
     })
 
     // Execute `then` blocks
-    thenQueue.forEach(([node, idAttrs]) => {
+    thenQueue.forEach(([node, idAttrsHash]) => {
       const matches = nodeToMatches.get(node)
-      if (matches !== undefined && matches.containsKey(idAttrs)) {
-        const match = matches.getValue(idAttrs)
-        if (match !== undefined && match.enabled) {
+      if (matches !== undefined && matches.has(idAttrsHash)) {
+        const match = matches.get(idAttrsHash)
+        if (
+          match !== undefined &&
+          match.match !== undefined &&
+          match.match.enabled
+        ) {
           session.triggeredNodeIds.clear()
-          if (!match.vars) {
-            throw new Error(`expected match ${match.id} to have vars??`)
+          if (!match.match.vars) {
+            throw new Error(`expected match ${match.match.id} to have vars??`)
           }
           if (process.env.NODE_ENV === 'development') {
             if (session.debug.enabled) {
               debugFrame?.triggeredRules.push({
                 ruleName: node.ruleName,
                 kind: 'then',
-                vars: match.vars,
+                vars: match.match.vars,
               })
             }
           }
-          node.nodeType?.thenFn?.(match.vars)
+          node.nodeType?.thenFn?.(match.match.vars)
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
       }
@@ -969,7 +1001,7 @@ const initSession = <T>(
 
   const idAttrNodes = newDict<IdAttr<T>, Set<AlphaNode<T>>>()
 
-  const thenQueue = new Set<[MemoryNode<T>, IdAttrs<T>]>()
+  const thenQueue = new Set<[MemoryNode<T>, IdAttrsHash]>()
 
   const thenFinallyQueue = new Set<MemoryNode<T>>()
 
@@ -1026,8 +1058,8 @@ const queryAll = <T, U>(
   // I feel like we should cache the results of these matches until the next `fire()`
   // then make it easy to query the data via key map paths or something. Iterating over all
   // matches could become cumbersome for large data sets
-  session.leafNodes.get(prod.name)?.matches.forEach((_, match) => {
-    const { enabled, vars } = match
+  session.leafNodes.get(prod.name)?.matches.forEach((match, _) => {
+    const { enabled, vars } = match.match
     if (enabled && vars) {
       if (!filter) {
         result.push(prod.convertMatchFn(vars))
@@ -1083,7 +1115,9 @@ const get = <T, U>(
 ): U | undefined => {
   const idAttrs = session.leafNodes.get(prod.name)?.matchIds.get(i)
   if (!idAttrs) return
-  const vars = session.leafNodes.get(prod.name)?.matches.getValue(idAttrs)?.vars
+  const idAttrsHash = hashIdAttrs(idAttrs as string[][])
+  const vars = session.leafNodes.get(prod.name)?.matches.get(idAttrsHash)
+    ?.match.vars
   if (!vars) {
     console.warn('No vars??')
     return

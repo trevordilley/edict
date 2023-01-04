@@ -4,6 +4,7 @@ import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
 import * as fs from 'fs'
 import { Dictionary } from 'typescript-collections'
+import MurmurHash3 from 'imurmurhash'
 
 v8Profiler.setGenerateType(1)
 
@@ -115,7 +116,7 @@ describe('baseline measure of time', () => {
   })
 
   it('Using Dictionary vs using native map', () => {
-    profile('nativeMap', 'profiles', () => {
+    profile('nativeMap', 'profiles/packages/rete', () => {
       const match = {
         id: 0,
         match: new Map<string, string | number>([
@@ -193,6 +194,51 @@ describe('baseline measure of time', () => {
       performance.mark('toStr_end')
       performance.measure('toStr', 'toStr_start', 'toStr_end')
 
+      performance.mark('murmur_start')
+      for (let i = 0; i < iterCount; i++) {
+        const hash = MurmurHash3()
+        let result = 0
+        for (let idAttr of idAttrs) {
+          hash.hash(idAttr[0]).hash(idAttr[1])
+        }
+        if (result > 0) {
+          expect(result).toBe(hash.result())
+        } else {
+          result = hash.result()
+        }
+      }
+      performance.mark('murmur_end')
+      performance.measure('murmur', 'murmur_start', 'murmur_end')
+
+      const javaHash = function (idAttrs: string[][]) {
+        var hash = 0,
+          i,
+          j,
+          k,
+          chr
+        for (i = 0; i < idAttrs.length; i++) {
+          for (j = 0; j < idAttrs[i].length; j++) {
+            for (k = 0; k < idAttrs[i][j].length; k++) {
+              chr = idAttrs[i][j].charCodeAt(k)
+              hash = (hash << 5) - hash + chr
+              hash |= 0 // Convert to 32bit integer
+            }
+          }
+        }
+        return hash
+      }
+
+      performance.mark('java_start')
+      let jHash = 0
+      for (let i = 0; i < iterCount; i++) {
+        const result = javaHash(idAttrs)
+        if (jHash === 0) jHash = result
+        else if (jHash !== result)
+          throw new Error(`hash mismatch ${result} vs previous ${jHash}`)
+      }
+      performance.mark('java_end')
+      performance.measure('java', 'java_start', 'java_end')
+
       const entries = performance
         .getEntriesByType('measure')
         .map((e) => `${e.name}: ${e.duration}`)
@@ -259,7 +305,7 @@ describe('rete perf', () => {
 
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
-    // expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(100)
     // expect(hz).toBeGreaterThan(1000)
     // expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)

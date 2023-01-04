@@ -89,13 +89,16 @@ export enum MEMORY_NODE_TYPE {
   LEAF,
 }
 
+export type IdAttrsHash = number
+
 export interface MemoryNode<T> {
   id: number
   parent: JoinNode<T>
   child?: JoinNode<T>
   leafNode?: MemoryNode<T>
   lastMatchId: number
-  matches: Dictionary<IdAttrs<T>, Match<T>>
+  // matches key is a
+  matches: Map<IdAttrsHash, { idAttrs: IdAttrs<T>; match: Match<T> }>
   matchIds: Map<number, IdAttrs<T>>
   condition: Condition<T>
   ruleName: string
@@ -177,7 +180,7 @@ export interface Session<T> {
   leafNodes: Map<string, MemoryNode<T>>
   idAttrNodes: Dictionary<IdAttr<T>, Set<AlphaNode<T>>>
   insideRule: boolean
-  thenQueue: Set<[node: MemoryNode<T>, idAttrs: IdAttrs<T>]>
+  thenQueue: Set<[node: MemoryNode<T>, idAttrsHash: IdAttrsHash]>
   thenFinallyQueue: Set<MemoryNode<T>>
   triggeredNodeIds: Set<MemoryNode<T>>
   subscriptionsOnProductions: Map<string, () => void>
