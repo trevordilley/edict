@@ -148,7 +148,7 @@ const addProductionToSession = <T, U>(
   production: Production<T, U>,
   alreadyExistsBehaviour = PRODUCTION_ALREADY_EXISTS_BEHAVIOR.ERROR
 ) => {
-  if (session.leafNodes.containsKey(production.name)) {
+  if (session.leafNodes.has(production.name)) {
     const message = `${production.name} already exists in session`
     if (alreadyExistsBehaviour === PRODUCTION_ALREADY_EXISTS_BEHAVIOR.QUIET)
       return
@@ -205,7 +205,7 @@ const addProductionToSession = <T, U>(
       ruleName: production.name,
       lastMatchId: -1,
       matches: newDict<IdAttrs<T>, Match<T>>(),
-      matchIds: newDict<number, IdAttrs<T>>(),
+      matchIds: new Map<number, IdAttrs<T>>(),
     }
     if (memNode.type === MEMORY_NODE_TYPE.LEAF) {
       memNode.nodeType = {
@@ -231,12 +231,12 @@ const addProductionToSession = <T, U>(
         }
       }
 
-      if (session.leafNodes.containsKey(production.name)) {
+      if (session.leafNodes.has(production.name)) {
         throw new Error(
           `${production.name} already exists in session, this should have been handled above`
         )
       }
-      session.leafNodes.setValue(production.name, memNode)
+      session.leafNodes.set(production.name, memNode)
     }
     memNodes.push(memNode)
     joinNodes.push(joinNode)
@@ -420,7 +420,7 @@ const leftActivationOnMemoryNode = <T>(
       node.type !== MEMORY_NODE_TYPE.LEAF ||
       !node.nodeType?.condFn ||
       (node.nodeType?.condFn(vars) ?? true)
-    node.matchIds.setValue(match.id, idAttrs)
+    node.matchIds.set(match.id, idAttrs)
     node.matches.setValue(idAttrs, match)
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
       session.triggeredSubscriptionQueue.add(node.ruleName)
@@ -435,7 +435,7 @@ const leftActivationOnMemoryNode = <T>(
   } else if (token.kind === TokenKind.RETRACT) {
     const idToDelete = node.matches.getValue(idAttrs)
     if (idToDelete) {
-      node.matchIds.remove(idToDelete.id)
+      node.matchIds.delete(idToDelete.id)
     }
     node.matches.remove(idAttrs)
     node.parent.oldIdAttrs.remove(idAttr)
@@ -965,7 +965,7 @@ const initSession = <T>(
     children: [],
   }
   nextId()
-  const leafNodes = newDict<string, MemoryNode<T>>()
+  const leafNodes = new Map<string, MemoryNode<T>>()
 
   const idAttrNodes = newDict<IdAttr<T>, Set<AlphaNode<T>>>()
 
@@ -1026,7 +1026,7 @@ const queryAll = <T, U>(
   // I feel like we should cache the results of these matches until the next `fire()`
   // then make it easy to query the data via key map paths or something. Iterating over all
   // matches could become cumbersome for large data sets
-  session.leafNodes.getValue(prod.name)?.matches.forEach((_, match) => {
+  session.leafNodes.get(prod.name)?.matches.forEach((_, match) => {
     const { enabled, vars } = match
     if (enabled && vars) {
       if (!filter) {
@@ -1081,11 +1081,9 @@ const get = <T, U>(
   prod: Production<T, U>,
   i: number
 ): U | undefined => {
-  const idAttrs = session.leafNodes.getValue(prod.name)?.matchIds.getValue(i)
+  const idAttrs = session.leafNodes.get(prod.name)?.matchIds.get(i)
   if (!idAttrs) return
-  const vars = session.leafNodes
-    .getValue(prod.name)
-    ?.matches.getValue(idAttrs)?.vars
+  const vars = session.leafNodes.get(prod.name)?.matches.getValue(idAttrs)?.vars
   if (!vars) {
     console.warn('No vars??')
     return

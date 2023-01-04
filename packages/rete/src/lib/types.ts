@@ -1,13 +1,13 @@
 /*** Facts ***/
-import { Dictionary, Set as TSet } from 'typescript-collections';
+import { Dictionary, Set as TSet } from 'typescript-collections'
 
 // This is a map of string to one of the elements of a fact tuple
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
-export type ValueOf<T> = T[keyof T];
-export type FactFragment<SCHEMA> = FactId | keyof SCHEMA | ValueOf<SCHEMA>;
-export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>;
-export type QueryFilter<SCHEMA> = Map<string, FactFragment<SCHEMA>[]>;
+export type ValueOf<T> = T[keyof T]
+export type FactFragment<SCHEMA> = FactId | keyof SCHEMA | ValueOf<SCHEMA>
+export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>
+export type QueryFilter<SCHEMA> = Map<string, FactFragment<SCHEMA>[]>
 
 export enum PRODUCTION_ALREADY_EXISTS_BEHAVIOR {
   QUIET,
@@ -21,13 +21,13 @@ export enum Field {
   VALUE,
 }
 
-export type FactId = number | string | Var;
+export type FactId = number | string | Var
 // Shorten that name a bit
-export type InternalFactRepresentation<SCHEMA> = [FactId, keyof SCHEMA, any];
-export type Fact<T> = InternalFactRepresentation<T>;
+export type InternalFactRepresentation<SCHEMA> = [FactId, keyof SCHEMA, any]
+export type Fact<T> = InternalFactRepresentation<T>
 
-export type IdAttr<S> = [FactId, keyof S];
-export type IdAttrs<S> = IdAttr<S>[];
+export type IdAttr<S> = [FactId, keyof S]
+export type IdAttrs<S> = IdAttr<S>[]
 export enum TokenKind {
   INSERT,
   RETRACT,
@@ -35,53 +35,53 @@ export enum TokenKind {
 }
 
 export interface Token<T> {
-  fact: Fact<T>;
-  kind: TokenKind;
+  fact: Fact<T>
+  kind: TokenKind
   // Only for Update Tokens
-  oldFact?: Fact<T>;
+  oldFact?: Fact<T>
 }
 
 /** Matches **/
 
-export type Vars<T> = Map<string, T>;
+export type Vars<T> = Map<string, T>
 export interface Var {
-  name: string;
-  field: Field;
+  name: string
+  field: Field
 }
 
 export interface Match<T> {
-  id: number;
-  vars?: MatchT<T>;
-  enabled?: boolean;
+  id: number
+  vars?: MatchT<T>
+  enabled?: boolean
 }
 
 /** functions **/
 export type ThenFn<T, U> = (then: {
-  session: Session<T>;
-  rule: Production<T, U>;
-  vars: U;
-}) => Promise<void> | void;
+  session: Session<T>
+  rule: Production<T, U>
+  vars: U
+}) => Promise<void> | void
 export type WrappedThenFn<SCHEMA> = (
   vars: MatchT<SCHEMA>
-) => Promise<void> | void;
+) => Promise<void> | void
 export type ThenFinallyFn<T, U> = (
   session: Session<T>,
   rule: Production<T, U>
-) => Promise<void> | void;
-export type WrappedThenFinallyFn = () => Promise<void> | void;
-export type ConvertMatchFn<T, U> = (vars: MatchT<T>) => U;
-export type CondFn<T> = (vars: MatchT<T>) => boolean;
-export type InitMatchFn<T> = () => MatchT<T>;
+) => Promise<void> | void
+export type WrappedThenFinallyFn = () => Promise<void> | void
+export type ConvertMatchFn<T, U> = (vars: MatchT<T>) => U
+export type CondFn<T> = (vars: MatchT<T>) => boolean
+export type InitMatchFn<T> = () => MatchT<T>
 
 /** Alpha Network **/
 export interface AlphaNode<T> {
-  id: number;
-  testField?: Field;
-  testValue?: keyof T | FactId;
+  id: number
+  testField?: Field
+  testValue?: keyof T | FactId
 
-  facts: Dictionary<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>;
-  successors: JoinNode<T>[];
-  children: AlphaNode<T>[];
+  facts: Dictionary<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>
+  successors: JoinNode<T>[]
+  children: AlphaNode<T>[]
 }
 
 export enum MEMORY_NODE_TYPE {
@@ -90,102 +90,102 @@ export enum MEMORY_NODE_TYPE {
 }
 
 export interface MemoryNode<T> {
-  id: number;
-  parent: JoinNode<T>;
-  child?: JoinNode<T>;
-  leafNode?: MemoryNode<T>;
-  lastMatchId: number;
-  matches: Dictionary<IdAttrs<T>, Match<T>>;
-  matchIds: Dictionary<number, IdAttrs<T>>;
-  condition: Condition<T>;
-  ruleName: string;
-  type: MEMORY_NODE_TYPE;
-  nodeType?: LeafNode<T>;
+  id: number
+  parent: JoinNode<T>
+  child?: JoinNode<T>
+  leafNode?: MemoryNode<T>
+  lastMatchId: number
+  matches: Dictionary<IdAttrs<T>, Match<T>>
+  matchIds: Map<number, IdAttrs<T>>
+  condition: Condition<T>
+  ruleName: string
+  type: MEMORY_NODE_TYPE
+  nodeType?: LeafNode<T>
 }
 
 export interface LeafNode<T> {
-  condFn?: CondFn<T>;
-  thenFn?: WrappedThenFn<T>;
-  thenFinallyFn?: WrappedThenFinallyFn;
-  trigger?: boolean;
+  condFn?: CondFn<T>
+  thenFn?: WrappedThenFn<T>
+  thenFinallyFn?: WrappedThenFinallyFn
+  trigger?: boolean
 }
 
 export interface JoinNode<T> {
-  id: number;
-  parent?: MemoryNode<T>;
-  child?: MemoryNode<T>;
-  alphaNode: AlphaNode<T>;
-  condition: Condition<T>;
-  idName?: string;
-  oldIdAttrs: TSet<IdAttr<T>>;
-  disableFastUpdates?: boolean;
-  ruleName: string;
+  id: number
+  parent?: MemoryNode<T>
+  child?: MemoryNode<T>
+  alphaNode: AlphaNode<T>
+  condition: Condition<T>
+  idName?: string
+  oldIdAttrs: TSet<IdAttr<T>>
+  disableFastUpdates?: boolean
+  ruleName: string
 }
 
 /** Session **/
 
 export interface Condition<T> {
-  nodes: [Field, keyof T | FactId][];
-  vars: Var[];
-  shouldTrigger: boolean;
+  nodes: [Field, keyof T | FactId][]
+  vars: Var[]
+  shouldTrigger: boolean
 }
 
 export interface Production<T, U> {
-  name: string;
-  conditions: Condition<T>[];
-  convertMatchFn: ConvertMatchFn<T, U>;
+  name: string
+  conditions: Condition<T>[]
+  convertMatchFn: ConvertMatchFn<T, U>
   subscriptions: Set<{
-    callback: (results: U[]) => void;
-    filter?: QueryFilter<T>;
-  }>;
-  condFn?: CondFn<T>;
-  thenFn?: ThenFn<T, U>;
-  thenFinallyFn?: ThenFinallyFn<T, U>;
+    callback: (results: U[]) => void
+    filter?: QueryFilter<T>
+  }>
+  condFn?: CondFn<T>
+  thenFn?: ThenFn<T, U>
+  thenFinallyFn?: ThenFinallyFn<T, U>
 }
 
 interface Mutation<T> {
-  kind: 'insert' | 'retract';
-  fact: Fact<T>;
+  kind: 'insert' | 'retract'
+  fact: Fact<T>
 }
 
 export interface DebugFrame<T> {
-  initialMutations: Mutation<T>[];
-  startingFacts: Fact<T>[];
-  endingFacts: Fact<T>[];
-  dt: number;
+  initialMutations: Mutation<T>[]
+  startingFacts: Fact<T>[]
+  endingFacts: Fact<T>[]
+  dt: number
   triggeredRules: {
-    ruleName: string;
-    kind: 'then' | 'thenFinally';
-    vars?: MatchT<T>;
-  }[];
+    ruleName: string
+    kind: 'then' | 'thenFinally'
+    vars?: MatchT<T>
+  }[]
 }
 
-export const DEFAULT_MAX_FRAME_DUMPS = 40;
+export const DEFAULT_MAX_FRAME_DUMPS = 40
 
 export interface DebugOptions {
-  enabled: boolean;
-  maxFrameDumps?: number;
+  enabled: boolean
+  maxFrameDumps?: number
 }
 export interface Debug<T> extends DebugOptions {
-  numFramesSinceInit: number;
-  frames: DebugFrame<T>[];
-  mutationsSinceLastFire: Mutation<T>[];
+  numFramesSinceInit: number
+  frames: DebugFrame<T>[]
+  mutationsSinceLastFire: Mutation<T>[]
 }
 
 export interface Session<T> {
-  alphaNode: AlphaNode<T>;
-  leafNodes: Dictionary<string, MemoryNode<T>>;
-  idAttrNodes: Dictionary<IdAttr<T>, Set<AlphaNode<T>>>;
-  insideRule: boolean;
-  thenQueue: Set<[node: MemoryNode<T>, idAttrs: IdAttrs<T>]>;
-  thenFinallyQueue: Set<MemoryNode<T>>;
-  triggeredNodeIds: Set<MemoryNode<T>>;
-  subscriptionsOnProductions: Map<string, () => void>;
-  triggeredSubscriptionQueue: Set<string>;
-  autoFire: boolean;
-  initMatch: InitMatchFn<T>;
-  nextId: () => number;
-  debug: Debug<T>;
+  alphaNode: AlphaNode<T>
+  leafNodes: Map<string, MemoryNode<T>>
+  idAttrNodes: Dictionary<IdAttr<T>, Set<AlphaNode<T>>>
+  insideRule: boolean
+  thenQueue: Set<[node: MemoryNode<T>, idAttrs: IdAttrs<T>]>
+  thenFinallyQueue: Set<MemoryNode<T>>
+  triggeredNodeIds: Set<MemoryNode<T>>
+  subscriptionsOnProductions: Map<string, () => void>
+  triggeredSubscriptionQueue: Set<string>
+  autoFire: boolean
+  initMatch: InitMatchFn<T>
+  nextId: () => number
+  debug: Debug<T>
 }
 
-export type ExecutedNodes<T> = Map<MemoryNode<T>, Set<MemoryNode<T>>>[];
+export type ExecutedNodes<T> = Map<MemoryNode<T>, Set<MemoryNode<T>>>[]
