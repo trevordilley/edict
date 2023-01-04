@@ -39,9 +39,6 @@ import {
 } from './types'
 import { Dictionary, Set as TSet } from 'typescript-collections'
 import * as _ from 'lodash'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import { performance } from 'perf_hooks'
 
 declare const process: {
   env: {
@@ -63,9 +60,6 @@ const addNode = <T>(
   node: AlphaNode<T>,
   newNode: AlphaNode<T>
 ): AlphaNode<T> => {
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('addNode_start')
-  }
   for (let i = 0; i < node.children.length; i++) {
     if (
       node.children[i].testField === newNode.testField &&
@@ -75,10 +69,6 @@ const addNode = <T>(
     }
   }
   node.children.push(newNode)
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('addNode_end')
-    performance.measure('addNode', 'addNode_start', 'addNode_end')
-  }
   return newNode
 }
 
@@ -86,9 +76,6 @@ const addNodes = <T>(
   session: Session<T>,
   nodes: [Field, keyof T | FactId][]
 ): AlphaNode<T> => {
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('addNodes_start')
-  }
   let result = session.alphaNode
   nodes.forEach(([testField, testValue]) => {
     result = addNode(result, {
@@ -100,10 +87,6 @@ const addNodes = <T>(
       facts: new Dictionary(),
     })
   })
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('addNodes_end')
-    performance.measure('addNodes', 'addNodes_start', 'addNodes_end')
-  }
   return result
 }
 
@@ -121,9 +104,6 @@ const addConditionsToProduction = <T, U>(
   value: Var | any,
   then: boolean
 ) => {
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('addConditionsToProduction_start')
-  }
   const condition: Condition<T> = { shouldTrigger: then, nodes: [], vars: [] }
   const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE]
 
@@ -149,35 +129,16 @@ const addConditionsToProduction = <T, U>(
     }
   })
   production.conditions.push(condition)
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('addConditionsToProduction_end')
-    performance.measure(
-      'addConditionsToProduction',
-      'addConditionsToProduction_start',
-      'addConditionsToProduction_end'
-    )
-  }
 }
 
 const isAncestor = <T>(x: JoinNode<T>, y: JoinNode<T>): boolean => {
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('isAncestor_start')
-  }
   let node = y
   while (node !== undefined && node.parent) {
     if (node.parent.parent === x) {
-      if (process.env.NODE_ENV === 'development') {
-        performance.mark('isAncestor_end')
-        performance.measure('isAncestor', 'isAncestor_start', 'isAncestor_end')
-      }
       return true
     } else {
       node = node.parent.parent
     }
-  }
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('isAncestor_end')
-    performance.measure('isAncestor', 'isAncestor_start', 'isAncestor_end')
   }
   return false
 }
@@ -187,9 +148,6 @@ const addProductionToSession = <T, U>(
   production: Production<T, U>,
   alreadyExistsBehaviour = PRODUCTION_ALREADY_EXISTS_BEHAVIOR.ERROR
 ) => {
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('addProductionToSession_start')
-  }
   if (session.leafNodes.containsKey(production.name)) {
     const message = `${production.name} already exists in session`
     if (alreadyExistsBehaviour === PRODUCTION_ALREADY_EXISTS_BEHAVIOR.QUIET)
@@ -301,14 +259,6 @@ const addProductionToSession = <T, U>(
       }
     }
   }
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('addProductionToSession_end')
-    performance.measure(
-      'addProductionToSession',
-      'addProductionToSession_start',
-      'addProductionToSession_end'
-    )
-  }
 }
 
 const subscribeToProduction = <T, U>(
@@ -317,9 +267,6 @@ const subscribeToProduction = <T, U>(
   callback: (results: U[]) => void,
   filter?: QueryFilter<T>
 ): (() => void) => {
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('subscribeToProduction_start')
-  }
   const sub = { callback, filter }
   production.subscriptions.add(sub)
   if (!session.subscriptionsOnProductions.has(production.name)) {
@@ -334,14 +281,6 @@ const subscribeToProduction = <T, U>(
     if (production.subscriptions.size === 0) {
       session.subscriptionsOnProductions.delete(production.name)
     }
-  }
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('subscribeToProduction_end')
-    performance.measure(
-      'subscribeToProduction',
-      'subscribeToProduction_start',
-      'subscribeToProduction_end'
-    )
   }
   return ret
 }
@@ -396,9 +335,6 @@ const leftActivationFromVars = <T>(
 ) => {
   const newVars: MatchT<T> = new Map(vars)
   if (getVarsFromFact(newVars, node.condition, alphaFact)) {
-    if (process.env.NODE_ENV === 'development') {
-      performance.mark('leftActivationFromVars_start')
-    }
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
@@ -409,14 +345,6 @@ const leftActivationFromVars = <T>(
       console.error('Session', JSON.stringify(session))
       console.error(`Node ${node.idName}`, JSON.stringify(node))
       throw new Error('Expected node to have child!')
-    }
-    if (process.env.NODE_ENV === 'development') {
-      performance.mark('leftActivationFromVars_end')
-      performance.measure(
-        'leftActivationFromVars',
-        'leftActivationFromVars_start',
-        'leftActivationFromVars_end'
-      )
     }
     leftActivationOnMemoryNode(
       session,
@@ -469,10 +397,6 @@ const leftActivationOnMemoryNode = <T>(
 ) => {
   const idAttr = idAttrs[idAttrs.length - 1]
 
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('leftActivationOnMemoryNode_start')
-  }
-  performance.mark('leftActivationOnMemoryNode_trigger_start')
   if (
     isNew &&
     (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) &&
@@ -482,15 +406,8 @@ const leftActivationOnMemoryNode = <T>(
   ) {
     node.leafNode.nodeType.trigger = true
   }
-  performance.mark('leftActivationOnMemoryNode_trigger_end')
-  performance.measure(
-    'leftActivationOnMemoryNode_trigger',
-    'leftActivationOnMemoryNode_trigger_start',
-    'leftActivationOnMemoryNode_trigger_end'
-  )
 
   if (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) {
-    performance.mark('leftActivationOnMemoryNode_mutate_start')
     let match: Match<T>
     if (node.matches.containsKey(idAttrs)) {
       match = node.matches.getValue(idAttrs)!
@@ -506,45 +423,16 @@ const leftActivationOnMemoryNode = <T>(
     node.matchIds.setValue(match.id, idAttrs)
     node.matches.setValue(idAttrs, match)
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
-      performance.mark('leftActivationOnMemoryNode_leaftrigger_start')
-      performance.mark('leftActivationOnMemoryNode_leaftrigger__addsub_start')
       session.triggeredSubscriptionQueue.add(node.ruleName)
-      performance.mark('leftActivationOnMemoryNode_leaftrigger__addsub_end')
-      performance.measure(
-        'leftActivationOnMemoryNode_leaftrigger__addsub',
-        'leftActivationOnMemoryNode_leaftrigger__addsub_start',
-        'leftActivationOnMemoryNode_leaftrigger__addsub_end'
-      )
-      performance.mark('leftActivationOnMemoryNode_leaftrigger__div_start')
-      const x = 2 + 2 === 4
-      performance.mark('leftActivationOnMemoryNode_leaftrigger__div_end')
-      performance.measure(
-        'leftActivationOnMemoryNode_leaftrigger__div',
-        'leftActivationOnMemoryNode_leaftrigger__div_start',
-        'leftActivationOnMemoryNode_leaftrigger__div_end'
-      )
       if (node.nodeType?.thenFn) {
         session.thenQueue.add([node, idAttrs])
       }
       if (node.nodeType.thenFinallyFn) {
         session.thenFinallyQueue.add(node)
       }
-      performance.mark('leftActivationOnMemoryNode_leaftrigger_end')
-      performance.measure(
-        'leftActivationOnMemoryNode_leaftrigger',
-        'leftActivationOnMemoryNode_leaftrigger_start',
-        'leftActivationOnMemoryNode_leaftrigger_end'
-      )
     }
     node.parent.oldIdAttrs.add(idAttr)
-    performance.mark('leftActivationOnMemoryNode_mutate_end')
-    performance.measure(
-      'leftActivationOnMemoryNode_mutate',
-      'leftActivationOnMemoryNode_mutate_start',
-      'leftActivationOnMemoryNode_mutate_end'
-    )
   } else if (token.kind === TokenKind.RETRACT) {
-    performance.mark('leftActivationOnMemoryNode_retract_start')
     const idToDelete = node.matches.getValue(idAttrs)
     if (idToDelete) {
       node.matchIds.remove(idToDelete.id)
@@ -557,24 +445,10 @@ const leftActivationOnMemoryNode = <T>(
         session.thenFinallyQueue.add(node)
       }
     }
-    performance.mark('leftActivationOnMemoryNode_retract_end')
-    performance.measure(
-      'leftActivationOnMemoryNode_retract',
-      'leftActivationOnMemoryNode_retract_start',
-      'leftActivationOnMemoryNode_retract_end'
-    )
   }
 
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
     leftActivationWithoutAlpha(session, node.child, idAttrs, vars, token)
-  }
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('leftActivationOnMemoryNode_end')
-    performance.measure(
-      'leftActivationOnMemoryNode',
-      'leftActivationOnMemoryNode_start',
-      'leftActivationOnMemoryNode_end'
-    )
   }
 }
 
@@ -756,7 +630,7 @@ const fireRules = <T>(
     return
   }
   let debugFrame: DebugFrame<T> | undefined = undefined
-  let startTs: number | undefined = undefined
+  const startTs: number | undefined = undefined
   let startingFacts: Fact<T>[] = []
   if (process.env.NODE_ENV === 'development') {
     if (session.debug.enabled) {
@@ -768,9 +642,7 @@ const fireRules = <T>(
         startingFacts,
         endingFacts: [],
       }
-      startTs = performance.now()
     }
-    performance.mark('fireRules_start')
   }
   // Only for debugging purposes, should we remove for prod usage?
   const executedNodes: ExecutedNodes<T> = []
@@ -895,10 +767,7 @@ const fireRules = <T>(
   }
   session.triggeredSubscriptionQueue.clear()
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('fireRules_end')
-    performance.measure('fireRules', 'fireRules_start', 'fireRules_end')
     if (session.debug.enabled) {
-      debugFrame!.dt = performance.now() - startTs!
       const endingFacts = queryFullSession(session)
       debugFrame!.endingFacts = endingFacts
       session.debug.numFramesSinceInit = session.debug.numFramesSinceInit + 1
@@ -921,20 +790,9 @@ const getAlphaNodesForFact = <T>(
   nodes: Set<AlphaNode<T>>
 ) => {
   if (root) {
-    if (process.env.NODE_ENV === 'development') {
-      performance.mark('getAlphaNodesForFact_start')
-    }
     node.children.forEach((child) => {
       getAlphaNodesForFact(session, child, fact, false, nodes)
     })
-    if (process.env.NODE_ENV === 'development') {
-      performance.mark('getAlphaNodesForFact_end')
-      performance.measure(
-        'getAlphaNodesForFact',
-        'getAlphaNodesForFact_start',
-        'getAlphaNodesForFact_end'
-      )
-    }
   } else {
     const val =
       node.testField === Field.IDENTIFIER
@@ -959,9 +817,6 @@ const upsertFact = <T>(
   fact: Fact<T>,
   nodes: Set<AlphaNode<T>>
 ) => {
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('upsertFact_start')
-  }
   const idAttr = getIdAttr<T>(fact)
   if (!session.idAttrNodes.containsKey(idAttr)) {
     nodes.forEach((n) => {
@@ -1010,11 +865,6 @@ const upsertFact = <T>(
         })
       }
     })
-
-    if (process.env.NODE_ENV === 'development') {
-      performance.mark('upsertFact_end')
-      performance.measure('upsertFact', 'upsertFact_start', 'upsertFact_end')
-    }
   }
 }
 const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
@@ -1034,7 +884,6 @@ const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
 
 const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('retractFact_start')
     session.debug.mutationsSinceLastFire.push({
       kind: 'retract',
       fact,
@@ -1057,10 +906,6 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
       kind: TokenKind.RETRACT,
     })
   })
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('retractFact_end')
-    performance.measure('retractFact', 'retractFact_start', 'retractFact_end')
-  }
 
   if (session.autoFire) {
     fireRules(session)
@@ -1074,7 +919,6 @@ const retractFactByIdAndAttr = <T>(
   autoFire?: boolean
 ) => {
   if (process.env.NODE_ENV === 'development') {
-    performance.mark('retractFactByIdAndAttr_start')
     session.debug.mutationsSinceLastFire.push({
       kind: 'retract',
       fact: [id, attr, undefined],
@@ -1094,14 +938,6 @@ const retractFactByIdAndAttr = <T>(
       console.warn('Missing fact during retraction?')
     }
   })
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('retractFactByIdAndAttr_end')
-    performance.measure(
-      'retractFactByIdAndAttr',
-      'retractFactByIdAndAttr_start',
-      'retractFactByIdAndAttr_end'
-    )
-  }
   if (autoFire ?? session.autoFire) {
     fireRules(session)
   }
@@ -1184,9 +1020,6 @@ const queryAll = <T, U>(
   prod: Production<T, U>,
   filter?: QueryFilter<T>
 ): U[] => {
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('queryAll_start')
-  }
   const result: U[] = []
 
   // TODO: Optimize result access?
@@ -1223,17 +1056,10 @@ const queryAll = <T, U>(
       }
     }
   })
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('queryAll_end')
-    performance.measure('queryAll', 'queryAll_start', 'queryAll_end')
-  }
   return result
 }
 
 const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('queryFullSession_start')
-  }
   const result: Fact<T>[] = []
   session.idAttrNodes.forEach((idAttr, nodes) => {
     const nodesArr = new Array(...nodes)
@@ -1247,14 +1073,6 @@ const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
     }
   })
 
-  if (process.env.NODE_ENV === 'development') {
-    performance.mark('queryFullSession_end')
-    performance.measure(
-      'queryFullSession',
-      'queryFullSession_start',
-      'queryFullSession_end'
-    )
-  }
   return result
 }
 

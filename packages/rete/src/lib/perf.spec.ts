@@ -1,39 +1,62 @@
 import { rete } from './rete'
 import { Field, MatchT } from '@edict/rete'
 import { performance } from 'perf_hooks'
-// import * as vega from 'vega'
-// import * as fs from 'fs'
+import v8Profiler from 'v8-profiler-next'
+import * as fs from 'fs'
 
-const bench = (fn: () => void) => {
-  let cycle_n = 1
-  let cycle_ms = 0
-  let cycle_total_ms = 0
+v8Profiler.setGenerateType(1)
 
-  const bench_iter = (fn: () => void, count: number) => {
-    const start = performance.now()
-    for (let i = 0; i < count; i++) {
-      fn()
+const profile = <T>(name: string, outdir: string, fn: () => T) => {
+  v8Profiler.startProfiling(name, true)
+  const result = fn()
+  const profile = v8Profiler.stopProfiling(name)
+  profile.export(function (error, result: any) {
+    // if it doesn't have the extension .cpuprofile then
+    // chrome's profiler tool won't like it.
+    // examine the profile:
+    //   Navigate to chrome://inspect
+    //   Click Open dedicated DevTools for Node
+    //   Select the profiler tab
+    //   Load your file
+    fs.mkdirSync(outdir, { recursive: true })
+    fs.writeFileSync(`${outdir.replace(/\/$/, '')}/${name}.cpuprofile`, result)
+    profile.delete()
+  })
+  return result
+}
+
+const bench = (name: string, fn: () => void) => {
+  return profile(name, 'profiles/packages/rete', () => {
+    let cycle_n = 1
+    let cycle_ms = 0
+    let cycle_total_ms = 0
+
+    const bench_iter = (fn: () => void, count: number) => {
+      const start = performance.now()
+      for (let i = 0; i < count; i++) {
+        fn()
+      }
+      const end = performance.now()
+      return end - start
     }
-    const end = performance.now()
-    return end - start
-  }
 
-  // Run multiple cycles to get an estimate
-  while (cycle_total_ms < 500) {
-    const elapsed = bench_iter(fn, cycle_n)
-    cycle_ms = elapsed / cycle_n
-    cycle_n *= 2
-    cycle_total_ms += elapsed
-  }
+    // Run multiple cycles to get an estimate
+    while (cycle_total_ms < 500) {
+      const elapsed = bench_iter(fn, cycle_n)
+      cycle_ms = elapsed / cycle_n
+      cycle_n *= 2
+      cycle_total_ms += elapsed
+    }
 
-  // Try to estimate the iteration count for 500ms
-  const target_n = 500 / cycle_ms
-  const total_ms = bench_iter(fn, target_n)
+    // Try to estimate the iteration count for 500ms
+    const target_n = 500 / cycle_ms
+    const total_ms = bench_iter(fn, target_n)
 
-  return {
-    hz: (target_n / total_ms) * 1_000, // ops/sec
-    ms: total_ms / target_n, // ms/op
-  }
+    return {
+      hz: (target_n / total_ms) * 1_000, // ops/sec
+      ms: total_ms / target_n, // ms/op
+    }
+  })
 }
 
 interface Schema {
@@ -71,8 +94,29 @@ const convertMatchFn = (vars: MatchT<Schema>) => vars
 
 // Tests based on these benchmarks: https://github.com/noctjs/ecs-benchmark
 
+describe('baseline measure of time', () => {
+  const sleep = (ms: number) => {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms)
+    })
+  }
+
+  it('takes 200 milliseconds', async () => {
+    performance.now()
+    await sleep(1)
+    const start = performance.now()
+    await sleep(2000)
+    const end = performance.now()
+    const dt = end - start
+    console.log(dt)
+
+    expect(2).toBe(2)
+  })
+})
+
 describe('rete perf', () => {
   it('packed_5', () => {
+    // @ts-ignore
     const session = rete.initSession<Schema>(false, { enabled: true })
     const makeProduction = (name: keyof Schema) => {
       const valName = name.toLowerCase()
@@ -119,46 +163,10 @@ describe('rete perf', () => {
     }
     rete.fireRules(session)
 
-    const { hz } = bench(() => {
+    const { hz } = bench('packed5', () => {
       rete.insertFact(session, ['Delta', 'delta', 1])
       rete.fireRules(session)
     })
-
-    const entries = performance
-      .getEntriesByType('measure')
-      .sort((a, b) => {
-        if (a.duration > b.duration) return -1
-        else return 1
-      })
-      .filter((a) => a.name === 'leftActivationOnMemoryNode_leaftrigger')
-      .map((a) => `${a.startTime ?? 0},${a.duration}`)
-      .join('\n')
-    console.log(entries)
-    // const view = new vega.View(
-    //   vega.parse({
-    //     $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
-    //     description: "Google's stock price over time.",
-    //     // @ts-ignore
-    //     data: {
-    //       values: entries,
-    //     },
-    //     mark: 'line',
-    //     encoding: {
-    //       x: { field: 'startTime', type: 'quantitative' },
-    //       y: { field: 'duration', type: 'quantitative' },
-    //     },
-    //   })
-    // )
-    //   .renderer('none')
-    //   .initialize()
-    //
-    // view.toCanvas().then((canvas) => {
-    //   console.log('write perf data')
-    //   const file = fs.createWriteStream('perf.png')
-    //   // @ts-ignore
-    //   const stream = canvas.createPNGStream()
-    //   stream.pipe(file)
-    // })
 
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
@@ -239,11 +247,11 @@ describe('rete perf', () => {
     }
     rete.fireRules(session)
 
-    const { hz } = bench(() => {
-      rete.insertFact(session, ['Delta', 'delta', 1])
-      rete.fireRules(session)
-    })
-    expect(hz).toBeGreaterThan(0)
+    // const { hz } = bench(() => {
+    //   rete.insertFact(session, ['Delta', 'delta', 1])
+    //   rete.fireRules(session)
+    // })
+    // expect(hz).toBeGreaterThan(0)
     //expect(hz).toBeGreaterThan(1)
     // expect(hz).toBeGreaterThan(10)
     // expect(hz).toBeGreaterThan(100)
@@ -297,7 +305,7 @@ describe('rete perf', () => {
     }
     rete.fireRules(session)
 
-    const { hz } = bench(() => {
+    const { hz } = bench('frag_iter', () => {
       rete.insertFact(session, ['Delta', 'delta', 1])
       rete.fireRules(session)
     })
@@ -369,7 +377,7 @@ describe('rete perf', () => {
     }
     rete.fireRules(session)
 
-    const { hz } = bench(() => {
+    const { hz } = bench('entity_cycle', () => {
       rete.insertFact(session, ['Delta', 'delta', 1])
       rete.fireRules(session)
     })
@@ -441,7 +449,7 @@ describe('rete perf', () => {
     }
     rete.fireRules(session)
 
-    const { hz } = bench(() => {
+    const { hz } = bench('add_remove', () => {
       rete.insertFact(session, ['Delta', 'delta', 1])
       rete.fireRules(session)
     })
