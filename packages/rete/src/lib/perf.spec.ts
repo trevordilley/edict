@@ -115,6 +115,65 @@ describe('baseline measure of time', () => {
     expect(2).toBe(2)
   })
 
+  it('profile data access', () => {
+    let x = 0
+    const u = new Uint32Array(1)
+    u[0] = 0
+    const mp = new Map<string, number>([['a', 0]])
+    const arr = [0]
+    const y = { y: 0 }
+    const z = { z: { z: { z: 0 } } }
+    const iter = 5_000_000
+    const bu = performance.now()
+    for (let i = 0; i < iter; i++) {
+      // @ts-ignore
+      u[0] += 1
+    }
+    const au = performance.now()
+    const bm = performance.now()
+    for (let i = 0; i < iter; i++) {
+      // @ts-ignore
+      mp.set('a', mp.get('a') + 1)
+    }
+    const am = performance.now()
+    const ba = performance.now()
+    for (let i = 0; i < iter; i++) {
+      arr[0] += 1
+    }
+    const aa = performance.now()
+    const bx = performance.now()
+    for (let i = 0; i < iter; i++) {
+      x += 1
+    }
+    const ax = performance.now()
+
+    const by = performance.now()
+    for (let i = 0; i < iter; i++) {
+      y.y += 1
+    }
+    const ay = performance.now()
+
+    const bz = performance.now()
+    const zs = ['z', 'z', 'z']
+    // @ts-ignore
+    const e = { [zs[0]]: { [zs[1]]: { [z[2]]: 0 } } }
+    for (let i = 0; i < iter; i++) {
+      // @ts-ignore
+      e['z']['z']['z'] += 1
+    }
+    const az = performance.now()
+
+    console.table({
+      u: au - bu,
+      m: am - bm,
+      a: aa - ba,
+      x: ax - bx,
+      y: ay - by,
+      z: az - bz,
+    })
+    expect(2).toBe(2)
+  })
+
   it('Using Dictionary vs using native map', () => {
     profile('nativeMap', 'profiles/packages/rete', () => {
       const match = {
