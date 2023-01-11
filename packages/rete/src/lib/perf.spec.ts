@@ -3,7 +3,6 @@ import { Field, MatchT } from '@edict/rete'
 import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
 import * as fs from 'fs'
-import { Dictionary } from 'typescript-collections'
 import MurmurHash3 from 'imurmurhash'
 
 v8Profiler.setGenerateType(1)
@@ -211,15 +210,6 @@ describe('baseline measure of time', () => {
       }
       performance.mark('map_end')
       performance.measure('map', 'map_start', 'map_end')
-      performance.mark('dict_start')
-      for (let i = 0; i < iterCount; i++) {
-        const d = new Dictionary<typeof idAttrs, typeof match>()
-        d.setValue(idAttrs, match)
-        d.getValue(idAttrs)
-        d.remove(idAttrs)
-      }
-      performance.mark('dict_end')
-      performance.measure('dict', 'dict_start', 'dict_end')
 
       const charsum = function (s: string) {
         var i,

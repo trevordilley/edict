@@ -38,7 +38,6 @@ import {
   TokenKind,
   Var,
 } from './types'
-import { Dictionary, Set as TSet } from 'typescript-collections'
 import * as _ from 'lodash'
 
 declare const process: {
@@ -47,8 +46,6 @@ declare const process: {
   }
 }
 
-export const newSet = <T>() => new TSet<T>()
-export const newDict = <K, V>() => new Dictionary<K, V>()
 // NOTE: The generic type T is our SCHEMA type. MatchT is the map of bindings
 export const getIdAttr = <SCHEMA>(
   fact: InternalFactRepresentation<SCHEMA>
@@ -90,20 +87,11 @@ const hashIdAttr = <T>(idAttr: string[]): number => {
   return hash
 }
 
-const hashVar = <T>(v: Var): number => {
-  let hash = 0,
-    i,
-    j,
-    chr
-  for (i = 0; i < v.name.length; i++) {
-    chr = v.name.charCodeAt(i)
-    hash = (hash << 5) - hash + chr
-    hash |= 0 // Convert to 32bit integer
-  }
-  hash = (hash << 5) - hash + v.field
-  hash |= 0 // Convert to 32bit integer
-  return hash
+const hashIdAttrObj = <T>(idAttr: IdAttr<T>): number => {
+  const [id, attr] = idAttr
+  return hashIdAttr([id.toString(), attr.toString()])
 }
+
 const addNode = <T>(
   node: AlphaNode<T>,
   newNode: AlphaNode<T>
@@ -228,7 +216,7 @@ const addProductionToSession = <T, U>(
       alphaNode: leafAlphaNode,
       condition,
       ruleName: production.name,
-      oldIdAttrs: newSet(),
+      oldIdAttrs: new Set<number>(),
     }
     condition.vars.forEach((v) => {
       if (bindings.has(v.name)) {
@@ -387,7 +375,7 @@ const leftActivationFromVars = <T>(
     const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
     const newToken = { fact: alphaFact, kind: token.kind }
-    const isNew = !node.oldIdAttrs?.contains(idAttr)
+    const isNew = !node.oldIdAttrs?.has(hashIdAttrObj(idAttr))
     const child = node.child
     if (!child) {
       console.error('Session', JSON.stringify(session))
@@ -414,9 +402,13 @@ const leftActivationWithoutAlpha = <T>(
 ) => {
   if (node.idName && node.idName != '') {
     const id = vars.get(node.idName)
-    if (id !== undefined && node.alphaNode.facts.containsKey(id)) {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    if (id !== undefined && node.alphaNode.facts.get(id.toString())) {
       const alphaFacts = [
-        ...(node.alphaNode.facts.getValue(id)?.values() ?? []),
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        ...(node.alphaNode.facts.get(id.toString())?.values() ?? []),
       ]
       if (!alphaFacts)
         throw new Error(`Expected to have alpha facts for ${node.idName}`)
@@ -480,14 +472,14 @@ const leftActivationOnMemoryNode = <T>(
         session.thenFinallyQueue.add(node)
       }
     }
-    node.parent.oldIdAttrs.add(idAttr)
+    node.parent.oldIdAttrs.add(hashIdAttrObj(idAttr))
   } else if (token.kind === TokenKind.RETRACT) {
     const idToDelete = node.matches.get(idAttrsHash)
     if (idToDelete) {
       node.matchIds.delete(idToDelete.match.id)
     }
     node.matches.delete(idAttrsHash)
-    node.parent.oldIdAttrs.remove(idAttr)
+    node.parent.oldIdAttrs.delete(hashIdAttrObj(idAttr))
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType) {
       session.triggeredSubscriptionQueue.add(node.ruleName)
       if (node.nodeType.thenFinallyFn) {
@@ -559,27 +551,30 @@ const rightActivationWithAlphaNode = <T>(
   token: Token<T>
 ) => {
   const idAttr = getIdAttr(token.fact)
-  const hash = hashIdAttr(idAttr as string[])
+  const idAttrHash = hashIdAttrObj(idAttr)
   const [id, attr] = idAttr
   if (token.kind === TokenKind.INSERT) {
-    if (!node.facts.containsKey(id)) {
-      node.facts.setValue(id, new Dictionary<FactFragment<T>, Fact<T>>())
+    if (!node.facts.has(id.toString())) {
+      node.facts.set(id.toString(), new Map<string, Fact<T>>())
     }
-    node.facts.getValue(id)!.setValue(attr, token.fact)
-    if (!session.idAttrNodes.containsKey(idAttr)) {
-      session.idAttrNodes.setValue(idAttr, new Set<AlphaNode<T>>())
+    node.facts.get(id.toString())!.set(attr.toString(), token.fact)
+    if (!session.idAttrNodes.has(idAttrHash)) {
+      session.idAttrNodes.set(idAttrHash, {
+        alphaNodes: new Set<AlphaNode<T>>(),
+        idAttr,
+      })
     }
-    session.idAttrNodes.getValue(idAttr)!.add(node)
+    session.idAttrNodes.get(idAttrHash)!.alphaNodes.add(node)
   } else if (token.kind === TokenKind.RETRACT) {
-    node.facts.getValue(id)?.remove(attr)
-    session.idAttrNodes.getValue(idAttr)!.delete(node)
-    if (session.idAttrNodes.getValue(idAttr)!.size == 0) {
-      session.idAttrNodes.remove(idAttr)
+    node.facts.get(id.toString())?.delete(attr.toString())
+    session.idAttrNodes.get(idAttrHash)!.alphaNodes.delete(node)
+    if (session.idAttrNodes.get(idAttrHash)!.alphaNodes.size == 0) {
+      session.idAttrNodes.delete(idAttrHash)
     }
   } else if (token.kind === TokenKind.UPDATE) {
-    const idAttr = node.facts.getValue(id)
+    const idAttr = node.facts.get(id.toString())
     if (idAttr === undefined) throw new Error(`Expected fact id to exist ${id}`)
-    idAttr.setValue(attr, token.fact)
+    idAttr.set(attr.toString(), token.fact)
   }
   node.successors.forEach((child) => {
     if (token.kind === TokenKind.UPDATE && child.disableFastUpdates) {
@@ -632,43 +627,6 @@ const raiseRecursionLimit = <T>(
     })
     nodes = currNodes
   }
-
-  const findCycles = (
-    cycles: TSet<string[]>,
-    k: string,
-    v: object,
-    cyc: string[]
-  ) => {
-    const newCyc = cyc
-    newCyc.push(k)
-    const index = cyc.indexOf(k)
-    if (index >= 0) {
-      cycles.add(newCyc.splice(index, newCyc.length))
-    } else {
-      Object.keys(v).forEach((key) => {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        findCycles(cycles, key, v[key], newCyc)
-      })
-    }
-  }
-
-  const cycles = newSet<string[]>()
-  Object.keys(nodes).forEach((key) => {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    findCycles(cycles, key, nodes[key], [])
-  })
-  let text = ''
-  cycles.forEach((cycle) => {
-    text = `${text}\nCycle detected! `
-    if (cycle.length == 2) {
-      text = `${text}${cycle[0]} is triggering itself`
-    } else {
-      text = `${text}${cycle.join(' -> ')}`
-    }
-    raiseRecursionLimitException(limit, text)
-  })
 }
 
 const DEFAULT_RECURSION_LIMIT = 16
@@ -871,7 +829,8 @@ const upsertFact = <T>(
   nodes: Set<AlphaNode<T>>
 ) => {
   const idAttr = getIdAttr<T>(fact)
-  if (!session.idAttrNodes.containsKey(idAttr)) {
+  const idAttrHash = hashIdAttrObj(idAttr)
+  if (!session.idAttrNodes.has(idAttrHash)) {
     nodes.forEach((n) => {
       rightActivationWithAlphaNode(session, n, {
         fact,
@@ -879,7 +838,7 @@ const upsertFact = <T>(
       })
     })
   } else {
-    const existingNodes = session.idAttrNodes.getValue(idAttr)
+    const existingNodes = session.idAttrNodes.get(idAttrHash)
     if (existingNodes === undefined) {
       console.warn('Session has no existing nodes?')
       return
@@ -887,10 +846,10 @@ const upsertFact = <T>(
     // retract any facts from nodes that the new fact wasn't inserted in
     // we use toSeq here to make a copy of the existingNodes, because
     // rightActivation will modify it
-    const existingNodesCopy = new Set<AlphaNode<T>>(existingNodes)
+    const existingNodesCopy = new Set<AlphaNode<T>>(existingNodes.alphaNodes)
     existingNodesCopy.forEach((n) => {
       if (!nodes.has(n)) {
-        const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1])
+        const oldFact = n.facts.get(fact[0].toString())?.get(fact[1].toString())
         if (oldFact === undefined) {
           console.warn("Old fact doesn't exist?")
           return
@@ -904,8 +863,8 @@ const upsertFact = <T>(
 
     // update or insert facts, depending on whether the node already exists
     nodes.forEach((n) => {
-      if (existingNodes.has(n)) {
-        const oldFact = n.facts.getValue(fact[0])?.getValue(fact[1])
+      if (existingNodes.alphaNodes.has(n)) {
+        const oldFact = n.facts.get(fact[0].toString())?.get(fact[1].toString())
         rightActivationWithAlphaNode(session, n, {
           fact,
           kind: TokenKind.UPDATE,
@@ -943,11 +902,16 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
     })
   }
   const idAttr = getIdAttr(fact)
+  const idAttrHash = hashIdAttrObj(idAttr)
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set<AlphaNode<T>>()
-  session.idAttrNodes.getValue(idAttr)?.forEach((i) => idAttrNodes.add(i))
+  session.idAttrNodes
+    .get(idAttrHash)
+    ?.alphaNodes?.forEach((i) => idAttrNodes.add(i))
   idAttrNodes.forEach((node) => {
-    const otherFact = node.facts.getValue(idAttr[0])?.getValue(idAttr[1])
+    const otherFact = node.facts
+      .get(idAttr[0].toString())
+      ?.get(idAttr[1].toString())
     if (!_.isEqual(fact, otherFact)) {
       throw new Error(
         `Expected fact ${fact} to be in node.facts at id: ${idAttr[0]}, attr: ${idAttr[1]}`
@@ -979,9 +943,11 @@ const retractFactByIdAndAttr = <T>(
   }
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set<AlphaNode<T>>()
-  session.idAttrNodes.getValue([id, attr])?.forEach((i) => idAttrNodes.add(i))
+  session.idAttrNodes
+    .get(hashIdAttr([id, attr.toString()]))
+    ?.alphaNodes?.forEach((i) => idAttrNodes.add(i))
   idAttrNodes.forEach((node) => {
-    const fact = node.facts.getValue(id)?.getValue(attr)
+    const fact = node.facts.get(id)?.get(attr.toString())
     if (fact) {
       rightActivationWithAlphaNode(session, node, {
         fact,
@@ -1010,17 +976,17 @@ const initSession = <T>(
   const nextId = () => nodeIdCounter++
   const alphaNode: AlphaNode<T> = {
     id: nodeIdCounter,
-    facts: new Dictionary<
-      FactFragment<T>,
-      Dictionary<FactFragment<T>, Fact<T>>
-    >(),
+    facts: new Map<string, Map<string, Fact<T>>>(),
     successors: [],
     children: [],
   }
   nextId()
   const leafNodes = new Map<string, MemoryNode<T>>()
 
-  const idAttrNodes = newDict<IdAttr<T>, Set<AlphaNode<T>>>()
+  const idAttrNodes = new Map<
+    number,
+    { alphaNodes: Set<AlphaNode<T>>; idAttr: IdAttr<T> }
+  >()
 
   const thenQueue = new Set<[MemoryNode<T>, IdAttrsHash]>()
 
@@ -1114,11 +1080,13 @@ const queryAll = <T, U>(
 
 const queryFullSession = <T>(session: Session<T>): Fact<T>[] => {
   const result: Fact<T>[] = []
-  session.idAttrNodes.forEach((idAttr, nodes) => {
-    const nodesArr = new Array(...nodes)
+  session.idAttrNodes.forEach(({ alphaNodes, idAttr }) => {
+    const nodesArr = new Array(...alphaNodes)
     if (nodesArr.length <= 0) throw new Error('No nodes in session?')
     const firstNode = nodesArr[0]
-    const fact = firstNode.facts.getValue(idAttr[0])?.getValue(idAttr[1])
+    const fact = firstNode.facts
+      .get(idAttr[0].toString())
+      ?.get(idAttr[1].toString())
     if (fact) {
       result.push([idAttr[0], idAttr[1], fact[2]])
     } else {
@@ -1147,7 +1115,7 @@ const get = <T, U>(
 }
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
-  session.idAttrNodes.containsKey([id, attr])
+  session.idAttrNodes.has(hashIdAttr([id, attr.toString()]))
 
 export const rete = {
   get,

@@ -1,6 +1,3 @@
-/*** Facts ***/
-import { Dictionary, Set as TSet } from 'typescript-collections'
-
 // This is a map of string to one of the elements of a fact tuple
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
@@ -79,7 +76,7 @@ export interface AlphaNode<T> {
   testField?: Field
   testValue?: keyof T | FactId
 
-  facts: Map<FactFragment<T>, Dictionary<FactFragment<T>, Fact<T>>>
+  facts: Map<string, Map<string, Fact<T>>>
   successors: JoinNode<T>[]
   children: AlphaNode<T>[]
 }
@@ -120,7 +117,7 @@ export interface JoinNode<T> {
   alphaNode: AlphaNode<T>
   condition: Condition<T>
   idName?: string
-  oldIdAttrs: TSet<IdAttr<T>>
+  oldIdAttrs: Set<number>
   disableFastUpdates?: boolean
   ruleName: string
 }
@@ -178,7 +175,7 @@ export interface Debug<T> extends DebugOptions {
 export interface Session<T> {
   alphaNode: AlphaNode<T>
   leafNodes: Map<string, MemoryNode<T>>
-  idAttrNodes: Dictionary<IdAttr<T>, Set<AlphaNode<T>>>
+  idAttrNodes: Map<number, { alphaNodes: Set<AlphaNode<T>>; idAttr: IdAttr<T> }>
   insideRule: boolean
   thenQueue: Set<[node: MemoryNode<T>, idAttrsHash: IdAttrsHash]>
   thenFinallyQueue: Set<MemoryNode<T>>

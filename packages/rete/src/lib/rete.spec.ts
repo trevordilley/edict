@@ -219,6 +219,8 @@ describe('rete', () => {
     const results = rete.queryAll(session, production)
     expect(results.length).toBe(1)
     expect(subResults).toStrictEqual(results)
+
+    const facts = rete.queryFullSession(session)
   })
 
   it('duplicate facts', () => {
@@ -376,6 +378,8 @@ describe('rete', () => {
     expect(newResults.length).toBe(1)
     //   expect(thenCount).toBe(2) // We have a bug where then isn't triggering again too reassign zVal to Xavier
     expect(zVal).toBe(Id.Xavier)
+
+    console.log(rete.queryFullSession(session))
   })
 
   it('updating facts asynchronously', async () => {
