@@ -1,6 +1,7 @@
 // This is a map of string to one of the elements of a fact tuple
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
+
 export type ValueOf<T> = T[keyof T]
 export type FactFragment<SCHEMA> = FactId | keyof SCHEMA | ValueOf<SCHEMA>
 export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>

@@ -4,6 +4,7 @@ import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
 import * as fs from 'fs'
 import MurmurHash3 from 'imurmurhash'
+import * as imm from 'immutable'
 
 v8Profiler.setGenerateType(1)
 
@@ -134,31 +135,34 @@ describe('baseline measure of time', () => {
     expect(2).toBe(2)
   })
 
-  it('profile for vs foreach', () => {
-    const len = 100000
-    const arr = []
+  it('profile Map vs Immutable Map', () => {
+    const len = 10000
+    let m = new Map<string, string>()
+    let im = imm.Map()
     for (let i = 0; i < len; i++) {
-      arr[i] = i
+      const s = `el${i}`
+      m.set(s, s)
+      im = im.set(s, s)
     }
 
-    performance.mark('profile_foreach_start')
-    const arr2 = []
-    arr.forEach((v, idx) => {
-      arr2[idx] = v
-    })
-    performance.mark('profile_foreach_end')
-    performance.measure(
-      'profile_foreach',
-      'profile_foreach_start',
-      'profile_foreach_end'
-    )
-    performance.mark('profile_for_start')
-    const arr3 = []
-    for (let i = 0; i < arr.length; i++) {
-      arr3[i] = arr[i]
+    performance.mark('profile_jsmap_start')
+    for (let i = 0; i < len; i++) {
+      const x = new Map(m)
     }
-    performance.mark('profile_for_end')
-    performance.measure('profile_for', 'profile_for_start', 'profile_for_end')
+    performance.mark('profile_jsmap_end')
+    performance.measure(
+      'profile_jsmap',
+      'profile_jsmap_start',
+      'profile_jsmap_end'
+    )
+    performance.mark('profile_imm_start')
+    for (let i = 0; i < len; i++) {
+      const s = `el${i}`
+      const x = im.asMutable()
+      im.set(s, s)
+    }
+    performance.mark('profile_imm_end')
+    performance.measure('profile_imm', 'profile_imm_start', 'profile_imm_end')
 
     console.table(perfResults())
   })
@@ -421,8 +425,8 @@ describe('rete perf', () => {
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
     expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
-    // expect(hz).toBeGreaterThan(10_000)
+    expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)
     // expect(hz).toBeGreaterThan(300_000)
   })
