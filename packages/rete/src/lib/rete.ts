@@ -370,7 +370,7 @@ const leftActivationFromVars = <T>(
   alphaFact: Fact<T>
 ) => {
   // If we change this from `new Map(vars)` to just `vars` suddenly we get 5000/ops
-  const newVars: MatchT<T> = vars //new Map(vars)
+  const newVars: MatchT<T> = new Map(vars)
   if (getVarsFromFact(newVars, node.condition, alphaFact)) {
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
