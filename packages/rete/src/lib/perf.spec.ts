@@ -7,6 +7,26 @@ import MurmurHash3 from 'imurmurhash'
 
 v8Profiler.setGenerateType(1)
 
+const perfResults = () => {
+  const measureMap = new Map<
+    string,
+    { total: number; count: number; avg: number }
+  >()
+  performance.getEntriesByType('measure').map((p) => {
+    if (!measureMap.has(p.name)) {
+      measureMap.set(p.name, { total: 0, count: 0, avg: 0 })
+    }
+    measureMap.get(p.name)!.count += 1
+    measureMap.get(p.name)!.total += p.duration
+  })
+  const results: any = {}
+  measureMap.forEach((agg, name) => {
+    measureMap.get(name)!.avg = agg.total / agg.count
+    results[name] = measureMap.get(name)
+  })
+  return results
+}
+
 const profile = <T>(name: string, outdir: string, fn: () => T) => {
   v8Profiler.startProfiling(name, true)
   const result = fn()
@@ -112,6 +132,35 @@ describe('baseline measure of time', () => {
     console.log(dt)
 
     expect(2).toBe(2)
+  })
+
+  it('profile for vs foreach', () => {
+    const len = 100000
+    const arr = []
+    for (let i = 0; i < len; i++) {
+      arr[i] = i
+    }
+
+    performance.mark('profile_foreach_start')
+    const arr2 = []
+    arr.forEach((v, idx) => {
+      arr2[idx] = v
+    })
+    performance.mark('profile_foreach_end')
+    performance.measure(
+      'profile_foreach',
+      'profile_foreach_start',
+      'profile_foreach_end'
+    )
+    performance.mark('profile_for_start')
+    const arr3 = []
+    for (let i = 0; i < arr.length; i++) {
+      arr3[i] = arr[i]
+    }
+    performance.mark('profile_for_end')
+    performance.measure('profile_for', 'profile_for_start', 'profile_for_end')
+
+    console.table(perfResults())
   })
 
   it('profile data access', () => {

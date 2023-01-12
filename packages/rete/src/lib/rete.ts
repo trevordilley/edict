@@ -370,7 +370,14 @@ const leftActivationFromVars = <T>(
   token: Token<T>,
   alphaFact: Fact<T>
 ) => {
+  performance.mark('leftActive_copy_start')
   const newVars: MatchT<T> = new Map(vars)
+  performance.mark('leftActive_copy_end')
+  performance.measure(
+    'leftActive_copy',
+    'leftActive_copy_start',
+    'leftActive_copy_end'
+  )
   if (getVarsFromFact(newVars, node.condition, alphaFact)) {
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
@@ -545,7 +552,14 @@ const rightActivationWithJoinNode = <T>(
     }
   } else {
     node.parent.matches.forEach((match) => {
+      performance.mark('rightActive_copy_start')
       const vars: MatchT<T> = new Map(match.match.vars)
+      performance.mark('rightActive_copy_end')
+      performance.measure(
+        'rightActive_copy',
+        'rightActive_copy_start',
+        'rightActive_copy_end'
+      )
       const idName = node.idName
       if (idName && idName !== '' && vars?.get(idName) != token.fact[0]) {
         return
@@ -553,7 +567,15 @@ const rightActivationWithJoinNode = <T>(
       if (!vars) {
         throw new Error('Expected vars to not be undefinied???')
       }
+
+      performance.mark('rightActive_copy2_start')
       const newVars = new Map(vars)
+      performance.mark('rightActive_copy2_end')
+      performance.measure(
+        'rightActive_copy2',
+        'rightActive_copy2_start',
+        'rightActive_copy2_end'
+      )
       if (getVarsFromFact(newVars, node.condition, token.fact)) {
         const newIdAttrs = [...match.idAttrs]
         newIdAttrs.push(idAttr)
