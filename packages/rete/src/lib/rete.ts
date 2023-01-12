@@ -467,7 +467,7 @@ const leftActivationOnMemoryNode = <T>(
     performance.mark('match_end')
     performance.measure('match', 'match_start', 'match_end')
     performance.mark('map_copy_start')
-    match.vars = new Map()
+    match.vars = new Map(vars)
     performance.mark('map_copy_end')
     performance.measure('map_copy', 'map_copy_start', 'map_copy_end')
     performance.mark('match_enabled_start')
