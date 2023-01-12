@@ -28,7 +28,12 @@ const perfResults = () => {
   return results
 }
 
-const profile = <T>(name: string, outdir: string, fn: () => T) => {
+const profile = <T>(
+  name: string,
+  outdir: string,
+  fn: () => T,
+  dontrun = false
+) => {
   v8Profiler.startProfiling(name, true)
   const result = fn()
   const profile = v8Profiler.stopProfiling(name)
@@ -48,37 +53,35 @@ const profile = <T>(name: string, outdir: string, fn: () => T) => {
 }
 
 const bench = (name: string, fn: () => void) => {
-  return profile(name, 'profiles/packages/rete', () => {
-    let cycle_n = 1
-    let cycle_ms = 0
-    let cycle_total_ms = 0
+  let cycle_n = 1
+  let cycle_ms = 0
+  let cycle_total_ms = 0
 
-    const bench_iter = (fn: () => void, count: number) => {
-      const start = performance.now()
-      for (let i = 0; i < count; i++) {
-        fn()
-      }
-      const end = performance.now()
-      return end - start
+  const bench_iter = (fn: () => void, count: number) => {
+    const start = performance.now()
+    for (let i = 0; i < count; i++) {
+      fn()
     }
+    const end = performance.now()
+    return end - start
+  }
 
-    // Run multiple cycles to get an estimate
-    while (cycle_total_ms < 500) {
-      const elapsed = bench_iter(fn, cycle_n)
-      cycle_ms = elapsed / cycle_n
-      cycle_n *= 2
-      cycle_total_ms += elapsed
-    }
+  // Run multiple cycles to get an estimate
+  while (cycle_total_ms < 500) {
+    const elapsed = bench_iter(fn, cycle_n)
+    cycle_ms = elapsed / cycle_n
+    cycle_n *= 2
+    cycle_total_ms += elapsed
+  }
 
-    // Try to estimate the iteration count for 500ms
-    const target_n = 500 / cycle_ms
-    const total_ms = bench_iter(fn, target_n)
+  // Try to estimate the iteration count for 500ms
+  const target_n = 500 / cycle_ms
+  const total_ms = bench_iter(fn, target_n)
 
-    return {
-      hz: (target_n / total_ms) * 1_000, // ops/sec
-      ms: total_ms / target_n, // ms/op
-    }
-  })
+  return {
+    hz: (target_n / total_ms) * 1_000, // ops/sec
+    ms: total_ms / target_n, // ms/op
+  }
 }
 
 interface Schema {
@@ -478,7 +481,7 @@ describe('rete perf', () => {
     makeProduction('C', 'E')
 
     rete.insertFact(session, ['Delta', 'delta', 1])
-    const NUM_ENTITIES = 10
+    const NUM_ENTITIES = 100
     for (let i = 0; i < NUM_ENTITIES; i++) {
       const ab = `${i}ab`
       rete.insertFact(session, [ab, 'A', 1])
@@ -500,17 +503,17 @@ describe('rete perf', () => {
     }
     rete.fireRules(session)
 
-    // const { hz } = bench(() => {
-    //   rete.insertFact(session, ['Delta', 'delta', 1])
-    //   rete.fireRules(session)
-    // })
-    // expect(hz).toBeGreaterThan(0)
-    //expect(hz).toBeGreaterThan(1)
-    // expect(hz).toBeGreaterThan(10)
-    // expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
-    // expect(NUM_ENTITIES).toBeGreaterThan(999)
-    // expect(hz).toBeGreaterThan(10_000)
+    const { hz } = bench('simple_iter', () => {
+      rete.insertFact(session, ['Delta', 'delta', 1])
+      rete.fireRules(session)
+    })
+    expect(hz).toBeGreaterThan(0)
+    expect(hz).toBeGreaterThan(1)
+    expect(hz).toBeGreaterThan(10)
+    expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(1000)
+    expect(NUM_ENTITIES).toBeGreaterThan(999)
+    expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)
   })
 
@@ -564,9 +567,9 @@ describe('rete perf', () => {
     })
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
-    // expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
-    // expect(hz).toBeGreaterThan(10_000)
+    expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)
     // expect(hz).toBeGreaterThan(300_000)
     // expect(hz).toBeGreaterThan(500_000)
@@ -624,7 +627,7 @@ describe('rete perf', () => {
     rete.addProductionToSession(session, retractB)
 
     rete.insertFact(session, ['Delta', 'delta', 1])
-    const NUM_ENTITIES = 100
+    const NUM_ENTITIES = 1000
     for (let i = 0; i < NUM_ENTITIES; i++) {
       rete.insertFact(session, [i, 'A', 1])
     }
@@ -637,9 +640,9 @@ describe('rete perf', () => {
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
     expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
-    // expect(hz).toBeGreaterThan(10_000)
-    // expect(hz).toBeGreaterThan(100_000)
+    expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(10_000)
+    expect(hz).toBeGreaterThan(100_000)
     // expect(hz).toBeGreaterThan(300_000)
     // expect(hz).toBeGreaterThan(500_000)
   })
@@ -696,7 +699,7 @@ describe('rete perf', () => {
     rete.addProductionToSession(session, retractB)
 
     rete.insertFact(session, ['Delta', 'delta', 1])
-    const NUM_ENTITIES = 100
+    const NUM_ENTITIES = 1000
     for (let i = 0; i < NUM_ENTITIES; i++) {
       rete.insertFact(session, [i, 'A', 1])
     }
@@ -709,9 +712,9 @@ describe('rete perf', () => {
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
     expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
-    // expect(hz).toBeGreaterThan(10_000)
-    // expect(hz).toBeGreaterThan(100_000)
+    expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(10_000)
+    expect(hz).toBeGreaterThan(100_000)
     // expect(hz).toBeGreaterThan(300_000)
     // expect(hz).toBeGreaterThan(500_000)
   })

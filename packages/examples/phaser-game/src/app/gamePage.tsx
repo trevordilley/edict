@@ -2,8 +2,8 @@ import { edict } from '@edict/edict'
 import * as Phaser from 'phaser'
 import { useLayoutEffect } from 'react'
 
-const WIDTH = 800
-const HEIGHT = 600
+const WIDTH = 1200
+const HEIGHT = 900
 const newDest = () => ({
   destX: Math.floor(Math.random() * WIDTH),
   destY: Math.floor(Math.random() * HEIGHT),
@@ -64,12 +64,12 @@ const create = (scene: Phaser.Scene) => {
     0x6666ff, 0x9966ff, 0xff6699, 0xaaff22, 0xfcdd11, 0x00ff00, 0xff0000,
     0x0000ff,
   ]
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 1200; i++) {
     const cIdx = i % colors.length
-    const circle = scene.add.circle(0, 0, 50, colors[cIdx])
+    const circle = scene.add.circle(0, 0, 10, colors[cIdx])
     insert({
       [`c${i}`]: {
-        speed: Math.random() * 2,
+        speed: 0.2,
         ...newDest(),
         circle,
       },
