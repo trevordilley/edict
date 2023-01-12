@@ -370,6 +370,7 @@ const leftActivationFromVars = <T>(
   alphaFact: Fact<T>
 ) => {
   // If we change this from `new Map(vars)` to just `vars` suddenly we get 5000/ops
+  // Try implementing this:https://github.com/paranim/pararules/pull/7/files
   const newVars: MatchT<T> = new Map(vars)
   if (getVarsFromFact(newVars, node.condition, alphaFact)) {
     const idAttr = getIdAttr<T>(alphaFact)
