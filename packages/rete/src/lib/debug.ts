@@ -42,7 +42,6 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
 
 const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>): Node => {
   const field = node.testField ? `${FIELD_TO_STR[node.testField]}` : ''
-
   const label = `${field}\n`
   return {
     id: node.id,

@@ -96,7 +96,7 @@ export interface MemoryNode<T> {
   lastMatchId: number
   // matches key is a
   matches: Map<IdAttrsHash, { idAttrs: IdAttrs<T>; match: Match<T> }>
-  matchIds: Map<number, IdAttrs<T>>
+  matchIds: Map<IdAttrsHash, IdAttrs<T>>
   condition: Condition<T>
   ruleName: string
   type: MEMORY_NODE_TYPE
@@ -117,7 +117,7 @@ export interface JoinNode<T> {
   alphaNode: AlphaNode<T>
   condition: Condition<T>
   idName?: string
-  oldIdAttrs: Set<number>
+  oldIdAttrs: Set<IdAttrsHash>
   disableFastUpdates?: boolean
   ruleName: string
 }
@@ -175,7 +175,10 @@ export interface Debug<T> extends DebugOptions {
 export interface Session<T> {
   alphaNode: AlphaNode<T>
   leafNodes: Map<string, MemoryNode<T>>
-  idAttrNodes: Map<number, { alphaNodes: Set<AlphaNode<T>>; idAttr: IdAttr<T> }>
+  idAttrNodes: Map<
+    IdAttrsHash,
+    { alphaNodes: Set<AlphaNode<T>>; idAttr: IdAttr<T> }
+  >
   insideRule: boolean
   thenQueue: Set<[node: MemoryNode<T>, idAttrsHash: IdAttrsHash]>
   thenFinallyQueue: Set<MemoryNode<T>>

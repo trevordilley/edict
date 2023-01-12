@@ -1,5 +1,5 @@
 import { rete } from './rete'
-import { Field, MatchT } from '@edict/rete'
+import { Field, MatchT, viz } from '@edict/rete'
 import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
 import * as fs from 'fs'
@@ -351,7 +351,24 @@ describe('rete perf', () => {
       rete.insertFact(session, ['Delta', 'delta', 1])
       rete.fireRules(session)
     })
-
+    const measureMap = new Map<
+      string,
+      { total: number; count: number; avg: number }
+    >()
+    performance.getEntriesByType('measure').map((p) => {
+      if (!measureMap.has(p.name)) {
+        measureMap.set(p.name, { total: 0, count: 0, avg: 0 })
+      }
+      measureMap.get(p.name)!.count += 1
+      measureMap.get(p.name)!.total += p.duration
+    })
+    const results: any = {}
+    measureMap.forEach((agg, name) => {
+      measureMap.get(name)!.avg = agg.total / agg.count
+      results[name] = measureMap.get(name)
+    })
+    console.table(results)
+    console.log(viz(session))
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
     expect(hz).toBeGreaterThan(100)

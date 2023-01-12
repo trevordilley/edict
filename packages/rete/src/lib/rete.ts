@@ -39,6 +39,7 @@ import {
   Var,
 } from './types'
 import * as _ from 'lodash'
+import { performance } from 'perf_hooks'
 
 declare const process: {
   env: {
@@ -435,9 +436,13 @@ const leftActivationOnMemoryNode = <T>(
   token: Token<T>,
   isNew: boolean
 ) => {
+  performance.mark('hash_start')
   const idAttr = idAttrs[idAttrs.length - 1]
   const idAttrsHash = hashIdAttrs(idAttrs as string[][])
+  performance.mark('hash_end')
+  performance.measure('hash', 'hash_start', 'hash_end')
 
+  performance.mark('trigger_start')
   if (
     isNew &&
     (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) &&
@@ -447,8 +452,11 @@ const leftActivationOnMemoryNode = <T>(
   ) {
     node.leafNode.nodeType.trigger = true
   }
+  performance.mark('trigger_end')
+  performance.measure('trigger', 'trigger_start', 'trigger_end')
 
   if (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) {
+    performance.mark('match_start')
     let match: Match<T>
     if (node.matches.has(idAttrsHash)) {
       match = node.matches.get(idAttrsHash)!.match!
@@ -456,14 +464,30 @@ const leftActivationOnMemoryNode = <T>(
       node.lastMatchId += 1
       match = { id: node.lastMatchId }
     }
-    match.vars = new Map(vars)
+    performance.mark('match_end')
+    performance.measure('match', 'match_start', 'match_end')
+    performance.mark('map_copy_start')
+    match.vars = new Map()
+    performance.mark('map_copy_end')
+    performance.measure('map_copy', 'map_copy_start', 'map_copy_end')
+    performance.mark('match_enabled_start')
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
       !node.nodeType?.condFn ||
       (node.nodeType?.condFn(vars) ?? true)
+    performance.mark('match_enabled_end')
+    performance.measure(
+      'match_enabled',
+      'match_enabled_start',
+      'match_enabled_end'
+    )
+    performance.mark('match_ids_start')
     node.matchIds.set(match.id, idAttrs)
     node.matches.set(idAttrsHash, { idAttrs, match })
+    performance.mark('match_ids_end')
+    performance.measure('match_ids', 'match_ids_start', 'match_ids_end')
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
+      performance.mark('queueing_start')
       session.triggeredSubscriptionQueue.add(node.ruleName)
       if (node.nodeType?.thenFn) {
         session.thenQueue.add([node, idAttrsHash])
@@ -471,8 +495,13 @@ const leftActivationOnMemoryNode = <T>(
       if (node.nodeType.thenFinallyFn) {
         session.thenFinallyQueue.add(node)
       }
+      performance.mark('queueing_end')
+      performance.measure('queueing', 'queueing_start', 'queueing_end')
     }
+    performance.mark('add_old_start')
     node.parent.oldIdAttrs.add(hashIdAttrObj(idAttr))
+    performance.mark('add_old_end')
+    performance.measure('add_old', 'add_old_start', 'add_old_end')
   } else if (token.kind === TokenKind.RETRACT) {
     const idToDelete = node.matches.get(idAttrsHash)
     if (idToDelete) {
