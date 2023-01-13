@@ -39,7 +39,9 @@ import {
   Var,
 } from './types'
 import * as _ from 'lodash'
+import { enableMapSet, produce } from 'immer'
 
+enableMapSet()
 declare const process: {
   env: {
     NODE_ENV: string
@@ -371,28 +373,29 @@ const leftActivationFromVars = <T>(
 ) => {
   // If we change this from `new Map(vars)` to just `vars` suddenly we get 5000/ops
   // Try implementing this:https://github.com/paranim/pararules/pull/7/files
-  const newVars: MatchT<T> = new Map(vars)
-  if (getVarsFromFact(newVars, node.condition, alphaFact)) {
-    const idAttr = getIdAttr<T>(alphaFact)
-    const newIdAttrs = [...idAttrs]
-    newIdAttrs.push(idAttr)
-    const newToken = { fact: alphaFact, kind: token.kind }
-    const isNew = !node.oldIdAttrs?.has(hashIdAttrObj(idAttr))
-    const child = node.child
-    if (!child) {
-      console.error('Session', JSON.stringify(session))
-      console.error(`Node ${node.idName}`, JSON.stringify(node))
-      throw new Error('Expected node to have child!')
+  produce(vars, (newVars) => {
+    if (getVarsFromFact(newVars as MatchT<T>, node.condition, alphaFact)) {
+      const idAttr = getIdAttr<T>(alphaFact)
+      const newIdAttrs = [...idAttrs]
+      newIdAttrs.push(idAttr)
+      const newToken = { fact: alphaFact, kind: token.kind }
+      const isNew = !node.oldIdAttrs?.has(hashIdAttrObj(idAttr))
+      const child = node.child
+      if (!child) {
+        console.error('Session', JSON.stringify(session))
+        console.error(`Node ${node.idName}`, JSON.stringify(node))
+        throw new Error('Expected node to have child!')
+      }
+      leftActivationOnMemoryNode(
+        session,
+        child,
+        newIdAttrs,
+        newVars as MatchT<T>,
+        newToken,
+        isNew
+      )
     }
-    leftActivationOnMemoryNode(
-      session,
-      child,
-      newIdAttrs,
-      newVars,
-      newToken,
-      isNew
-    )
-  }
+  })
 }
 
 const leftActivationWithoutAlpha = <T>(
