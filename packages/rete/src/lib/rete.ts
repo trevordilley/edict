@@ -39,9 +39,7 @@ import {
   Var,
 } from './types'
 import * as _ from 'lodash'
-import { enableMapSet } from 'immer'
 
-enableMapSet()
 declare const process: {
   env: {
     NODE_ENV: string
