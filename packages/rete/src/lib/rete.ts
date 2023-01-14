@@ -39,6 +39,7 @@ import {
   Var,
 } from './types'
 import * as _ from 'lodash'
+import { hashIdAttr, hashIdAttrObj, hashIdAttrs } from './utils'
 
 declare const process: {
   env: {
@@ -52,44 +53,6 @@ export const getIdAttr = <SCHEMA>(
 ): IdAttr<SCHEMA> => {
   // TODO: Good way to assert that fact[1] is actually keyof T at compile time?
   return [fact[0], fact[1] as keyof SCHEMA]
-}
-
-const hashIdAttrs = <T>(idAttrs: string[][]): number => {
-  let hash = 0,
-    i,
-    j,
-    k,
-    chr
-  for (i = 0; i < idAttrs.length; i++) {
-    for (j = 0; j < idAttrs[i].length; j++) {
-      for (k = 0; k < idAttrs[i][j].length; k++) {
-        chr = idAttrs[i][j].charCodeAt(k)
-        hash = (hash << 5) - hash + chr
-        hash |= 0 // Convert to 32bit integer
-      }
-    }
-  }
-  return hash
-}
-
-const hashIdAttr = <T>(idAttr: string[]): number => {
-  let hash = 0,
-    i,
-    j,
-    chr
-  for (i = 0; i < idAttr.length; i++) {
-    for (j = 0; j < idAttr[i].length; j++) {
-      chr = idAttr[i].charCodeAt(j)
-      hash = (hash << 5) - hash + chr
-      hash |= 0 // Convert to 32bit integer
-    }
-  }
-  return hash
-}
-
-const hashIdAttrObj = <T>(idAttr: IdAttr<T>): number => {
-  const [id, attr] = idAttr
-  return hashIdAttr([id.toString(), attr.toString()])
 }
 
 const addNode = <T>(
@@ -414,14 +377,9 @@ const leftActivationWithoutAlpha = <T>(
 ) => {
   if (node.idName && node.idName != '') {
     const id = vars.get(node.idName)
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    if (id !== undefined && node.alphaNode.facts.get(id.toString())) {
-      const alphaFacts = [
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        ...(node.alphaNode.facts.get(id.toString())?.values() ?? []),
-      ]
+    const idStr = id ? `${id}` : undefined
+    if (idStr !== undefined && node.alphaNode.facts.get(idStr)) {
+      const alphaFacts = [...(node.alphaNode.facts.get(idStr)?.values() ?? [])]
       if (!alphaFacts)
         throw new Error(`Expected to have alpha facts for ${node.idName}`)
       alphaFacts.forEach((alphaFact) => {
@@ -448,7 +406,7 @@ const leftActivationOnMemoryNode = <T>(
   isNew: boolean
 ) => {
   const idAttr = idAttrs[idAttrs.length - 1]
-  const idAttrsHash = hashIdAttrs(idAttrs as string[][])
+  const idAttrsHash = hashIdAttrs(idAttrs)
   if (
     isNew &&
     (token.kind === TokenKind.INSERT || token.kind === TokenKind.UPDATE) &&
@@ -1116,7 +1074,7 @@ const get = <T, U>(
 ): U | undefined => {
   const idAttrs = session.leafNodes.get(prod.name)?.matchIds.get(i)
   if (!idAttrs) return
-  const idAttrsHash = hashIdAttrs(idAttrs as string[][])
+  const idAttrsHash = hashIdAttrs(idAttrs)
   const vars = session.leafNodes.get(prod.name)?.matches.get(idAttrsHash)
     ?.match.vars
   if (!vars) {
