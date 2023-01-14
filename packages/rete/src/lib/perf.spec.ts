@@ -117,26 +117,6 @@ const convertMatchFn = (vars: MatchT<Schema>) => vars
 
 // Tests based on these benchmarks: https://github.com/noctjs/ecs-benchmark
 
-describe('baseline measure of time', () => {
-  const sleep = (ms: number) => {
-    return new Promise((resolve) => {
-      setTimeout(resolve, ms)
-    })
-  }
-
-  it('takes 200 milliseconds', async () => {
-    performance.now()
-    await sleep(1)
-    const start = performance.now()
-    await sleep(2000)
-    const end = performance.now()
-    const dt = end - start
-    console.log(dt)
-
-    expect(2).toBe(2)
-  })
-
-
 describe('rete perf', () => {
   it('packed_5', () => {
     // @ts-ignore

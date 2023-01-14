@@ -39,7 +39,7 @@ import {
   Var,
 } from './types'
 import * as _ from 'lodash'
-import produce, { enableMapSet } from 'immer'
+import { enableMapSet } from 'immer'
 
 enableMapSet()
 declare const process: {
@@ -373,8 +373,8 @@ const leftActivationFromVars = <T>(
 ) => {
   // If we change this from `new Map(vars)` to just `vars` suddenly we get 5000/ops
   // Try implementing this:https://github.com/paranim/pararules/pull/7/files
-  const newVars: MatchT<T> = vars
-  if (getVarsFromFact(newVars, node.condition, alphaFact)) {
+  // const newVars: MatchT<T> = vars
+  if (getVarsFromFact(vars, node.condition, alphaFact)) {
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
@@ -390,7 +390,7 @@ const leftActivationFromVars = <T>(
       session,
       child,
       newIdAttrs,
-      newVars,
+      vars,
       newToken,
       isNew
     )
@@ -404,47 +404,31 @@ const leftActivationWithoutAlpha = <T>(
   vars: MatchT<T>,
   token: Token<T>
 ) => {
-  produce(vars, (draft) => {
-    if (node.idName && node.idName != '') {
-      const id = vars.get(node.idName)
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      if (id !== undefined && node.alphaNode.facts.get(id.toString())) {
-        const alphaFacts = [
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          ...(node.alphaNode.facts.get(id.toString())?.values() ?? []),
-        ]
-        if (!alphaFacts)
-          throw new Error(`Expected to have alpha facts for ${node.idName}`)
-        alphaFacts.forEach((alphaFact) => {
-          leftActivationFromVars(
-            session,
-            node,
-            idAttrs,
-            draft as MatchT<T>,
-            token,
-            alphaFact
-          )
-        })
-      }
-    } else {
-      const factsForId = [...node.alphaNode.facts.values()]
-      factsForId.forEach((facts) => {
-        const alphas = [...facts.values()]
-        alphas.forEach((alphaFact) => {
-          leftActivationFromVars(
-            session,
-            node,
-            idAttrs,
-            draft as MatchT<T>,
-            token,
-            alphaFact
-          )
-        })
+  if (node.idName && node.idName != '') {
+    const id = vars.get(node.idName)
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    if (id !== undefined && node.alphaNode.facts.get(id.toString())) {
+      const alphaFacts = [
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        ...(node.alphaNode.facts.get(id.toString())?.values() ?? []),
+      ]
+      if (!alphaFacts)
+        throw new Error(`Expected to have alpha facts for ${node.idName}`)
+      alphaFacts.forEach((alphaFact) => {
+        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
       })
     }
-  })
+  } else {
+    const factsForId = [...node.alphaNode.facts.values()]
+    factsForId.forEach((facts) => {
+      const alphas = [...facts.values()]
+      alphas.forEach((alphaFact) => {
+        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+      })
+    })
+  }
 }
 
 const leftActivationOnMemoryNode = <T>(
