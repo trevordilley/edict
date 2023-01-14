@@ -373,8 +373,18 @@ const leftActivationFromVars = <T>(
 ) => {
   // If we change this from `new Map(vars)` to just `vars` suddenly we get 5000/ops
   // Try implementing this:https://github.com/paranim/pararules/pull/7/files
-  // const newVars: MatchT<T> = vars
-  if (getVarsFromFact(vars, node.condition, alphaFact)) {
+  //
+  // I've tried using immer and immutable to get around the cost of this copy, but
+  // immutable doesn't actually give us any perf benefits, and immer has an issue
+  // because we save the created draft to node.match.vars which persists the proxy
+  // beyond the life cycle of the production.
+  //
+  // I'm still pretty sure immutability is the way to go, we just gotta figure out a
+  // way to thread the needle OR find that one path where we modify the vars when we
+  // shouldn't and correct it. I'd definitely prefer NOT adding an immutability library
+  // simply cause it splits the mental model into "mutable" world vs "immutable" world.
+  const newVars: MatchT<T> = new Map(vars)
+  if (getVarsFromFact(newVars, node.condition, alphaFact)) {
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
@@ -390,7 +400,7 @@ const leftActivationFromVars = <T>(
       session,
       child,
       newIdAttrs,
-      vars,
+      newVars,
       newToken,
       isNew
     )
