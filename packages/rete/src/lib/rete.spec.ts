@@ -1,5 +1,6 @@
 import { rete } from './rete'
 import { FactFragment, Field, MatchT } from './types'
+import { viz } from '@edict/rete'
 
 type People = [id: number, color: string, leftOf: number, height: number][]
 enum Id {
@@ -101,6 +102,7 @@ describe('rete', () => {
     rete.insertFact(session, [Id.Thomas, 'Height', 72])
     rete.insertFact(session, [Id.George, 'Height', 72])
     rete.fireRules(session)
+    console.log(viz(session))
     const unfilteredResults = rete.queryAll(session, production)
     expect(unfilteredResults.length).toBe(3)
     expect(subResultsAllResults).toStrictEqual(unfilteredResults)
@@ -217,6 +219,7 @@ describe('rete', () => {
 
     rete.fireRules(session)
     const results = rete.queryAll(session, production)
+    console.log(viz(session))
     expect(results.length).toBe(1)
     expect(subResults).toStrictEqual(results)
 
@@ -543,6 +546,7 @@ describe('rete', () => {
     rete.addProductionToSession(session, rule2)
     rete.insertFact(session, [Id.Alice, 'LeftOf', Id.Zach])
     rete.fireRules(session)
+    console.log(viz(session))
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(alice).toBe(Id.Alice)
@@ -698,7 +702,7 @@ describe('rete', () => {
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
     rete.insertFact(session, [Id.Alice, 'Color', 'red'])
     rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
-
+    console.log(viz(session))
     expect(count).toBe(1)
   })
 

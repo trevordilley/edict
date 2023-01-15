@@ -7,7 +7,7 @@ import {
   Session,
 } from './types'
 
-const FIELD_TO_STR = ['Identifier', 'Attribute', 'Value']
+const FIELD_TO_STR = ['ID', 'ATTR', 'VAL']
 
 interface Node {
   id: number
@@ -27,22 +27,46 @@ interface NetworkGraph {
 }
 
 const conditionToString = <SCHEMA>(condition: Condition<SCHEMA>) =>
-  condition.vars.map((v) => `${FIELD_TO_STR[v.field]} ${v.name}`).join('\n')
+  condition.vars.map((v) => `${FIELD_TO_STR[v.field]}: ${v.name}`).join('\n')
 
 const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
   const fillColor =
     node.type === MEMORY_NODE_TYPE.LEAF ? ',fillcolor=green,style=filled' : ''
-
-  const label = `${node.ruleName}\n${conditionToString(node.condition)}`
+  const matchStrs: string[] = []
+  node.matches.forEach((v, k) => {
+    const idAttrStr = v.idAttrs
+      .map(([id, attr]) => `[${id}, ${attr}]`)
+      .join('\n')
+    const enabled = v.match.enabled
+    const varStr: string[] = []
+    v.match.vars?.forEach((vv, kk) => {
+      varStr.push(`${kk} => ${vv}`)
+    })
+    const matchStr = `MATCH ${v.match.id} is ${
+      enabled ? 'enabled' : 'disabled'
+    } \n ${idAttrStr}\n -- vars -- \n\n ${varStr.join('\n')}`
+    matchStrs.push(matchStr)
+  })
+  const label = `MEMORY\n\nrule: ${
+    node.ruleName
+  }\n\n -- conditions --\n${conditionToString(
+    node.condition
+  )}\n\n-- matches --\n${matchStrs}\n\n`
   return {
     id: node.id,
-    attributes: `[color=green${fillColor}, label="${label}"]`,
+    attributes: `[shape=rect, color=green${fillColor}, label="${label}"]`,
   }
 }
 
 const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>): Node => {
   const field = node.testField ? `${FIELD_TO_STR[node.testField]}` : ''
-  const label = `${field}\n`
+  const factStrs: string[] = []
+  node.facts.forEach((v, k) => {
+    v.forEach((vv, kk) => {
+      factStrs.push(`${vv}`)
+    })
+  })
+  const label = `ALPHA ${field}\n${factStrs.join('\n')}`
   return {
     id: node.id,
     attributes: `[color=blue, label="${label}"]`,
@@ -52,13 +76,10 @@ const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>): Node => {
 const joinNode = <SCHEMA>(node: JoinNode<SCHEMA>): Node => {
   const cond = conditionToString(node.condition)
   const idName = node.idName ?? ''
-  const disableFastUpdates = node.disableFastUpdates ?? false
-
-  const label = `${node.ruleName}\n${idName}\n${cond}\nDisable Fast Updates? ${disableFastUpdates}`
-
+  const label = `${node.ruleName}\n${idName}\n${cond}`
   return {
     id: node.id,
-    attributes: `[color=red, label="${label}"]`,
+    attributes: `[color=red, label="JOIN\n${label}"]`,
   }
 }
 const addMemoryNode = <SCHEMA>(
@@ -98,9 +119,8 @@ const addAlphaNode = <SCHEMA>(
   const gNode = alphaNode(node)
   graph.nodes.set(node.id, gNode)
   if (source) graph.edges.push({ sources: [source], sink: gNode })
-
-  node.children.forEach((s) => {
-    addAlphaNode(s, graph, gNode)
+  node.children.forEach((c) => {
+    addAlphaNode(c, graph, gNode)
   })
 
   node.successors.forEach((s) => {
