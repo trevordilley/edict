@@ -1,4 +1,4 @@
-import { IdAttr, Var } from '@edict/rete'
+import { Var } from '@edict/rete'
 
 export const hashIdAttrs = <T>(
   idAttrs: (string | number | Var | symbol)[][]
@@ -21,24 +21,22 @@ export const hashIdAttrs = <T>(
   return hash
 }
 
-export const hashIdAttr = <T>(idAttr: string[]): number => {
+export const hashIdAttr = <T>(
+  idAttr: (string | number | Var | symbol)[]
+): number => {
   let hash = 0,
     i,
     j,
     chr
 
   for (i = 0; i < idAttr.length; i++) {
-    for (j = 0; j < idAttr[i].length; j++) {
-      chr = idAttr[i].charCodeAt(j)
+    const k = idAttr[i].toString()
+    for (j = 0; j < k.length; j++) {
+      chr = k.charCodeAt(j)
       hash = (hash << 5) - hash + chr
       hash |= 0 // Convert to 32bit integer
     }
   }
 
   return hash
-}
-
-export const hashIdAttrObj = <T>(idAttr: IdAttr<T>): number => {
-  const [id, attr] = idAttr
-  return hashIdAttr([id.toString(), attr.toString()])
 }

@@ -39,7 +39,7 @@ import {
   Var,
 } from './types'
 import * as _ from 'lodash'
-import { hashIdAttr, hashIdAttrObj, hashIdAttrs } from './utils'
+import { hashIdAttr, hashIdAttrs } from './utils'
 
 declare const process: {
   env: {
@@ -350,7 +350,7 @@ const leftActivationFromVars = <T>(
     const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
     const newToken = { fact: alphaFact, kind: token.kind }
-    const isNew = !node.oldIdAttrs?.has(hashIdAttrObj(idAttr))
+    const isNew = !node.oldIdAttrs?.has(hashIdAttr(idAttr))
     const child = node.child
     if (!child) {
       console.error('Session', JSON.stringify(session))
@@ -441,14 +441,14 @@ const leftActivationOnMemoryNode = <T>(
         session.thenFinallyQueue.add(node)
       }
     }
-    node.parent.oldIdAttrs.add(hashIdAttrObj(idAttr))
+    node.parent.oldIdAttrs.add(hashIdAttr(idAttr))
   } else if (token.kind === TokenKind.RETRACT) {
     const idToDelete = node.matches.get(idAttrsHash)
     if (idToDelete) {
       node.matchIds.delete(idToDelete.match.id)
     }
     node.matches.delete(idAttrsHash)
-    node.parent.oldIdAttrs.delete(hashIdAttrObj(idAttr))
+    node.parent.oldIdAttrs.delete(hashIdAttr(idAttr))
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType) {
       session.triggeredSubscriptionQueue.add(node.ruleName)
       if (node.nodeType.thenFinallyFn) {
@@ -521,7 +521,7 @@ const rightActivationWithAlphaNode = <T>(
   token: Token<T>
 ) => {
   const idAttr = getIdAttr(token.fact)
-  const idAttrHash = hashIdAttrObj(idAttr)
+  const idAttrHash = hashIdAttr(idAttr)
   const [id, attr] = idAttr
   if (token.kind === TokenKind.INSERT) {
     if (!node.facts.has(id.toString())) {
@@ -799,7 +799,7 @@ const upsertFact = <T>(
   nodes: Set<AlphaNode<T>>
 ) => {
   const idAttr = getIdAttr<T>(fact)
-  const idAttrHash = hashIdAttrObj(idAttr)
+  const idAttrHash = hashIdAttr(idAttr)
   if (!session.idAttrNodes.has(idAttrHash)) {
     nodes.forEach((n) => {
       rightActivationWithAlphaNode(session, n, {
@@ -872,7 +872,7 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
     })
   }
   const idAttr = getIdAttr(fact)
-  const idAttrHash = hashIdAttrObj(idAttr)
+  const idAttrHash = hashIdAttr(idAttr)
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set<AlphaNode<T>>()
   session.idAttrNodes
@@ -914,7 +914,7 @@ const retractFactByIdAndAttr = <T>(
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set<AlphaNode<T>>()
   session.idAttrNodes
-    .get(hashIdAttr([id, attr.toString()]))
+    .get(hashIdAttr([id, attr]))
     ?.alphaNodes?.forEach((i) => idAttrNodes.add(i))
   idAttrNodes.forEach((node) => {
     const fact = node.facts.get(id)?.get(attr.toString())
@@ -1085,7 +1085,7 @@ const get = <T, U>(
 }
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
-  session.idAttrNodes.has(hashIdAttr([id, attr.toString()]))
+  session.idAttrNodes.has(hashIdAttr([id, attr]))
 
 export const rete = {
   get,
