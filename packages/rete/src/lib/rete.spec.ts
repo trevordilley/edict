@@ -204,23 +204,21 @@ describe('rete', () => {
       true
     )
     rete.addProductionToSession(session, production)
-    console.log('before facts', vizOnlineUrl(session))
     rete.insertFact(session, [Id.Xavier, 'RightOf', Id.Yair])
     rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Zach])
     rete.insertFact(session, [Id.Zach, 'Color', 'red'])
     rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
     rete.insertFact(session, [Id.Charlie, 'Color', 'green'])
-
     rete.insertFact(session, [Id.Seth, 'On', 'table'])
     rete.insertFact(session, [Id.Yair, 'RightOf', Id.Bob])
-    rete.insertFact(session, [Id.Alice, 'LeftOf', Id.David])
 
+    // TODO: due to hash change: "Alice", "LeftOf", "David" fails if it's not after "David", "Color", "white"
+    rete.insertFact(session, [Id.Alice, 'LeftOf', Id.David])
     rete.insertFact(session, [Id.David, 'Color', 'white'])
 
     rete.fireRules(session)
     const results = rete.queryAll(session, production)
-    console.log(vizOnlineUrl(session))
     expect(results.length).toBe(1)
     expect(subResults).toStrictEqual(results)
 
