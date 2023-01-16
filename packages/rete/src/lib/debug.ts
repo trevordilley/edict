@@ -7,6 +7,7 @@ import {
   MemoryNode,
   Session,
 } from './types'
+import { hashIdAttr } from './utils'
 
 const FIELD_TO_STR = ['ID', 'ATTR', 'VAL']
 
@@ -45,7 +46,7 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
   const matchStrs: string[] = []
   node.matches.forEach((v, k) => {
     const idAttrStr = v.idAttrs
-      .map(([id, attr]) => `[${id}, ${attr}]`)
+      .map(([id, attr]) => `[${id}, ${attr}] - ${hashIdAttr([id, attr])}`)
       .join('\n')
     const enabled = v.match.enabled
     const varStr: string[] = []
@@ -54,10 +55,12 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
     })
     const matchStr = `\n\nMATCH ${v.match.id} is ${
       enabled ? 'enabled' : 'disabled'
-    } \n ${idAttrStr}\n\n -- vars -- \n\n ${varStr.join('\n')}`
+    } \n\n idAttrs: ${idAttrStr}\n hash: ${k} \n\n -- vars -- \n\n ${varStr.join(
+      '\n'
+    )}`
     matchStrs.push(matchStr)
   })
-  const label = `MEMORY\n\nrule: ${
+  const label = `MEMORY ${node.id}\n\nrule: ${
     node.ruleName
   }\n\n -- conditions --\n${conditionToString(
     node.condition
@@ -69,7 +72,9 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
 }
 
 const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>): Node => {
-  const field = node.testField ? `${FIELD_TO_STR[node.testField]}` : ''
+  const testVal = node.testField
+    ? `${FIELD_TO_STR[node.testField]} ${node.testValue}`
+    : ''
   const factStrs: string[] = []
 
   const fieldKind = new Set<string>()
@@ -85,9 +90,7 @@ const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>): Node => {
     })
   })
 
-  const kindStr = [...fieldKind].join(',')
-
-  const label = `ALPHA ${field} ${kindStr}\n${factStrs.join('\n')}`
+  const label = `ALPHA ${node.id}\n\n ${testVal} \n${factStrs.join('\n')}`
   return {
     id: node.id,
     attributes: `[color=blue, label="${label}"]`,
@@ -101,7 +104,7 @@ const joinNode = <SCHEMA>(node: JoinNode<SCHEMA>): Node => {
 
   return {
     id: node.id,
-    attributes: `[color=red, label="JOIN\n${label}"]`,
+    attributes: `[color=red, label="JOIN ${node.id}\n\n${label}"]`,
   }
 }
 const addMemoryNode = <SCHEMA>(

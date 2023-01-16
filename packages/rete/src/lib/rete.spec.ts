@@ -204,6 +204,7 @@ describe('rete', () => {
       true
     )
     rete.addProductionToSession(session, production)
+    console.log('before facts', vizOnlineUrl(session))
     rete.insertFact(session, [Id.Xavier, 'RightOf', Id.Yair])
     rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Zach])
     rete.insertFact(session, [Id.Zach, 'Color', 'red'])
@@ -219,7 +220,7 @@ describe('rete', () => {
 
     rete.fireRules(session)
     const results = rete.queryAll(session, production)
-    console.log(viz(session))
+    console.log(vizOnlineUrl(session))
     expect(results.length).toBe(1)
     expect(subResults).toStrictEqual(results)
 
@@ -497,14 +498,15 @@ describe('rete', () => {
     )
     rete.addProductionToSession(session, production)
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
+    console.log('fire0', vizOnlineUrl(session))
     rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Zach])
     rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
     rete.insertFact(session, [Id.Yair, 'RightOf', Id.Bob])
     rete.fireRules(session)
     const results = rete.queryAll(session, production)
     expect(results.length).toBe(1)
-
     rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Xavier])
+    console.log('fire2', vizOnlineUrl(session))
     rete.fireRules(session)
     const newResults = rete.queryAll(session, production)
     expect(newResults.length).toBe(0)
