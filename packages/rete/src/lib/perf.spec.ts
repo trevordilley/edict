@@ -1,5 +1,5 @@
 import { rete } from './rete'
-import { Field, MatchT, viz } from '@edict/rete'
+import { Field, MatchT, vizOnlineUrl } from '@edict/rete'
 import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
 import * as fs from 'fs'
@@ -167,7 +167,7 @@ describe('rete perf', () => {
     rete.fireRules(session)
     rete.insertFact(session, ['Delta', 'delta', 1])
     rete.fireRules(session)
-    console.log(viz(session))
+    console.log(vizOnlineUrl(session))
     // const { hz } = bench('packed5', () => {
     //   rete.insertFact(session, ['Delta', 'delta', 1])
     //   rete.fireRules(session)

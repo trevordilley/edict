@@ -1,6 +1,6 @@
 import { rete } from './rete'
 import { FactFragment, Field, MatchT } from './types'
-import { viz } from '@edict/rete'
+import { viz, vizOnlineUrl } from '@edict/rete'
 
 type People = [id: number, color: string, leftOf: number, height: number][]
 enum Id {
@@ -102,7 +102,7 @@ describe('rete', () => {
     rete.insertFact(session, [Id.Thomas, 'Height', 72])
     rete.insertFact(session, [Id.George, 'Height', 72])
     rete.fireRules(session)
-    console.log(viz(session))
+    console.log(vizOnlineUrl(session))
     const unfilteredResults = rete.queryAll(session, production)
     expect(unfilteredResults.length).toBe(3)
     expect(subResultsAllResults).toStrictEqual(unfilteredResults)

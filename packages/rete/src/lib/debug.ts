@@ -1,6 +1,7 @@
 import {
   AlphaNode,
   Condition,
+  Field,
   JoinNode,
   MEMORY_NODE_TYPE,
   MemoryNode,
@@ -26,8 +27,17 @@ interface NetworkGraph {
   edges: Edge[]
 }
 
-const conditionToString = <SCHEMA>(condition: Condition<SCHEMA>) =>
-  condition.vars.map((v) => `${FIELD_TO_STR[v.field]}: ${v.name}`).join('\n')
+const conditionToString = <SCHEMA>(condition: Condition<SCHEMA>) => {
+  const nodeStr = condition.nodes
+    .map((n) => `[${FIELD_TO_STR[n[0]]} ${n[1]}]`)
+    .join('\n')
+
+  const varStr = condition.vars
+    .map((v) => `${FIELD_TO_STR[v.field]}: ${v.name}`)
+    .join('\n')
+
+  return `-- nodes --\n ${nodeStr}\n\n -- vars -- \n ${varStr}`
+}
 
 const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
   const fillColor =
@@ -42,9 +52,9 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
     v.match.vars?.forEach((vv, kk) => {
       varStr.push(`${kk} => ${vv}`)
     })
-    const matchStr = `MATCH ${v.match.id} is ${
+    const matchStr = `\n\nMATCH ${v.match.id} is ${
       enabled ? 'enabled' : 'disabled'
-    } \n ${idAttrStr}\n -- vars -- \n\n ${varStr.join('\n')}`
+    } \n ${idAttrStr}\n\n -- vars -- \n\n ${varStr.join('\n')}`
     matchStrs.push(matchStr)
   })
   const label = `MEMORY\n\nrule: ${
@@ -61,12 +71,23 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
 const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>): Node => {
   const field = node.testField ? `${FIELD_TO_STR[node.testField]}` : ''
   const factStrs: string[] = []
+
+  const fieldKind = new Set<string>()
+
   node.facts.forEach((v, k) => {
     v.forEach((vv, kk) => {
+      if (node.testField === Field.ATTRIBUTE) {
+        fieldKind.add(vv[1].toString())
+      } else if (node.testField === Field.VALUE) {
+        fieldKind.add(vv[2].toString())
+      }
       factStrs.push(`${vv}`)
     })
   })
-  const label = `ALPHA ${field}\n${factStrs.join('\n')}`
+
+  const kindStr = [...fieldKind].join(',')
+
+  const label = `ALPHA ${field} ${kindStr}\n${factStrs.join('\n')}`
   return {
     id: node.id,
     attributes: `[color=blue, label="${label}"]`,
@@ -77,6 +98,7 @@ const joinNode = <SCHEMA>(node: JoinNode<SCHEMA>): Node => {
   const cond = conditionToString(node.condition)
   const idName = node.idName ?? ''
   const label = `${node.ruleName}\n${idName}\n${cond}`
+
   return {
     id: node.id,
     attributes: `[color=red, label="JOIN\n${label}"]`,
@@ -162,4 +184,15 @@ export const viz = <SCHEMA>(session: Session<SCHEMA>) => {
   graphNetwork(root, graph)
 
   return toDot(graph)
+}
+
+export const vizOnlineUrl = <SCHEMA>(
+  session: Session<SCHEMA>,
+  openInBrowser?: boolean
+) => {
+  const datums = viz(session)
+  const encoded = encodeURIComponent(datums)
+  const url = `https://dreampuf.github.io/GraphvizOnline/#${encoded}`
+  if (openInBrowser) open(url)
+  return url
 }
