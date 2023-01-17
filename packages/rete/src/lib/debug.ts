@@ -44,8 +44,7 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
   const fillColor =
     node.type === MEMORY_NODE_TYPE.LEAF ? ',fillcolor=green,style=filled' : ''
   const matchStrs: string[] = []
-
-  for (const [k, v] of node.matches.pairs()) {
+  node.matches.data().forEach((v, k) => {
     const idAttrStr = v.idAttrs
       .map(([id, attr]) => `[${id}, ${attr}] - ${hashIdAttr([id, attr])}`)
       .join('\n')
@@ -60,8 +59,7 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
       '\n'
     )}`
     matchStrs.push(matchStr)
-  }
-
+  })
   const label = `MEMORY ${node.id}\n\nrule: ${
     node.ruleName
   }\n\n -- conditions --\n${conditionToString(
