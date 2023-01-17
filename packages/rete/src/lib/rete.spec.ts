@@ -235,7 +235,9 @@ describe('rete', () => {
         convertMatchFn,
         thenFn: () => {
           rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
+          console.log('first then insert, ', vizOnlineUrl(session))
           rete.insertFact(session, [Id.Charlie, 'Color', 'gold'])
+          console.log('second then insert, ', vizOnlineUrl(session))
         },
       }
     )
@@ -250,9 +252,23 @@ describe('rete', () => {
     const secondRule = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'secondRule',
       convertMatchFn,
-      thenFn: () => {
+      thenFn: (vars) => {
         count++
       },
+
+      // First then trigger after outer second insert:
+      //  {  "c1" : "red", "otherPerson": 1, "c2": "blue" }
+      // After first then insert
+      //  {  "c1" : "maize", "otherPerson": 1, "c2": "blue" }
+      // After second then insert
+      //  {  "c1" : "maize", "otherPerson": 2, "c2": "gold" }
+
+      // When not making new maps, then...
+      // First then trigger after outer second insert:
+      //  {  "c1" : "red", "otherPerson": 1, "c2": "blue" }
+      // SKIPS FIRST THEN INSERT
+      // After second then insert
+      //  {  "c1" : "maize", "otherPerson": 2, "c2": "gold" }
       condFn: (vars) => {
         return vars.get('otherPerson') != Id.Alice
       },
@@ -273,8 +289,10 @@ describe('rete', () => {
     )
     rete.addProductionToSession(session, secondRule)
 
+    console.log('before facts, ', vizOnlineUrl(session))
     rete.insertFact(session, [Id.Alice, 'Color', 'red'])
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
+    console.log('second insert, ', vizOnlineUrl(session))
     expect(count).toBe(3)
   })
 

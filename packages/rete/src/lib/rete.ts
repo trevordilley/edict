@@ -347,7 +347,7 @@ const leftActivationFromVars = <T>(
   // way to thread the needle OR find that one path where we modify the vars when we
   // shouldn't and correct it. I'd definitely prefer NOT adding an immutability library
   // simply cause it splits the mental model into "mutable" world vs "immutable" world.
-  const newVars: MatchT<T> = new Map(vars)
+  const newVars: MatchT<T> = vars
   if (getVarsFromFact(newVars, node.condition, alphaFact)) {
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
