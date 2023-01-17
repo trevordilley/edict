@@ -392,7 +392,7 @@ const leftActivationWithoutAlpha = <T>(
 ) => {
   if (node.idName && node.idName != '') {
     const id = vars.get(node.idName)
-    const idStr = id ? `${id}` : undefined
+    const idStr = id !== undefined ? `${id}` : undefined
     if (idStr !== undefined && node.alphaNode.facts.get(idStr)) {
       const alphaFacts = [...(node.alphaNode.facts.get(idStr)?.values() ?? [])]
       if (!alphaFacts)
@@ -826,7 +826,6 @@ const upsertFact = <T>(
   } else {
     const existingNodes = session.idAttrNodes.get(idAttrHash)
     if (existingNodes === undefined) {
-      console.warn('Session has no existing nodes?')
       return
     }
     // retract any facts from nodes that the new fact wasn't inserted in
