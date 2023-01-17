@@ -298,20 +298,8 @@ const getVarFromFact = <T>(
   fact: FactFragment<T>
 ): boolean => {
   if (vars.has(key) && vars.get(key) != fact) {
-    varUpdateLog.push({
-      didUpdateVars: false,
-      key,
-      original: vars.get(key),
-      new: vars.get(key),
-    })
     return false
   } else {
-    varUpdateLog.push({
-      didUpdateVars: true,
-      key,
-      original: vars.get(key),
-      new: fact,
-    })
     vars.set(key, fact)
   }
   return true

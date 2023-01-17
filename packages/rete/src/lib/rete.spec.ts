@@ -225,6 +225,59 @@ describe('rete', () => {
     const facts = rete.queryFullSession(session)
   })
 
+  it('inserting inside a rule can trigger rule more than once', () => {
+    let count = 0
+
+    const session = rete.initSession<SmallSchema>(true)
+    const firstRuleProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>(
+      {
+        name: 'firstRule',
+        convertMatchFn,
+        thenFn: () => {
+          rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
+          rete.insertFact(session, [Id.Charlie, 'Color', 'gold'])
+        },
+      }
+    )
+    rete.addConditionsToProduction(
+      firstRuleProd,
+      { name: 'b', field: Field.IDENTIFIER },
+      'Color',
+      'blue',
+      true
+    )
+    rete.addProductionToSession(session, firstRuleProd)
+    const secondRule = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+      name: 'secondRule',
+      convertMatchFn,
+      thenFn: () => {
+        count++
+      },
+      condFn: (vars) => {
+        return vars.get('otherPerson') != Id.Alice
+      },
+    })
+    rete.addConditionsToProduction(
+      secondRule,
+      Id.Alice,
+      'Color',
+      { name: 'c1', field: Field.VALUE },
+      true
+    )
+    rete.addConditionsToProduction(
+      secondRule,
+      { name: 'otherPerson', field: Field.IDENTIFIER },
+      'Color',
+      { name: 'c2', field: Field.VALUE },
+      true
+    )
+    rete.addProductionToSession(session, secondRule)
+
+    rete.insertFact(session, [Id.Alice, 'Color', 'red'])
+    rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
+    expect(count).toBe(3)
+  })
+
   it('duplicate facts', () => {
     const session = rete.initSession<SmallSchema>(false)
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({

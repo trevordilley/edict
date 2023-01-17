@@ -154,6 +154,7 @@ describe('rete perf', () => {
     makeProduction('C')
     makeProduction('D')
     makeProduction('E')
+    console.log(vizOnlineUrl(session))
 
     rete.insertFact(session, ['Delta', 'delta', 1])
     const NUM_ENTITIES = 10
