@@ -157,7 +157,7 @@ describe('rete perf', () => {
     console.log(vizOnlineUrl(session))
 
     rete.insertFact(session, ['Delta', 'delta', 1])
-    const NUM_ENTITIES = 10
+    const NUM_ENTITIES = 1000
     for (let i = 0; i < NUM_ENTITIES; i++) {
       rete.insertFact(session, [i, 'A', 1])
       rete.insertFact(session, [i, 'B', 1])
