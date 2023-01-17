@@ -168,36 +168,33 @@ describe('rete perf', () => {
     rete.fireRules(session)
     rete.insertFact(session, ['Delta', 'delta', 1])
     rete.fireRules(session)
-    console.log(vizOnlineUrl(session))
-    // const { hz } = bench('packed5', () => {
-    //   rete.insertFact(session, ['Delta', 'delta', 1])
-    //   rete.fireRules(session)
-    // })
-    // const measureMap = new Map<
-    //   string,
-    //   { total: number; count: number; avg: number }
-    // >()
-    // performance.getEntriesByType('measure').map((p) => {
-    //   if (!measureMap.has(p.name)) {
-    //     measureMap.set(p.name, { total: 0, count: 0, avg: 0 })
-    //   }
-    //   measureMap.get(p.name)!.count += 1
-    //   measureMap.get(p.name)!.total += p.duration
-    // })
-    // const results: any = {}
-    // measureMap.forEach((agg, name) => {
-    //   measureMap.get(name)!.avg = agg.total / agg.count
-    //   results[name] = measureMap.get(name)
-    // })
-    // console.table(results)
-    // console.log(viz(session))
-    // expect(hz).toBeGreaterThan(1)
-    // expect(hz).toBeGreaterThan(10)
-    // expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
-    // expect(hz).toBeGreaterThan(10_000)
-    // expect(hz).toBeGreaterThan(100_000)
-    // expect(hz).toBeGreaterThan(300_000)
+    const { hz } = bench('packed5', () => {
+      rete.insertFact(session, ['Delta', 'delta', 1])
+      rete.fireRules(session)
+    })
+    const measureMap = new Map<
+      string,
+      { total: number; count: number; avg: number }
+    >()
+    performance.getEntriesByType('measure').map((p) => {
+      if (!measureMap.has(p.name)) {
+        measureMap.set(p.name, { total: 0, count: 0, avg: 0 })
+      }
+      measureMap.get(p.name)!.count += 1
+      measureMap.get(p.name)!.total += p.duration
+    })
+    const results: any = {}
+    measureMap.forEach((agg, name) => {
+      measureMap.get(name)!.avg = agg.total / agg.count
+      results[name] = measureMap.get(name)
+    })
+    expect(hz).toBeGreaterThan(1)
+    expect(hz).toBeGreaterThan(10)
+    expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(10_000)
+    expect(hz).toBeGreaterThan(100_000)
+    expect(hz).toBeGreaterThan(300_000)
   })
 
   it('simple_iter', () => {

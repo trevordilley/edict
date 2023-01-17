@@ -1,9 +1,9 @@
-type CowTablePayload<K, V> = {
+export type CowTablePayload<K, V> = {
   counter: number
   data: Map<K, V>
 }
 
-class CowTable<K, V> {
+export class CowTable<K, V> {
   private p: CowTablePayload<K, V>
 
   constructor() {
@@ -13,14 +13,17 @@ class CowTable<K, V> {
     }
   }
 
-  public static copy(a: CowTable<K, V>, b: CowTable<K, V>) {
+  public static copy<K, V>(a: CowTable<K, V>, b: CowTable<K, V>) {
     b.p.counter++
     a.p = b.p
   }
 
-  public static destroy(x: CowTable<K, V>) {
+  public static destroy<K, V>(x: CowTable<K, V>) {
     if (x.p && x.p.counter === 0) {
-      x.p = null
+      x.p = {
+        counter: 0,
+        data: new Map<K, V>(),
+      }
     } else if (x.p) {
       x.p.counter--
     }
@@ -32,11 +35,11 @@ class CowTable<K, V> {
     return result
   }
 
-  public hasKey(key: K): boolean {
+  public has(key: K): boolean {
     return this.p.data.has(key)
   }
 
-  public get(key: K): V {
+  public get(key: K): V | undefined {
     return this.p.data.get(key)
   }
 
@@ -52,6 +55,9 @@ class CowTable<K, V> {
       this.p = this.deepCopy().p
     }
     this.p.data.delete(key)
+  }
+  public data() {
+    return this.p.data
   }
 
   public *pairs(): IterableIterator<[K, V]> {

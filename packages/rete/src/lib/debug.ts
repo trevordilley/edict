@@ -44,7 +44,7 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
   const fillColor =
     node.type === MEMORY_NODE_TYPE.LEAF ? ',fillcolor=green,style=filled' : ''
   const matchStrs: string[] = []
-  node.matches.forEach((v, k) => {
+  node.matches.data().forEach((v, k) => {
     const idAttrStr = v.idAttrs
       .map(([id, attr]) => `[${id}, ${attr}] - ${hashIdAttr([id, attr])}`)
       .join('\n')
