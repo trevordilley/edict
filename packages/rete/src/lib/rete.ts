@@ -491,7 +491,7 @@ const rightActivationWithJoinNode = <T>(
       )
     }
   } else {
-    node.parent.matches.data().forEach((match) => {
+    for (const [_, match] of node.parent.matches.pairs()) {
       const vars: MatchT<T> = new Map(match.match.vars)
       const idName = node.idName
       if (idName && idName !== '' && vars?.get(idName) != token.fact[0]) {
@@ -518,7 +518,7 @@ const rightActivationWithJoinNode = <T>(
           true
         )
       }
-    })
+    }
   }
 }
 
@@ -1022,39 +1022,40 @@ const queryAll = <T, U>(
   // I feel like we should cache the results of these matches until the next `fire()`
   // then make it easy to query the data via key map paths or something. Iterating over all
   // matches could become cumbersome for large data sets
-  session.leafNodes
-    .get(prod.name)
-    ?.matches.data()
-    .forEach((match, _) => {
-      const { enabled, vars } = match.match
-      if (enabled && vars) {
-        if (!filter) {
-          result.push(prod.convertMatchFn(vars))
-        } else {
-          const filterKeys = filter.keys() // All keys must be present to match the value
-          let hasAllFilterKeys = true
 
-          for (const f of filterKeys) {
-            if (!hasAllFilterKeys) break
-            if (!vars.has(f)) {
+  const matches = session.leafNodes.get(prod.name)?.matches.pairs() ?? []
+  for (const [_, match] of matches) {
+    console.log(match)
+    const { enabled, vars } = match.match
+    if (enabled && vars) {
+      if (!filter) {
+        result.push(prod.convertMatchFn(vars))
+      } else {
+        const filterKeys = filter.keys() // All keys must be present to match the value
+        let hasAllFilterKeys = true
+
+        for (const f of filterKeys) {
+          if (!hasAllFilterKeys) break
+          if (!vars.has(f)) {
+            hasAllFilterKeys = false
+            break
+          } else {
+            const fVal = filter.get(f)
+            const vVal = vars.get(f)
+            if (!fVal || !vVal || !fVal.includes(vVal)) {
               hasAllFilterKeys = false
               break
-            } else {
-              const fVal = filter.get(f)
-              const vVal = vars.get(f)
-              if (!fVal || !vVal || !fVal.includes(vVal)) {
-                hasAllFilterKeys = false
-                break
-              }
             }
           }
+        }
 
-          if (hasAllFilterKeys) {
-            result.push(prod.convertMatchFn(vars))
-          }
+        if (hasAllFilterKeys) {
+          result.push(prod.convertMatchFn(vars))
         }
       }
-    })
+    }
+  }
+
   return result
 }
 

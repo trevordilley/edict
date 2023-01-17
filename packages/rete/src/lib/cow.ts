@@ -56,9 +56,6 @@ export class CowTable<K, V> {
     }
     this.p.data.delete(key)
   }
-  public data() {
-    return this.p.data
-  }
 
   public *pairs(): IterableIterator<[K, V]> {
     for (const x of this.p.data) {
