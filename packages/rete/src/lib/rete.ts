@@ -40,7 +40,6 @@ import {
 } from './types'
 import * as _ from 'lodash'
 import { hashIdAttr, hashIdAttrs } from './utils'
-import { CowTable } from './cow'
 
 declare const process: {
   env: {
@@ -204,10 +203,7 @@ const addProductionToSession = <T, U>(
       condition,
       ruleName: production.name,
       lastMatchId: -1,
-      matches: new CowTable<
-        IdAttrsHash,
-        { idAttrs: IdAttrs<T>; match: Match<T> }
-      >(),
+      matches: new Map<IdAttrsHash, { idAttrs: IdAttrs<T>; match: Match<T> }>(),
       matchIds: new Map<number, IdAttrs<T>>(),
     }
     if (memNode.type === MEMORY_NODE_TYPE.LEAF) {
@@ -491,7 +487,7 @@ const rightActivationWithJoinNode = <T>(
       )
     }
   } else {
-    node.parent.matches.data().forEach((match) => {
+    node.parent.matches.forEach((match) => {
       const vars: MatchT<T> = new Map(match.match.vars)
       const idName = node.idName
       if (idName && idName !== '' && vars?.get(idName) != token.fact[0]) {
@@ -688,7 +684,7 @@ const fireRules = <T>(
 
     const nodeToMatches: Map<
       MemoryNode<T>,
-      CowTable<IdAttrsHash, { idAttrs: IdAttrs<T>; match: Match<T> }>
+      Map<IdAttrsHash, { idAttrs: IdAttrs<T>; match: Match<T> }>
     > = new Map()
 
     thenQueue.forEach(([node]) => {
@@ -1022,39 +1018,36 @@ const queryAll = <T, U>(
   // I feel like we should cache the results of these matches until the next `fire()`
   // then make it easy to query the data via key map paths or something. Iterating over all
   // matches could become cumbersome for large data sets
-  session.leafNodes
-    .get(prod.name)
-    ?.matches.data()
-    .forEach((match, _) => {
-      const { enabled, vars } = match.match
-      if (enabled && vars) {
-        if (!filter) {
-          result.push(prod.convertMatchFn(vars))
-        } else {
-          const filterKeys = filter.keys() // All keys must be present to match the value
-          let hasAllFilterKeys = true
+  session.leafNodes.get(prod.name)?.matches.forEach((match, _) => {
+    const { enabled, vars } = match.match
+    if (enabled && vars) {
+      if (!filter) {
+        result.push(prod.convertMatchFn(vars))
+      } else {
+        const filterKeys = filter.keys() // All keys must be present to match the value
+        let hasAllFilterKeys = true
 
-          for (const f of filterKeys) {
-            if (!hasAllFilterKeys) break
-            if (!vars.has(f)) {
+        for (const f of filterKeys) {
+          if (!hasAllFilterKeys) break
+          if (!vars.has(f)) {
+            hasAllFilterKeys = false
+            break
+          } else {
+            const fVal = filter.get(f)
+            const vVal = vars.get(f)
+            if (!fVal || !vVal || !fVal.includes(vVal)) {
               hasAllFilterKeys = false
               break
-            } else {
-              const fVal = filter.get(f)
-              const vVal = vars.get(f)
-              if (!fVal || !vVal || !fVal.includes(vVal)) {
-                hasAllFilterKeys = false
-                break
-              }
             }
           }
+        }
 
-          if (hasAllFilterKeys) {
-            result.push(prod.convertMatchFn(vars))
-          }
+        if (hasAllFilterKeys) {
+          result.push(prod.convertMatchFn(vars))
         }
       }
-    })
+    }
+  })
   return result
 }
 

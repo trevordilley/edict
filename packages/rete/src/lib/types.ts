@@ -2,8 +2,6 @@
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
 
-import { CowTable } from './cow'
-
 export type ValueOf<T> = T[keyof T]
 export type FactFragment<SCHEMA> = FactId | keyof SCHEMA | ValueOf<SCHEMA>
 export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>
@@ -98,7 +96,7 @@ export interface MemoryNode<T> {
   leafNode?: MemoryNode<T>
   lastMatchId: number
   // matches key is a
-  matches: CowTable<IdAttrsHash, { idAttrs: IdAttrs<T>; match: Match<T> }>
+  matches: Map<IdAttrsHash, { idAttrs: IdAttrs<T>; match: Match<T> }>
   matchIds: Map<IdAttrsHash, IdAttrs<T>>
   condition: Condition<T>
   ruleName: string
