@@ -294,15 +294,17 @@ const varUpdateLog: any[] = []
 export const nonEmptyVarUpdates = 0
 const getVarFromFact = <T>(
   vars: MatchT<T>,
-  key: string,
-  fact: FactFragment<T>
+  conditionName: string,
+  factIdOrVal: FactFragment<T>
 ): boolean => {
-  if (vars.has(key) && vars.get(key) != fact) {
-    return false
+  // If the vars do not have this condition name, then match the condition name
+  // to the factId or the value
+  if (!vars.has(conditionName) || vars.get(conditionName) == factIdOrVal) {
+    vars.set(conditionName, factIdOrVal)
+    return true
   } else {
-    vars.set(key, fact)
+    return false
   }
-  return true
 }
 
 /// There's going to be a lot of facts
@@ -371,7 +373,7 @@ export let leftActCountBefore = 0
 export let leftActCountAfter = 0
 export const msNoActivate = 0
 export let msDoActivate = 0
-export const varKeys = new Set<Map<any, any>>()
+export const varKeys = new Set<{ id: number; fact: any; vars: Map<any, any> }>()
 export let matchVarCount = 0
 export let numTokens = 0
 const leftActivationFromVars = <T>(
@@ -396,11 +398,31 @@ const leftActivationFromVars = <T>(
   // simply cause it splits the mental model into "mutable" world vs "immutable" world.
   leftActCountBefore++
 
+  /**
+   * Var Log
+   *
+   * Passing:
+   * keys   Set(2) {
+   *          Map(1) { 'c1' => 'red' },
+   *          Map(1) { 'c1' => 'maize'}
+   *        }
+   *
+   * Failing:
+   * keys  Set(2) {
+   *         Map(3) { 'c1' => 'red', 'otherPerson' => 0, 'c2' => 'red' },
+   *         Map(3) { 'c1' => 'maize', 'otherPerson' => 0, 'c2' => 'maize' }
+   *       }
+   */
+
   const newVars: MatchT<T> = new Map(vars)
   if (getVarsFromFact(newVars, node.condition, alphaFact)) {
     const b = performance.now()
     for (const k of vars.keys()) {
-      varKeys.add(vars)
+      varKeys.add({
+        id: node.id,
+        fact: { new: token.fact.join(','), old: token.oldFact?.join(',') },
+        vars,
+      })
     }
     const a = performance.now()
     msDoActivate += a - b
@@ -515,7 +537,6 @@ const leftActivationOnMemoryNode = <T>(
       }
     }
   }
-
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
     leftActivationWithoutAlpha(session, node.child, idAttrs, vars, token)
   }
