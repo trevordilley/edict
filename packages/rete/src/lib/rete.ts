@@ -348,6 +348,10 @@ const getVarFromFact = <T>(
 
 /// That's why that one specific `new Map(vars)` to just `vars` is so effective.
 /// It's the last copy before assigning to `vars` which is passed to the thenFn's
+
+// Insert when upserted
+// Try this: idAtrrHash => nodeId => conditionOrMapId => vars
+
 const getVarsFromFact = <T>(
   vars: MatchT<T>,
   condition: Condition<T>,
