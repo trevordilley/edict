@@ -214,11 +214,11 @@ const addProductionToSession = <T, U>(
       const pThenFn = production.thenFn
       if (pThenFn) {
         const sess = { ...session, insideRule: true }
-        memNode.nodeType.thenFn = (vars) => {
+        memNode.nodeType.thenFn = (matchedVars) => {
           pThenFn({
             session: sess,
             rule: production,
-            vars: production.convertMatchFn(vars),
+            vars: production.convertMatchFn(matchedVars),
           })
         }
       }
@@ -297,12 +297,9 @@ const getVarFromFact = <T>(
   conditionName: string,
   factIdOrVal: FactFragment<T>
 ): boolean => {
-  // If the vars do not have this condition name, then match the condition name
-  // to the factId or the value
-  if (
-    !matchedVars.has(conditionName) ||
-    matchedVars.get(conditionName) == factIdOrVal
-  ) {
+  if (matchedVars.get(conditionName) == factIdOrVal) {
+    return true
+  } else if (!matchedVars.has(conditionName)) {
     matchedVars.set(conditionName, factIdOrVal)
     return true
   } else {
@@ -1176,13 +1173,13 @@ const get = <T, U>(
   const idAttrs = session.leafNodes.get(prod.name)?.matchIds.get(i)
   if (!idAttrs) return
   const idAttrsHash = hashIdAttrs(idAttrs)
-  const vars = session.leafNodes.get(prod.name)?.matches.get(idAttrsHash)
+  const matchedVars = session.leafNodes.get(prod.name)?.matches.get(idAttrsHash)
     ?.match.matchedVars
-  if (!vars) {
+  if (!matchedVars) {
     console.warn('No vars??')
     return
   }
-  return prod.convertMatchFn(vars)
+  return prod.convertMatchFn(matchedVars)
 }
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
