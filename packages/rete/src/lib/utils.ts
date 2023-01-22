@@ -28,7 +28,6 @@ export const hashIdAttr = <T>(
     i,
     j,
     chr
-
   for (i = 0; i < idAttr.length; i++) {
     const k = idAttr[i].toString()
     for (j = 0; j < k.length; j++) {

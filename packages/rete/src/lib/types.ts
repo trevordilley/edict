@@ -4,7 +4,7 @@
 
 export type ValueOf<T> = T[keyof T]
 export type FactFragment<SCHEMA> = FactId | keyof SCHEMA | ValueOf<SCHEMA>
-export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>
+export type MatchedVars<SCHEMA> = Map<string, FactFragment<SCHEMA>>
 export type QueryFilter<SCHEMA> = Map<string, FactFragment<SCHEMA>[]>
 
 export enum PRODUCTION_ALREADY_EXISTS_BEHAVIOR {
@@ -41,7 +41,6 @@ export interface Token<T> {
 
 /** Matches **/
 
-export type Vars<T> = Map<string, T>
 export interface Var {
   name: string
   field: Field
@@ -49,7 +48,7 @@ export interface Var {
 
 export interface Match<T> {
   id: number
-  vars?: MatchT<T>
+  matchedVars?: MatchedVars<T>
   enabled?: boolean
 }
 
@@ -60,16 +59,16 @@ export type ThenFn<T, U> = (then: {
   vars: U
 }) => Promise<void> | void
 export type WrappedThenFn<SCHEMA> = (
-  vars: MatchT<SCHEMA>
+  vars: MatchedVars<SCHEMA>
 ) => Promise<void> | void
 export type ThenFinallyFn<T, U> = (
   session: Session<T>,
   rule: Production<T, U>
 ) => Promise<void> | void
 export type WrappedThenFinallyFn = () => Promise<void> | void
-export type ConvertMatchFn<T, U> = (vars: MatchT<T>) => U
-export type CondFn<T> = (vars: MatchT<T>) => boolean
-export type InitMatchFn<T> = () => MatchT<T>
+export type ConvertMatchFn<T, U> = (vars: MatchedVars<T>) => U
+export type CondFn<T> = (vars: MatchedVars<T>) => boolean
+export type InitMatchFn<T> = () => MatchedVars<T>
 
 /** Alpha Network **/
 export interface AlphaNode<T> {
@@ -157,7 +156,7 @@ export interface DebugFrame<T> {
   triggeredRules: {
     ruleName: string
     kind: 'then' | 'thenFinally'
-    vars?: MatchT<T>
+    vars?: MatchedVars<T>
   }[]
 }
 

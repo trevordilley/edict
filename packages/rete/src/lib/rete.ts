@@ -25,7 +25,7 @@ import {
   InternalFactRepresentation,
   JoinNode,
   Match,
-  MatchT,
+  MatchedVars,
   MEMORY_NODE_TYPE,
   MemoryNode,
   Production,
@@ -293,14 +293,17 @@ const subscribeToProduction = <T, U>(
 const varUpdateLog: any[] = []
 export const nonEmptyVarUpdates = 0
 const getVarFromFact = <T>(
-  vars: MatchT<T>,
+  matchedVars: MatchedVars<T>,
   conditionName: string,
   factIdOrVal: FactFragment<T>
 ): boolean => {
   // If the vars do not have this condition name, then match the condition name
   // to the factId or the value
-  if (!vars.has(conditionName) || vars.get(conditionName) == factIdOrVal) {
-    vars.set(conditionName, factIdOrVal)
+  if (
+    !matchedVars.has(conditionName) ||
+    matchedVars.get(conditionName) == factIdOrVal
+  ) {
+    matchedVars.set(conditionName, factIdOrVal)
     return true
   } else {
     return false
@@ -353,20 +356,20 @@ const getVarFromFact = <T>(
 // Try this: idAtrrHash => nodeId => conditionOrMapId => vars
 
 const getVarsFromFact = <T>(
-  vars: MatchT<T>,
+  matchedVars: MatchedVars<T>,
   condition: Condition<T>,
   fact: Fact<T>
 ): boolean => {
   for (let i = 0; i < condition.vars.length; i++) {
     const v = condition.vars[i]
     if (v.field === Field.IDENTIFIER) {
-      if (!getVarFromFact(vars, v.name, fact[0])) {
+      if (!getVarFromFact(matchedVars, v.name, fact[0])) {
         return false
       }
     } else if (v.field === Field.ATTRIBUTE) {
       throw new Error(`Attributes can not contain vars: ${v}`)
     } else if (v.field === Field.VALUE) {
-      if (!getVarFromFact(vars, v.name, fact[2])) {
+      if (!getVarFromFact(matchedVars, v.name, fact[2])) {
         return false
       }
     }
@@ -384,7 +387,7 @@ const leftActivationFromVars = <T>(
   session: Session<T>,
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
-  vars: MatchT<T>,
+  matchedVars: MatchedVars<T>,
   token: Token<T>,
   alphaFact: Fact<T>
 ) => {
@@ -418,14 +421,14 @@ const leftActivationFromVars = <T>(
    *       }
    */
 
-  const newVars: MatchT<T> = new Map(vars)
-  if (getVarsFromFact(newVars, node.condition, alphaFact)) {
+  const newMatchedVars: MatchedVars<T> = new Map(matchedVars)
+  if (getVarsFromFact(newMatchedVars, node.condition, alphaFact)) {
     const b = performance.now()
-    for (const k of vars.keys()) {
+    for (const k of matchedVars.keys()) {
       varKeys.add({
         id: node.id,
         fact: { new: token.fact.join(','), old: token.oldFact?.join(',') },
-        vars,
+        vars: matchedVars,
       })
     }
     const a = performance.now()
@@ -447,7 +450,7 @@ const leftActivationFromVars = <T>(
       session,
       child,
       newIdAttrs,
-      newVars,
+      newMatchedVars,
       newToken,
       isNew
     )
@@ -458,24 +461,38 @@ const leftActivationWithoutAlpha = <T>(
   session: Session<T>,
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
-  vars: MatchT<T>,
+  matchedVars: MatchedVars<T>,
   token: Token<T>
 ) => {
   if (node.idName && node.idName != '') {
-    const id = vars.get(node.idName)
+    const id = matchedVars.get(node.idName)
     const idStr = id !== undefined ? `${id}` : undefined
     if (idStr !== undefined && node.alphaNode.facts.get(idStr)) {
       const alphaFacts = [...(node.alphaNode.facts.get(idStr)?.values() ?? [])]
       if (!alphaFacts)
         throw new Error(`Expected to have alpha facts for ${node.idName}`)
       alphaFacts.forEach((alphaFact) => {
-        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+        leftActivationFromVars(
+          session,
+          node,
+          idAttrs,
+          matchedVars,
+          token,
+          alphaFact
+        )
       })
     }
   } else {
     for (const fact of node.alphaNode.facts.values()) {
       for (const alphaFact of fact.values()) {
-        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+        leftActivationFromVars(
+          session,
+          node,
+          idAttrs,
+          matchedVars,
+          token,
+          alphaFact
+        )
       }
     }
   }
@@ -485,7 +502,7 @@ const leftActivationOnMemoryNode = <T>(
   session: Session<T>,
   node: MemoryNode<T>,
   idAttrs: IdAttrs<T>,
-  vars: MatchT<T>,
+  matchedVars: MatchedVars<T>,
   token: Token<T>,
   isNew: boolean
 ) => {
@@ -510,11 +527,11 @@ const leftActivationOnMemoryNode = <T>(
       match = { id: node.lastMatchId }
     }
     matchVarCount++
-    match.vars = new Map(vars)
+    match.matchedVars = new Map(matchedVars)
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
       !node.nodeType?.condFn ||
-      (node.nodeType?.condFn(vars) ?? true)
+      (node.nodeType?.condFn(matchedVars) ?? true)
     node.matchIds.set(match.id, idAttrs)
     node.matches.set(idAttrsHash, { idAttrs, match })
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
@@ -542,7 +559,7 @@ const leftActivationOnMemoryNode = <T>(
     }
   }
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
-    leftActivationWithoutAlpha(session, node.child, idAttrs, vars, token)
+    leftActivationWithoutAlpha(session, node.child, idAttrs, matchedVars, token)
   }
 }
 
@@ -570,7 +587,7 @@ const rightActivationWithJoinNode = <T>(
   } else {
     node.parent.matches.forEach((match) => {
       // const store = match.match.vars.inherit(token.fact)
-      const newVars: MatchT<T> = new Map(match.match.vars)
+      const newVars: MatchedVars<T> = new Map(match.match.matchedVars)
       const idName = node.idName
       if (idName && idName !== '' && newVars?.get(idName) != token.fact[0]) {
         return
@@ -785,7 +802,7 @@ const fireRules = <T>(
           match.match.enabled
         ) {
           session.triggeredNodeIds.clear()
-          if (!match.match.vars) {
+          if (!match.match.matchedVars) {
             throw new Error(`expected match ${match.match.id} to have vars??`)
           }
           if (process.env.NODE_ENV === 'development') {
@@ -793,11 +810,11 @@ const fireRules = <T>(
               debugFrame?.triggeredRules.push({
                 ruleName: node.ruleName,
                 kind: 'then',
-                vars: match.match.vars,
+                vars: match.match.matchedVars,
               })
             }
           }
-          node.nodeType?.thenFn?.(match.match.vars)
+          node.nodeType?.thenFn?.(match.match.matchedVars)
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
       }
@@ -1100,22 +1117,22 @@ const queryAll = <T, U>(
   // then make it easy to query the data via key map paths or something. Iterating over all
   // matches could become cumbersome for large data sets
   session.leafNodes.get(prod.name)?.matches.forEach((match, _) => {
-    const { enabled, vars } = match.match
-    if (enabled && vars) {
+    const { enabled, matchedVars } = match.match
+    if (enabled && matchedVars) {
       if (!filter) {
-        result.push(prod.convertMatchFn(vars))
+        result.push(prod.convertMatchFn(matchedVars))
       } else {
         const filterKeys = filter.keys() // All keys must be present to match the value
         let hasAllFilterKeys = true
 
         for (const f of filterKeys) {
           if (!hasAllFilterKeys) break
-          if (!vars.has(f)) {
+          if (!matchedVars.has(f)) {
             hasAllFilterKeys = false
             break
           } else {
             const fVal = filter.get(f)
-            const vVal = vars.get(f)
+            const vVal = matchedVars.get(f)
             if (!fVal || !vVal || !fVal.includes(vVal)) {
               hasAllFilterKeys = false
               break
@@ -1124,7 +1141,7 @@ const queryAll = <T, U>(
         }
 
         if (hasAllFilterKeys) {
-          result.push(prod.convertMatchFn(vars))
+          result.push(prod.convertMatchFn(matchedVars))
         }
       }
     }
@@ -1160,7 +1177,7 @@ const get = <T, U>(
   if (!idAttrs) return
   const idAttrsHash = hashIdAttrs(idAttrs)
   const vars = session.leafNodes.get(prod.name)?.matches.get(idAttrsHash)
-    ?.match.vars
+    ?.match.matchedVars
   if (!vars) {
     console.warn('No vars??')
     return

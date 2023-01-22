@@ -50,7 +50,7 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
       .join('\n')
     const enabled = v.match.enabled
     const varStr: string[] = []
-    v.match.vars?.forEach((vv, kk) => {
+    v.match.matchedVars?.forEach((vv, kk) => {
       varStr.push(`${kk} => ${vv}`)
     })
     const matchStr = `\n\nmatch ${v.match.id} is ${

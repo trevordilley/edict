@@ -8,7 +8,7 @@ import {
   rete,
   varKeys,
 } from './rete'
-import { Field, MatchT, vizOnlineUrl } from '@edict/rete'
+import { Field, MatchedVars, vizOnlineUrl } from '@edict/rete'
 import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
 import * as fs from 'fs'
@@ -123,7 +123,7 @@ interface Schema {
   delta: number
 }
 
-const convertMatchFn = (vars: MatchT<Schema>) => vars
+const convertMatchFn = (vars: MatchedVars<Schema>) => vars
 
 // Tests based on these benchmarks: https://github.com/noctjs/ecs-benchmark
 
@@ -274,7 +274,7 @@ describe('rete perf', () => {
     const makeProduction = (name: keyof Schema) => {
       const valName = name.toLowerCase()
       const entJoin = '$ent'
-      const production = rete.initProduction<Schema, MatchT<Schema>>({
+      const production = rete.initProduction<Schema, MatchedVars<Schema>>({
         name: `${name} production`,
         convertMatchFn,
         thenFn: ({ vars }) => {
@@ -385,7 +385,7 @@ describe('rete perf', () => {
       const secondValName = second.toLowerCase()
       const firstJoin = '$first'
       const secondJoin = '$second'
-      const production = rete.initProduction<Schema, MatchT<Schema>>({
+      const production = rete.initProduction<Schema, MatchedVars<Schema>>({
         name: `${first}-${second}`,
         convertMatchFn,
         thenFn: ({ vars }) => {
@@ -466,7 +466,7 @@ describe('rete perf', () => {
     const makeProduction = (name: keyof Schema) => {
       const valName = name.toLowerCase()
       const joinId = '$ent'
-      const production = rete.initProduction<Schema, MatchT<Schema>>({
+      const production = rete.initProduction<Schema, MatchedVars<Schema>>({
         name,
         convertMatchFn,
         thenFn: ({ vars }) => {
@@ -522,7 +522,7 @@ describe('rete perf', () => {
   it('entity_cycle', () => {
     const session = rete.initSession<Schema>(false)
     const joinId = '$ent'
-    const spawnB = rete.initProduction<Schema, MatchT<Schema>>({
+    const spawnB = rete.initProduction<Schema, MatchedVars<Schema>>({
       name: 'Spawn B',
       convertMatchFn,
       thenFn: ({ vars }) => {
@@ -546,7 +546,7 @@ describe('rete perf', () => {
       false
     )
     rete.addProductionToSession(session, spawnB)
-    const retractB = rete.initProduction<Schema, MatchT<Schema>>({
+    const retractB = rete.initProduction<Schema, MatchedVars<Schema>>({
       name: 'Retract B',
       convertMatchFn,
       thenFn: ({ vars }) => {
@@ -594,7 +594,7 @@ describe('rete perf', () => {
   it('add_remove', () => {
     const session = rete.initSession<Schema>(false)
     const joinId = '$ent'
-    const spawnB = rete.initProduction<Schema, MatchT<Schema>>({
+    const spawnB = rete.initProduction<Schema, MatchedVars<Schema>>({
       name: 'Spawn B',
       convertMatchFn,
       thenFn: ({ vars }) => {
@@ -618,7 +618,7 @@ describe('rete perf', () => {
       false
     )
     rete.addProductionToSession(session, spawnB)
-    const retractB = rete.initProduction<Schema, MatchT<Schema>>({
+    const retractB = rete.initProduction<Schema, MatchedVars<Schema>>({
       name: 'Retract B',
       convertMatchFn,
       thenFn: ({ vars }) => {
