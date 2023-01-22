@@ -12,6 +12,7 @@ import { Field, MatchT, vizOnlineUrl } from '@edict/rete'
 import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
 import * as fs from 'fs'
+import { hashIdAttr } from './utils'
 
 v8Profiler.setGenerateType(1)
 
@@ -125,6 +126,113 @@ interface Schema {
 const convertMatchFn = (vars: MatchT<Schema>) => vars
 
 // Tests based on these benchmarks: https://github.com/noctjs/ecs-benchmark
+
+it('compare new Map vs ...', () => {
+  const m = new Map([
+    ['$someVar', 'someValue'],
+    ['$someOtherVar', 'someValue'],
+  ])
+  const a = [
+    // node id condition id hash
+    (45 << 16) + 22,
+    // idAttr hash
+    (2340 << 16) + 10,
+    // value idx
+    12334,
+    // idAttr hash
+    (2344 << 16) + 8,
+    // value idx
+    4321,
+  ]
+  const numItrs = 50_000
+
+  const bm = performance.now()
+  for (let i = 0; i < numItrs; i++) {
+    const n = new Map(m)
+    n.set('$anotherAnotherKey', 'someOtherValue')
+  }
+  const am = performance.now()
+
+  const ba = performance.now()
+  for (let i = 0; i < numItrs; i++) {
+    const n = [...a, (9999 << 16) + 5, 98475]
+    n[0] = 1
+  }
+  const aa = performance.now()
+
+  const bc = performance.now()
+  for (let i = 0; i < numItrs; i++) {
+    a[5] = (9999 << 16) + i
+    a[6] = i
+  }
+  const ac = performance.now()
+
+  console.log('map', am - bm, 'array', aa - ba, 'element update', ac - bc)
+
+  // Array copy is 4x faster than new map. Updating an array is 10x faster than then new amp
+  expect(2).toBe(2)
+})
+
+it('extract id and attr from hash', () => {
+  // Max values are 2^15 apiece
+  const id = 32767
+  const attr = 32767
+
+  const hash = (attr << 16) + id
+
+  // Unshift 16 bits to the second half
+  const attr2 = hash >> 16
+  // Shift overtop second half, then shift back to get first 16 bits
+  const id2 = (hash << 16) >> 16
+
+  expect(id2).toBe(id)
+  expect(attr2).toBe(attr)
+})
+
+it('compare charAt hash with bitshift hash', () => {
+  const ids = []
+  const attrs = []
+  for (let i = 0; i < 1000; i++) {
+    ids[i] = i
+  }
+  for (let i = 0; i < 10; i++) {
+    attrs[i] = i
+  }
+
+  const idAttrStr: string[][] = []
+  const idAttrInt: number[][] = []
+  for (let i = 0; i < ids.length * attrs.length; i++) {
+    const [id, attr] = [ids[i % ids.length], attrs[i % attrs.length]]
+    idAttrStr[i] = [`${id}xxx-aaaa-bbbb-cccc-aaaaa`, `${attr}SomeAttr`]
+    idAttrInt[i] = [id, attr]
+  }
+  const iterations = 5000
+  const hashMap = new Map<number, number>()
+
+  const bStr = performance.now()
+  for (let i = 0; i < iterations; i++) {
+    for (let j = 0; j < idAttrStr.length; j++) {
+      const idAttr = idAttrStr[j]
+      if (idAttr === undefined) {
+        console.log(j)
+      }
+      hashMap.set(hashIdAttr(idAttr), i * j)
+    }
+  }
+  const aStr = performance.now()
+  const bBit = performance.now()
+  for (let i = 0; i < iterations; i++) {
+    for (let j = 0; j < idAttrInt.length; j++) {
+      const idx = idAttrInt[j][0] << (16 + idAttrInt[j][1])
+      hashMap.set(idx, i * j)
+    }
+  }
+  const aBit = performance.now()
+
+  console.log('hash', aStr - bStr, 'bit', aBit - bBit)
+
+  expect(2).toBe(2)
+})
 
 it('test map instantiation', () => {
   const orig = new Map()
