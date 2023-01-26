@@ -40,6 +40,7 @@ import {
 } from './types'
 import * as _ from 'lodash'
 import { hashIdAttr, hashIdAttrs } from './utils'
+import { PRIMES } from './primes'
 
 declare const process: {
   env: {
@@ -290,12 +291,36 @@ const subscribeToProduction = <T, U>(
 // $npc: {circle, speed, destX, destY},
 //
 // We'd need a map
-const varUpdateLog: any[] = []
-export const nonEmptyVarUpdates = 0
+const getVarFromFactViaJoinPath = <T>(
+  session: Session<T>,
+  joinPath: number[],
+  conditionName: string,
+  factIdOrVal: FactFragment<T>
+): boolean => {
+  if (conditionName === 'c2') {
+    console.log('c2')
+  }
+  const key = joinPathToKey(joinPath)
+  const matchedVars = session.joinPathToMatches.get(key)?.matchedVars
+  if (matchedVars === undefined) {
+    const m: MatchedVars<T> = new Map()
+    m.set(conditionName, factIdOrVal)
+    session.joinPathToMatches.set(key, { joinPath, matchedVars: m })
+    return true
+  } else if (matchedVars.get(conditionName) == factIdOrVal) {
+    return true
+  } else if (!matchedVars.has(conditionName)) {
+    matchedVars.set(conditionName, factIdOrVal)
+    return true
+  } else {
+    return false
+  }
+}
 const getVarFromFact = <T>(
   matchedVars: MatchedVars<T>,
   conditionName: string,
-  factIdOrVal: FactFragment<T>
+  factIdOrVal: FactFragment<T>,
+  joinPath?: number[]
 ): boolean => {
   if (matchedVars.get(conditionName) == factIdOrVal) {
     return true
@@ -352,7 +377,91 @@ const getVarFromFact = <T>(
 // Insert when upserted
 // Try this: idAtrrHash => nodeId => conditionOrMapId => vars
 
+const joinPathToKey = (joinPath: number[]) => {
+  let key = 1
+  for (let i = 0; i < joinPath.length; i++) {
+    key *= joinPath[i]
+  }
+  return key
+}
+
+const compileMatchesAlongJoinPath = <T>(
+  joinPath: number[],
+  matches: Map<number, { matchedVars: MatchedVars<T> }>
+) => {
+  const result: MatchedVars<T> = new Map()
+  let key = 1
+  for (let i = 0; i < joinPath.length; i++) {
+    key *= joinPath[i]
+    const matched = matches.get(key)
+    if (!matched) continue
+    // if (!matches.has(key))
+    //   throw new Error(
+    //     `Could not find ${key} in session matches, is path ${joinPath} correct?`
+    //   )
+    for (const [k, v] of matched.matchedVars) {
+      if (result.has(k)) {
+        console.warn(
+          `Existing match in joinPath? Key: ${key}, path: ${joinPath}`
+        )
+      }
+      result.set(k, v)
+    }
+  }
+  return result
+}
+
 const getVarsFromFact = <T>(
+  matchedVars: MatchedVars<T>,
+  condition: Condition<T>,
+  fact: Fact<T>,
+  joinPath: number[],
+  session: Session<T>
+): boolean => {
+  for (let i = 0; i < condition.vars.length; i++) {
+    const v = condition.vars[i]
+    const initialVars = new Map(matchedVars)
+    if (v.field === Field.IDENTIFIER) {
+      getVarFromFactViaJoinPath(session, joinPath, v.name, fact[0])
+      const varResult = getVarFromFact(matchedVars, v.name, fact[0])
+      const joinResult = compileMatchesAlongJoinPath(
+        joinPath,
+        session.joinPathToMatches
+      )
+      const newVars = matchedVars
+      if (!varResult) {
+        return false
+      }
+    } else if (v.field === Field.ATTRIBUTE) {
+      throw new Error(`Attributes can not contain vars: ${v}`)
+    } else if (v.field === Field.VALUE) {
+      getVarFromFactViaJoinPath(session, joinPath, v.name, fact[2])
+      const joinResult = compileMatchesAlongJoinPath(
+        joinPath,
+        session.joinPathToMatches
+      )
+      const newVars = matchedVars
+      const varResult = getVarFromFact(matchedVars, v.name, fact[2])
+      if (!varResult) {
+        return false
+      }
+    }
+  }
+  return true
+}
+
+const isVarChanged = <T>(
+  matchedVars: MatchedVars<T>,
+  conditionName: string,
+  factIdOrVal: FactFragment<T>
+): boolean => {
+  return (
+    matchedVars.get(conditionName) != factIdOrVal &&
+    matchedVars.get(conditionName) !== undefined
+  )
+}
+
+const isVarsChanged = <T>(
   matchedVars: MatchedVars<T>,
   condition: Condition<T>,
   fact: Fact<T>
@@ -360,31 +469,26 @@ const getVarsFromFact = <T>(
   for (let i = 0; i < condition.vars.length; i++) {
     const v = condition.vars[i]
     if (v.field === Field.IDENTIFIER) {
-      if (!getVarFromFact(matchedVars, v.name, fact[0])) {
-        return false
+      if (isVarChanged(matchedVars, v.name, fact[0])) {
+        return true
       }
     } else if (v.field === Field.ATTRIBUTE) {
       throw new Error(`Attributes can not contain vars: ${v}`)
     } else if (v.field === Field.VALUE) {
-      if (!getVarFromFact(matchedVars, v.name, fact[2])) {
-        return false
+      if (isVarChanged(matchedVars, v.name, fact[2])) {
+        return true
       }
     }
   }
-  return true
+  return false
 }
-export let leftActCountBefore = 0
-export let leftActCountAfter = 0
-export const msNoActivate = 0
-export let msDoActivate = 0
-export const varKeys = new Set<{ id: number; fact: any; vars: Map<any, any> }>()
-export let matchVarCount = 0
-export let numTokens = 0
+
 const leftActivationFromVars = <T>(
   session: Session<T>,
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
   matchedVars: MatchedVars<T>,
+  joinPath: number[],
   token: Token<T>,
   alphaFact: Fact<T>
 ) => {
@@ -400,7 +504,6 @@ const leftActivationFromVars = <T>(
   // way to thread the needle OR find that one path where we modify the vars when we
   // shouldn't and correct it. I'd definitely prefer NOT adding an immutability library
   // simply cause it splits the mental model into "mutable" world vs "immutable" world.
-  leftActCountBefore++
 
   /**
    * Var Log
@@ -418,46 +521,33 @@ const leftActivationFromVars = <T>(
    *       }
    */
 
-  const newMatchedVars: MatchedVars<T> = new Map(matchedVars)
-  if (getVarsFromFact(newMatchedVars, node.condition, alphaFact)) {
-    const b = performance.now()
-    for (const k of matchedVars.keys()) {
-      varKeys.add({
-        id: node.id,
-        fact: { new: token.fact.join(','), old: token.oldFact?.join(',') },
-        vars: matchedVars,
-      })
-    }
-    const a = performance.now()
-    msDoActivate += a - b
-    leftActCountAfter++
-    const idAttr = getIdAttr<T>(alphaFact)
-    const newIdAttrs = [...idAttrs]
-    newIdAttrs.push(idAttr)
-    numTokens++
-    const newToken = { fact: alphaFact, kind: token.kind }
-    const isNew = !node.oldIdAttrs?.has(hashIdAttr(idAttr))
-    const child = node.child
-    if (!child) {
-      console.error('Session', JSON.stringify(session))
-      console.error(`Node ${node.idName}`, JSON.stringify(node))
-      throw new Error('Expected node to have child!')
-    }
-    leftActivationOnMemoryNode(
-      session,
-      child,
-      newIdAttrs,
-      newMatchedVars,
-      newToken,
-      isNew
-    )
+  const idAttr = getIdAttr<T>(alphaFact)
+  const newIdAttrs = [...idAttrs]
+  newIdAttrs.push(idAttr)
+  const newToken = { fact: alphaFact, kind: token.kind }
+  const isNew = !node.oldIdAttrs?.has(hashIdAttr(idAttr))
+  const child = node.child
+  if (!child) {
+    console.error('Session', JSON.stringify(session))
+    console.error(`Node ${node.idName}`, JSON.stringify(node))
+    throw new Error('Expected node to have child!')
   }
+  leftActivationOnMemoryNode(
+    session,
+    child,
+    joinPath,
+    newIdAttrs,
+    matchedVars,
+    newToken,
+    isNew
+  )
 }
 
 const leftActivationWithoutAlpha = <T>(
   session: Session<T>,
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
+  joinPath: number[],
   matchedVars: MatchedVars<T>,
   token: Token<T>
 ) => {
@@ -469,27 +559,68 @@ const leftActivationWithoutAlpha = <T>(
       if (!alphaFacts)
         throw new Error(`Expected to have alpha facts for ${node.idName}`)
       alphaFacts.forEach((alphaFact) => {
-        leftActivationFromVars(
-          session,
-          node,
-          idAttrs,
-          matchedVars,
-          token,
-          alphaFact
-        )
+        const idAttr = session.idAttrNodes.get(
+          hashIdAttr([alphaFact[0], alphaFact[1]])
+        )!
+        const newMatchedVars = new Map(matchedVars)
+        // const newMatchedVars = matchedVars
+        // const newMatchedVars: MatchedVars<T> = isVarsChanged(
+        //   matchedVars,
+        //   node.condition,
+        //   alphaFact
+        // )
+        //   ? new Map(matchedVars)
+        //   : matchedVars
+        const newPath = [...joinPath, idAttr._id]
+        if (
+          getVarsFromFact(
+            newMatchedVars,
+            node.condition,
+            alphaFact,
+            newPath,
+            session
+          )
+        ) {
+          leftActivationFromVars(
+            session,
+            node,
+            idAttrs,
+            newMatchedVars,
+            newPath,
+            token,
+            alphaFact
+          )
+        }
       })
     }
   } else {
     for (const fact of node.alphaNode.facts.values()) {
       for (const alphaFact of fact.values()) {
-        leftActivationFromVars(
-          session,
-          node,
-          idAttrs,
-          matchedVars,
-          token,
-          alphaFact
-        )
+        const newMatchedVars = new Map(matchedVars)
+
+        const idAttr = session.idAttrNodes.get(
+          hashIdAttr([alphaFact[0], alphaFact[1]])
+        )!
+        const newPath = [...joinPath, idAttr._id]
+        if (
+          getVarsFromFact(
+            newMatchedVars,
+            node.condition,
+            alphaFact,
+            newPath,
+            session
+          )
+        ) {
+          leftActivationFromVars(
+            session,
+            node,
+            idAttrs,
+            newMatchedVars,
+            newPath,
+            token,
+            alphaFact
+          )
+        }
       }
     }
   }
@@ -498,6 +629,7 @@ const leftActivationWithoutAlpha = <T>(
 const leftActivationOnMemoryNode = <T>(
   session: Session<T>,
   node: MemoryNode<T>,
+  joinPath: number[],
   idAttrs: IdAttrs<T>,
   matchedVars: MatchedVars<T>,
   token: Token<T>,
@@ -520,10 +652,18 @@ const leftActivationOnMemoryNode = <T>(
     if (node.matches.has(idAttrsHash)) {
       match = node.matches.get(idAttrsHash)!.match!
     } else {
+      const matchId = session.nextId()
       node.lastMatchId += 1
-      match = { id: node.lastMatchId }
+      match = {
+        matchId,
+        id: node.lastMatchId,
+        joinPath: [...joinPath, matchId],
+      }
     }
-    matchVarCount++
+    const joinPathMatches = compileMatchesAlongJoinPath(
+      match.joinPath,
+      session.joinPathToMatches
+    )
     match.matchedVars = new Map(matchedVars)
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
@@ -546,6 +686,7 @@ const leftActivationOnMemoryNode = <T>(
     if (idToDelete) {
       node.matchIds.delete(idToDelete.match.id)
     }
+    // HEY TREV, LOOK HERE NEXT TIME. WE NEED TO HANDLE RETRACTIONS
     node.matches.delete(idAttrsHash)
     node.parent.oldIdAttrs.delete(hashIdAttr(idAttr))
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType) {
@@ -556,7 +697,14 @@ const leftActivationOnMemoryNode = <T>(
     }
   }
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
-    leftActivationWithoutAlpha(session, node.child, idAttrs, matchedVars, token)
+    leftActivationWithoutAlpha(
+      session,
+      node.child,
+      idAttrs,
+      joinPath,
+      matchedVars,
+      token
+    )
   }
 }
 
@@ -568,13 +716,15 @@ const rightActivationWithJoinNode = <T>(
 ) => {
   if (node.parent === undefined) {
     const vars = session.initMatch()
-    if (getVarsFromFact(vars, node.condition, token.fact)) {
+    const path = [node.alphaNode.id, node.id]
+    if (getVarsFromFact(vars, node.condition, token.fact, path, session)) {
       if (!node.child) {
         throw new Error(`Unexpected undefined child for node ${node.idName}`)
       }
       leftActivationOnMemoryNode(
         session,
         node.child,
+        path,
         [idAttr],
         vars,
         token,
@@ -583,8 +733,11 @@ const rightActivationWithJoinNode = <T>(
     }
   } else {
     node.parent.matches.forEach((match) => {
-      // const store = match.match.vars.inherit(token.fact)
       const newVars: MatchedVars<T> = new Map(match.match.matchedVars)
+      const joinVars = compileMatchesAlongJoinPath(
+        match.match.joinPath,
+        session.joinPathToMatches
+      )
       const idName = node.idName
       if (idName && idName !== '' && newVars?.get(idName) != token.fact[0]) {
         return
@@ -593,7 +746,12 @@ const rightActivationWithJoinNode = <T>(
         throw new Error('Expected vars to not be undefinied???')
       }
 
-      if (getVarsFromFact(newVars, node.condition, token.fact)) {
+      const path = match.match.joinPath
+      if (getVarsFromFact(newVars, node.condition, token.fact, path, session)) {
+        const newJoinVars = compileMatchesAlongJoinPath(
+          match.match.joinPath,
+          session.joinPathToMatches
+        )
         const newIdAttrs = [...match.idAttrs]
         newIdAttrs.push(idAttr)
         const child = node.child
@@ -603,6 +761,7 @@ const rightActivationWithJoinNode = <T>(
         leftActivationOnMemoryNode(
           session,
           child,
+          path,
           newIdAttrs,
           newVars,
           token,
@@ -620,6 +779,18 @@ const rightActivationWithAlphaNode = <T>(
 ) => {
   const idAttr = getIdAttr(token.fact)
   const idAttrHash = hashIdAttr(idAttr)
+  if (token.kind === TokenKind.RETRACT || token.kind === TokenKind.UPDATE) {
+    const key = session.idAttrNodes.get(idAttrHash)?._id
+    if (key) {
+      for (const [k, _] of session.joinPathToMatches) {
+        const result = k / key
+        const isInt = Number.isInteger(result)
+        if (Number.isInteger(k / key)) {
+          session.joinPathToMatches.get(k)?.matchedVars.clear()
+        }
+      }
+    }
+  }
   const [id, attr] = idAttr
   if (token.kind === TokenKind.INSERT) {
     if (!node.facts.has(id.toString())) {
@@ -630,6 +801,7 @@ const rightActivationWithAlphaNode = <T>(
       session.idAttrNodes.set(idAttrHash, {
         alphaNodes: new Set<AlphaNode<T>>(),
         idAttr,
+        _id: session.nextId(),
       })
     }
     session.idAttrNodes.get(idAttrHash)!.alphaNodes.add(node)
@@ -644,6 +816,7 @@ const rightActivationWithAlphaNode = <T>(
     if (idAttr === undefined) throw new Error(`Expected fact id to exist ${id}`)
     idAttr.set(attr.toString(), token.fact)
   }
+
   node.successors.forEach((child) => {
     if (token.kind === TokenKind.UPDATE && child.disableFastUpdates) {
       if (token.oldFact === undefined)
@@ -1041,19 +1214,18 @@ const initSession = <T>(
   }
 ): Session<T> => {
   let nodeIdCounter = 0
-  const nextId = () => nodeIdCounter++
+  const nextId = () => PRIMES[++nodeIdCounter]
   const alphaNode: AlphaNode<T> = {
     id: nodeIdCounter,
     facts: new Map<string, Map<string, Fact<T>>>(),
     successors: [],
     children: [],
   }
-  nextId()
   const leafNodes = new Map<string, MemoryNode<T>>()
 
   const idAttrNodes = new Map<
     number,
-    { alphaNodes: Set<AlphaNode<T>>; idAttr: IdAttr<T> }
+    { alphaNodes: Set<AlphaNode<T>>; idAttr: IdAttr<T>; _id: number }
   >()
 
   const thenQueue = new Set<[MemoryNode<T>, IdAttrsHash]>()
@@ -1063,6 +1235,17 @@ const initSession = <T>(
   const triggeredNodeIds = new Set<MemoryNode<T>>()
 
   const subscriptionQueue = new Map<string, () => void>()
+
+  // Key: product of path
+  // path: array node ids, these are primes
+  // matchedVars: vars at this point in the path
+  const joinPathToMatches = new Map<
+    number,
+    { joinPath: number[]; matchedVars: MatchedVars<T> }
+  >()
+
+  // IdAttrs that have been updated or retracted go in here.
+  const dirtyIdAttrs = new Set<number>()
 
   const initMatch = () => defaultInitMatch()
 
@@ -1079,8 +1262,12 @@ const initSession = <T>(
     triggeredSubscriptionQueue: new Set<string>(),
     autoFire,
     nextId,
+    joinPathToMatches,
+    dirtyIdAttrs,
     debug: {
       ...debug,
+      idAttrNodes,
+      joinPathToMatches,
       numFramesSinceInit: 0,
       frames: [],
       mutationsSinceLastFire: [],

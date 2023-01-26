@@ -1,10 +1,4 @@
-import {
-  leftActCountAfter,
-  leftActCountBefore,
-  msDoActivate,
-  rete,
-  varKeys,
-} from './rete'
+import { rete } from './rete'
 import { FactFragment, Field, MatchedVars } from './types'
 import { viz, vizOnlineUrl } from '@edict/rete'
 
@@ -111,7 +105,7 @@ describe('rete', () => {
     rete.insertFact(session, [Id.Thomas, 'Height', 72])
     rete.insertFact(session, [Id.George, 'Height', 72])
     rete.fireRules(session)
-    console.log(vizOnlineUrl(session))
+    console.log(session.joinPathToMatches)
     const unfilteredResults = rete.queryAll(session, production)
     expect(unfilteredResults.length).toBe(3)
     expect(subResultsAllResults).toStrictEqual(unfilteredResults)
@@ -249,9 +243,7 @@ describe('rete', () => {
       convertMatchFn,
       thenFn: () => {
         rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
-        console.log('first then insert, ', vizOnlineUrl(session))
         rete.insertFact(session, [Id.Charlie, 'Color', 'gold'])
-        console.log('second then insert, ', vizOnlineUrl(session))
       },
     })
     rete.addConditionsToProduction(
@@ -305,23 +297,10 @@ describe('rete', () => {
     )
     rete.addProductionToSession(session, secondRule)
 
-    console.log('before facts, ', vizOnlineUrl(session))
     rete.insertFact(session, [Id.Alice, 'Color', 'red'])
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
-    console.log('second insert, ', vizOnlineUrl(session))
-    console.log(
-      'before ',
-      leftActCountBefore,
-      ' after ',
-      leftActCountAfter,
-      ' total ',
-      leftActCountAfter + leftActCountBefore,
-      ' ms do activate ',
-      msDoActivate,
-      ' count ',
-      count
-    )
-    console.log('keys ', varKeys)
+    console.log(vizOnlineUrl(session))
+    console.log(session.joinPathToMatches)
     expect(count).toBe(3)
   })
 

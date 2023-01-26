@@ -48,8 +48,10 @@ export interface Var {
 
 export interface Match<T> {
   id: number
+  matchId: number
   matchedVars?: MatchedVars<T>
   enabled?: boolean
+  joinPath: number[]
 }
 
 /** functions **/
@@ -76,6 +78,7 @@ export interface AlphaNode<T> {
   testField?: Field
   testValue?: keyof T | FactId
 
+  // This could change to id|attr => [primeId, fact]
   facts: Map<string, Map<string, Fact<T>>>
   successors: JoinNode<T>[]
   children: AlphaNode<T>[]
@@ -168,16 +171,29 @@ export interface DebugOptions {
 }
 export interface Debug<T> extends DebugOptions {
   numFramesSinceInit: number
+  idAttrNodes: Map<
+    number,
+    { alphaNodes: Set<AlphaNode<T>>; idAttr: IdAttr<T>; _id: number }
+  >
+  joinPathToMatches: Map<
+    number,
+    { joinPath: number[]; matchedVars: MatchedVars<T> }
+  >
   frames: DebugFrame<T>[]
   mutationsSinceLastFire: Mutation<T>[]
 }
 
 export interface Session<T> {
+  joinPathToMatches: Map<
+    number,
+    { joinPath: number[]; matchedVars: MatchedVars<T> }
+  >
+  dirtyIdAttrs: Set<number>
   alphaNode: AlphaNode<T>
   leafNodes: Map<string, MemoryNode<T>>
   idAttrNodes: Map<
     IdAttrsHash,
-    { alphaNodes: Set<AlphaNode<T>>; idAttr: IdAttr<T> }
+    { alphaNodes: Set<AlphaNode<T>>; idAttr: IdAttr<T>; _id: number }
   >
   insideRule: boolean
   thenQueue: Set<[node: MemoryNode<T>, idAttrsHash: IdAttrsHash]>
