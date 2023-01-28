@@ -301,6 +301,7 @@ describe('rete', () => {
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
     console.log(vizOnlineUrl(session))
     console.log(session.joinPathToMatches)
+
     expect(count).toBe(3)
   })
 

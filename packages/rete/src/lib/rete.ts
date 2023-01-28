@@ -657,7 +657,7 @@ const leftActivationOnMemoryNode = <T>(
       match = {
         matchId,
         id: node.lastMatchId,
-        joinPath: [...joinPath, matchId],
+        joinPath,
       }
     }
     const joinPathMatches = compileMatchesAlongJoinPath(
@@ -686,7 +686,6 @@ const leftActivationOnMemoryNode = <T>(
     if (idToDelete) {
       node.matchIds.delete(idToDelete.match.id)
     }
-    // HEY TREV, LOOK HERE NEXT TIME. WE NEED TO HANDLE RETRACTIONS
     node.matches.delete(idAttrsHash)
     node.parent.oldIdAttrs.delete(hashIdAttr(idAttr))
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType) {
@@ -716,7 +715,10 @@ const rightActivationWithJoinNode = <T>(
 ) => {
   if (node.parent === undefined) {
     const vars = session.initMatch()
-    const path = [node.alphaNode.id, node.id]
+    const idAttr = getIdAttr(token.fact)
+    const idAttrHash = hashIdAttr(idAttr)
+    const idAttrId = session.idAttrNodes.get(idAttrHash)!._id
+    const path = [idAttrId]
     if (getVarsFromFact(vars, node.condition, token.fact, path, session)) {
       if (!node.child) {
         throw new Error(`Unexpected undefined child for node ${node.idName}`)
@@ -733,6 +735,13 @@ const rightActivationWithJoinNode = <T>(
     }
   } else {
     node.parent.matches.forEach((match) => {
+      // So, this is where I think we might have something interesting to follow up on.
+      // Right here we want a new path.
+      //
+      // I think it's the match.path (which is the parent) and then we need SOME other id to go off of.
+      //
+      // Should it be the `node.child.id`? I think so!
+      // TREV LOOK HERE NEXT
       const newVars: MatchedVars<T> = new Map(match.match.matchedVars)
       const joinVars = compileMatchesAlongJoinPath(
         match.match.joinPath,
@@ -746,7 +755,7 @@ const rightActivationWithJoinNode = <T>(
         throw new Error('Expected vars to not be undefinied???')
       }
 
-      const path = match.match.joinPath
+      const path = [...match.match.joinPath, match.match.matchId]
       if (getVarsFromFact(newVars, node.condition, token.fact, path, session)) {
         const newJoinVars = compileMatchesAlongJoinPath(
           match.match.joinPath,
@@ -780,6 +789,9 @@ const rightActivationWithAlphaNode = <T>(
   const idAttr = getIdAttr(token.fact)
   const idAttrHash = hashIdAttr(idAttr)
   if (token.kind === TokenKind.RETRACT || token.kind === TokenKind.UPDATE) {
+    const idAttr = getIdAttr(token.fact)
+    const idAttrHash = hashIdAttr(idAttr)
+
     const key = session.idAttrNodes.get(idAttrHash)?._id
     if (key) {
       for (const [k, _] of session.joinPathToMatches) {
