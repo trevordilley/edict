@@ -405,7 +405,6 @@ const compileMatchesAlongJoinPath = <T>(
 }
 
 const getVarsFromFact = <T>(
-  matchedVars: MatchedVars<T>,
   condition: Condition<T>,
   fact: Fact<T>,
   joinPath: number[],
@@ -420,22 +419,25 @@ const getVarsFromFact = <T>(
     const v = condition.vars[i]
     if (v.field === Field.IDENTIFIER) {
       getVarFromFactViaJoinPath(session, idAttr._id, newPath, v.name, fact[0])
-      const varResult = getVarFromFact(matchedVars, v.name, fact[0])
       const joinResult = compileMatchesAlongJoinPath(
         joinPath,
         session.joinPathToMatches
       )
-      const newVars = matchedVars
-      if (!varResult) {
+      if (!joinResult) {
         session.dirtyIdAttrs.delete(newPathKey)
         return { setVar: false, newPath: joinPath }
       }
     } else if (v.field === Field.ATTRIBUTE) {
       throw new Error(`Attributes can not contain vars: ${v}`)
     } else if (v.field === Field.VALUE) {
-      getVarFromFactViaJoinPath(session, idAttr._id, newPath, v.name, fact[2])
-      const varResult = getVarFromFact(matchedVars, v.name, fact[2])
-      if (!varResult) {
+      const joinResult = getVarFromFactViaJoinPath(
+        session,
+        idAttr._id,
+        newPath,
+        v.name,
+        fact[2]
+      )
+      if (!joinResult) {
         session.dirtyIdAttrs.delete(newPathKey)
         return { setVar: false, newPath: joinPath }
       }
@@ -460,7 +462,6 @@ const leftActivationFromVars = <T>(
   session: Session<T>,
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
-  matchedVars: MatchedVars<T>,
   joinPath: number[],
   token: Token<T>,
   alphaFact: Fact<T>
@@ -510,7 +511,6 @@ const leftActivationFromVars = <T>(
     child,
     joinPath,
     newIdAttrs,
-    matchedVars,
     newToken,
     isNew
   )
@@ -521,20 +521,19 @@ const leftActivationWithoutAlpha = <T>(
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
   joinPath: number[],
-  matchedVars: MatchedVars<T>,
   token: Token<T>
 ) => {
   if (node.idName && node.idName != '') {
-    const id = matchedVars.get(node.idName)
+    const id = session.joinPathToMatches
+      .get(joinPathToKey(joinPath))
+      ?.matchedVars.get(node.idName)
     const idStr = id !== undefined ? `${id}` : undefined
     if (idStr !== undefined && node.alphaNode.facts.get(idStr)) {
       const alphaFacts = [...(node.alphaNode.facts.get(idStr)?.values() ?? [])]
       if (!alphaFacts)
         throw new Error(`Expected to have alpha facts for ${node.idName}`)
       alphaFacts.forEach((alphaFact) => {
-        const newMatchedVars = new Map(matchedVars)
         const result = getVarsFromFact(
-          newMatchedVars,
           node.condition,
           alphaFact,
           joinPath,
@@ -545,7 +544,6 @@ const leftActivationWithoutAlpha = <T>(
             session,
             node,
             idAttrs,
-            newMatchedVars,
             result.newPath,
             token,
             alphaFact
@@ -556,9 +554,7 @@ const leftActivationWithoutAlpha = <T>(
   } else {
     for (const fact of node.alphaNode.facts.values()) {
       for (const alphaFact of fact.values()) {
-        const newMatchedVars = new Map(matchedVars)
         const result = getVarsFromFact(
-          newMatchedVars,
           node.condition,
           alphaFact,
           joinPath,
@@ -569,7 +565,6 @@ const leftActivationWithoutAlpha = <T>(
             session,
             node,
             idAttrs,
-            newMatchedVars,
             result.newPath,
             token,
             alphaFact
@@ -585,7 +580,6 @@ const leftActivationOnMemoryNode = <T>(
   node: MemoryNode<T>,
   joinPath: number[],
   idAttrs: IdAttrs<T>,
-  matchedVars: MatchedVars<T>,
   token: Token<T>,
   isNew: boolean
 ) => {
@@ -622,7 +616,7 @@ const leftActivationOnMemoryNode = <T>(
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
       !node.nodeType?.condFn ||
-      (node.nodeType?.condFn(matchedVars) ?? true)
+      (node.nodeType?.condFn(joinPathMatches) ?? true)
     node.matchIds.set(match.id, idAttrs)
     node.matches.set(idAttrsHash, { idAttrs, match })
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
@@ -650,14 +644,7 @@ const leftActivationOnMemoryNode = <T>(
     }
   }
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
-    leftActivationWithoutAlpha(
-      session,
-      node.child,
-      idAttrs,
-      joinPath,
-      matchedVars,
-      token
-    )
+    leftActivationWithoutAlpha(session, node.child, idAttrs, joinPath, token)
   }
 }
 
@@ -668,18 +655,11 @@ const rightActivationWithJoinNode = <T>(
   token: Token<T>
 ) => {
   if (node.parent === undefined) {
-    const vars = session.initMatch()
     const idAttr = getIdAttr(token.fact)
     const idAttrHash = hashIdAttr(idAttr)
     const idAttrId = session.idAttrNodes.get(idAttrHash)!._id
     const path = [idAttrId]
-    const result = getVarsFromFact(
-      vars,
-      node.condition,
-      token.fact,
-      path,
-      session
-    )
+    const result = getVarsFromFact(node.condition, token.fact, path, session)
     if (result.setVar) {
       if (!node.child) {
         throw new Error(`Unexpected undefined child for node ${node.idName}`)
@@ -689,7 +669,6 @@ const rightActivationWithJoinNode = <T>(
         node.child,
         result.newPath,
         [idAttr],
-        vars,
         token,
         true
       )
@@ -704,10 +683,6 @@ const rightActivationWithJoinNode = <T>(
       // Should it be the `node.child.id`? I think so!
       // TREV LOOK HERE NEXT
       const newVars: MatchedVars<T> = new Map(match.match.matchedVars)
-      const joinVars = compileMatchesAlongJoinPath(
-        match.match.joinPath,
-        session.joinPathToMatches
-      )
       const idName = node.idName
       if (idName && idName !== '' && newVars?.get(idName) != token.fact[0]) {
         return
@@ -717,18 +692,8 @@ const rightActivationWithJoinNode = <T>(
       }
 
       const path = [...match.match.joinPath, match.match.matchId]
-      const result = getVarsFromFact(
-        newVars,
-        node.condition,
-        token.fact,
-        path,
-        session
-      )
+      const result = getVarsFromFact(node.condition, token.fact, path, session)
       if (result.setVar) {
-        const newJoinVars = compileMatchesAlongJoinPath(
-          match.match.joinPath,
-          session.joinPathToMatches
-        )
         const newIdAttrs = [...match.idAttrs]
         newIdAttrs.push(idAttr)
         const child = node.child
@@ -740,7 +705,6 @@ const rightActivationWithJoinNode = <T>(
           child,
           result.newPath,
           newIdAttrs,
-          newVars,
           token,
           true
         )

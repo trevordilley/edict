@@ -1,17 +1,18 @@
-import { insert, Province } from '../../rules/rules';
-import { Button, Typography } from '@mui/material';
-import { useLocations } from '../../hooks/useLocations';
-import { LocationList } from '../location/LocationList';
-import { genLocation } from '../../rules/dataGen';
+import { debug, insert, Province } from '../../rules/rules'
+import { Button, Typography } from '@mui/material'
+import { useLocations } from '../../hooks/useLocations'
+import { LocationList } from '../location/LocationList'
+import { genLocation } from '../../rules/dataGen'
 
 const generateLocation = (provinceId: string) => {
-  const { newLocation, civilians } = genLocation(provinceId, 20);
+  const { newLocation, civilians } = genLocation(provinceId, 20)
   const datums = {
     ...newLocation,
     ...civilians,
-  };
-  insert(datums);
-};
+  }
+  insert(datums)
+  console.log('joinPathToMatches: ', debug.engineDebug?.joinPathToMatches)
+}
 
 export const ProvinceRow: React.FC<Province & { id: string }> = ({
   id,
@@ -19,7 +20,7 @@ export const ProvinceRow: React.FC<Province & { id: string }> = ({
   provinceClassification,
   provincePopulation,
 }) => {
-  const locationList = useLocations({ provinceId: id }).map((l) => l.$location);
+  const locationList = useLocations({ provinceId: id }).map((l) => l.$location)
   return (
     <div>
       <Typography variant={'h1'}>{provinceName}</Typography>
@@ -31,11 +32,11 @@ export const ProvinceRow: React.FC<Province & { id: string }> = ({
       </Button>
       <LocationList locations={locationList} />
     </div>
-  );
-};
+  )
+}
 
 export const ProvinceList: React.FC<{
-  provinces: (Province & { id: string })[];
+  provinces: (Province & { id: string })[]
 }> = ({ provinces }) => {
   return (
     <div>
@@ -43,5 +44,5 @@ export const ProvinceList: React.FC<{
         <ProvinceRow {...p} />
       ))}
     </div>
-  );
-};
+  )
+}
