@@ -1,4 +1,10 @@
-import { rete } from './rete'
+import {
+  leftActCountAfter,
+  leftActCountBefore,
+  msDoActivate,
+  rete,
+  varKeys,
+} from './rete'
 import { FactFragment, Field, MatchT } from './types'
 import { viz, vizOnlineUrl } from '@edict/rete'
 
@@ -235,7 +241,9 @@ describe('rete', () => {
         convertMatchFn,
         thenFn: () => {
           rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
+          console.log('first then insert, ', vizOnlineUrl(session))
           rete.insertFact(session, [Id.Charlie, 'Color', 'gold'])
+          console.log('second then insert, ', vizOnlineUrl(session))
         },
       }
     )
@@ -287,9 +295,23 @@ describe('rete', () => {
     )
     rete.addProductionToSession(session, secondRule)
 
+    console.log('before facts, ', vizOnlineUrl(session))
     rete.insertFact(session, [Id.Alice, 'Color', 'red'])
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
-    console.log(vizOnlineUrl(session))
+    console.log('second insert, ', vizOnlineUrl(session))
+    console.log(
+      'before ',
+      leftActCountBefore,
+      ' after ',
+      leftActCountAfter,
+      ' total ',
+      leftActCountAfter + leftActCountBefore,
+      ' ms do activate ',
+      msDoActivate,
+      ' count ',
+      count
+    )
+    console.log('keys ', varKeys)
     expect(count).toBe(3)
   })
 

@@ -53,7 +53,7 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
     v.match.vars?.forEach((vv, kk) => {
       varStr.push(`${kk} => ${vv}`)
     })
-    const matchStr = `\n\nMATCH ${v.match.id} is ${
+    const matchStr = `\n\nmatch ${v.match.id} is ${
       enabled ? 'enabled' : 'disabled'
     } \n\n idAttrs: ${idAttrStr}\n hash: ${k} \n\n -- vars -- \n\n ${varStr.join(
       '\n'
@@ -62,9 +62,9 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
   })
   const label = `MEMORY ${node.id}\n\nrule: ${
     node.ruleName
-  }\n\n -- conditions --\n${conditionToString(
+  }\n\n ** CONDITIONS ** \\n${conditionToString(
     node.condition
-  )}\n\n-- matches --\n${matchStrs}\n\n`
+  )}\n\n** MATCHES ** \n${matchStrs}\n\n`
   return {
     id: node.id,
     attributes: `[shape=rect, color=green${fillColor}, label="${label}"]`,
@@ -74,14 +74,18 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
 const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>): Node => {
   const testVal = node.testField
     ? `${FIELD_TO_STR[node.testField]} ${node.testValue}`
-    : ''
+    : node.testValue
+    ? `${FIELD_TO_STR[Field.IDENTIFIER]} ${node.testValue}`
+    : 'dummy root'
   const factStrs: string[] = []
 
   const fieldKind = new Set<string>()
 
   node.facts.forEach((v, k) => {
     v.forEach((vv, kk) => {
-      if (node.testField === Field.ATTRIBUTE) {
+      if (node.testField === Field.IDENTIFIER) {
+        fieldKind.add(vv[0].toString())
+      } else if (node.testField === Field.ATTRIBUTE) {
         fieldKind.add(vv[1].toString())
       } else if (node.testField === Field.VALUE) {
         fieldKind.add(vv[2].toString())
@@ -100,7 +104,7 @@ const alphaNode = <SCHEMA>(node: AlphaNode<SCHEMA>): Node => {
 const joinNode = <SCHEMA>(node: JoinNode<SCHEMA>): Node => {
   const cond = conditionToString(node.condition)
   const idName = node.idName ?? ''
-  const label = `${node.ruleName}\n${idName}\n${cond}`
+  const label = `${node.ruleName}\n${idName}\n\n**CONDITIONS**\n\n${cond}`
 
   return {
     id: node.id,

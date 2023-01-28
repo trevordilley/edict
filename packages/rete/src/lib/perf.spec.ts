@@ -1,4 +1,13 @@
-import { rete } from './rete'
+import {
+  leftActCountAfter,
+  leftActCountBefore,
+  matchVarCount,
+  msDoActivate,
+  nonEmptyVarUpdates,
+  numTokens,
+  rete,
+  varKeys,
+} from './rete'
 import { Field, MatchT, vizOnlineUrl } from '@edict/rete'
 import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
@@ -117,6 +126,39 @@ const convertMatchFn = (vars: MatchT<Schema>) => vars
 
 // Tests based on these benchmarks: https://github.com/noctjs/ecs-benchmark
 
+it('test map instantiation', () => {
+  const orig = new Map()
+  orig.set('Delta', 1)
+  orig.set('dt', 1)
+  const orig2 = new Map()
+  orig.set('Delta', 1)
+  orig.set('dt', 1)
+
+  const mut3 = new Map()
+
+  let n = orig
+  const b = performance.now()
+  for (let i = 0; i < 540_000; i++) {
+    n = new Map(orig)
+  }
+  const a = performance.now()
+  const b2 = performance.now()
+  for (let i = 0; i < 540_000; i++) {
+    mut3.set(i % 1000, i)
+  }
+  const a2 = performance.now()
+  const b3 = performance.now()
+  let y
+  for (let i = 0; i < 540_000; i++) {
+    y = () => i
+  }
+  const a3 = performance.now()
+  console.log('inst', a - b)
+  console.log('mut', a2 - b2)
+  console.log('fn', a3 - b3)
+  expect(2).toBe(2)
+})
+
 describe('rete perf', () => {
   it('packed_5', () => {
     // @ts-ignore
@@ -125,7 +167,7 @@ describe('rete perf', () => {
       const valName = name.toLowerCase()
       const entJoin = '$ent'
       const production = rete.initProduction<Schema, MatchT<Schema>>({
-        name,
+        name: `${name} production`,
         convertMatchFn,
         thenFn: ({ vars }) => {
           const id = vars.get(entJoin)!
@@ -148,15 +190,17 @@ describe('rete perf', () => {
         false
       )
       rete.addProductionToSession(session, production)
+      return production
     }
-    makeProduction('A')
-    makeProduction('B')
+    const a = makeProduction('A')
+    const b = makeProduction('B')
     makeProduction('C')
     makeProduction('D')
     makeProduction('E')
+    console.log(vizOnlineUrl(session))
 
     rete.insertFact(session, ['Delta', 'delta', 1])
-    const NUM_ENTITIES = 10
+    const NUM_ENTITIES = 4
     for (let i = 0; i < NUM_ENTITIES; i++) {
       rete.insertFact(session, [i, 'A', 1])
       rete.insertFact(session, [i, 'B', 1])
@@ -167,29 +211,56 @@ describe('rete perf', () => {
     rete.fireRules(session)
     rete.insertFact(session, ['Delta', 'delta', 1])
     rete.fireRules(session)
-    console.log(vizOnlineUrl(session))
+    rete.insertFact(session, ['Delta', 'delta', 1])
+    const x = rete.queryAll(session, a)
+    const y = rete.queryAll(session, b)
+    const before = performance.now()
+    let count = 0
     // const { hz } = bench('packed5', () => {
-    //   rete.insertFact(session, ['Delta', 'delta', 1])
+    //   const dt = Math.random()
+    //   rete.insertFact(session, ['Delta', 'delta', dt])
     //   rete.fireRules(session)
+    //   count++
     // })
-    // const measureMap = new Map<
-    //   string,
-    //   { total: number; count: number; avg: number }
-    // >()
-    // performance.getEntriesByType('measure').map((p) => {
-    //   if (!measureMap.has(p.name)) {
-    //     measureMap.set(p.name, { total: 0, count: 0, avg: 0 })
-    //   }
-    //   measureMap.get(p.name)!.count += 1
-    //   measureMap.get(p.name)!.total += p.duration
-    // })
-    // const results: any = {}
-    // measureMap.forEach((agg, name) => {
-    //   measureMap.get(name)!.avg = agg.total / agg.count
-    //   results[name] = measureMap.get(name)
-    // })
-    // console.table(results)
-    // console.log(viz(session))
+    const after = performance.now()
+    const measureMap = new Map<
+      string,
+      { total: number; count: number; avg: number }
+    >()
+    performance.getEntriesByType('measure').map((p) => {
+      if (!measureMap.has(p.name)) {
+        measureMap.set(p.name, { total: 0, count: 0, avg: 0 })
+      }
+      measureMap.get(p.name)!.count += 1
+      measureMap.get(p.name)!.total += p.duration
+    })
+    const results: any = {}
+    measureMap.forEach((agg, name) => {
+      measureMap.get(name)!.avg = agg.total / agg.count
+      results[name] = measureMap.get(name)
+    })
+    console.log(
+      'nonEmptyVarSets ',
+      nonEmptyVarUpdates,
+      ' num tokens',
+      numTokens,
+      'before ',
+      leftActCountBefore,
+      ' after ',
+      leftActCountAfter,
+      ' total ',
+      leftActCountAfter + leftActCountBefore,
+      ' ms do activate ',
+      msDoActivate,
+      ' ms total ',
+      after - before,
+      ' count ',
+      count,
+      ' match var count ',
+      matchVarCount
+    )
+    console.log('keys ', varKeys)
+    expect(2).toBe(2)
     // expect(hz).toBeGreaterThan(1)
     // expect(hz).toBeGreaterThan(10)
     // expect(hz).toBeGreaterThan(100)

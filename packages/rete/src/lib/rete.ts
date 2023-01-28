@@ -291,32 +291,63 @@ const subscribeToProduction = <T, U>(
 //
 // We'd need a map
 const varUpdateLog: any[] = []
-
+export const nonEmptyVarUpdates = 0
 const getVarFromFact = <T>(
   vars: MatchT<T>,
-  key: string,
-  fact: FactFragment<T>
+  conditionName: string,
+  factIdOrVal: FactFragment<T>
 ): boolean => {
-  if (vars.has(key) && vars.get(key) != fact) {
-    varUpdateLog.push({
-      didUpdateVars: false,
-      key,
-      original: vars.get(key),
-      new: vars.get(key),
-    })
-    return false
+  // If the vars do not have this condition name, then match the condition name
+  // to the factId or the value
+  if (!vars.has(conditionName) || vars.get(conditionName) == factIdOrVal) {
+    vars.set(conditionName, factIdOrVal)
+    return true
   } else {
-    varUpdateLog.push({
-      didUpdateVars: true,
-      key,
-      original: vars.get(key),
-      new: fact,
-    })
-    vars.set(key, fact)
+    return false
   }
-  return true
 }
 
+/// There's going to be a lot of facts
+/// There's a small number of conditions
+/// There's a small number of vars
+/// However, we need a var map for every fact
+/// Do we just make a big map that hashes every fact token + attr/id?
+/// How do we inherit values from an existing map?
+//////// prime numbers????
+/// setting keys that already exist in a map is fast
+
+/// namespace keys by token + fact? something like that? initial cost of setting keys
+/// but if they don't change that much maybe savings?
+
+/// ideally we optimize for key reuse as much as possible.
+
+/// The challenge is two fold. Finding the right key to namespace on, and
+/// how do we only track changes rather than copy whole data sets?
+
+/// Perhaps we return an array of accessors to access key->vals by token?
+
+/// Javascript is single threaded so we can count on doing things one at
+/// a time here, so if we need an incrementing id we can leverage that
+
+/// I think it all comes down to a modification of `getVarsFromFact`,
+/// every time it's used we make a new map to make things immutable,
+
+/// instead we need to make it so all things that want their vars
+/// will know how to get them.
+
+/// matches have id's, we can use that I think.
+/// We can also assign other ids.
+
+/// These id's could correspond to array indexes, though be careful. `array.push` is as
+/// expensive as `map.set`, and those are each half as fast as doing `new Map()`
+
+/// The right step forward is to look at how the vars are READ, which will inform how
+/// they are WRITTEN.
+
+/// Matches are what is passed into convert match
+
+/// That's why that one specific `new Map(vars)` to just `vars` is so effective.
+/// It's the last copy before assigning to `vars` which is passed to the thenFn's
 const getVarsFromFact = <T>(
   vars: MatchT<T>,
   condition: Condition<T>,
@@ -338,7 +369,13 @@ const getVarsFromFact = <T>(
   }
   return true
 }
-
+export let leftActCountBefore = 0
+export let leftActCountAfter = 0
+export const msNoActivate = 0
+export let msDoActivate = 0
+export const varKeys = new Set<{ id: number; fact: any; vars: Map<any, any> }>()
+export let matchVarCount = 0
+export let numTokens = 0
 const leftActivationFromVars = <T>(
   session: Session<T>,
   node: JoinNode<T>,
@@ -359,11 +396,41 @@ const leftActivationFromVars = <T>(
   // way to thread the needle OR find that one path where we modify the vars when we
   // shouldn't and correct it. I'd definitely prefer NOT adding an immutability library
   // simply cause it splits the mental model into "mutable" world vs "immutable" world.
+  leftActCountBefore++
+
+  /**
+   * Var Log
+   *
+   * Passing:
+   * keys   Set(2) {
+   *          Map(1) { 'c1' => 'red' },
+   *          Map(1) { 'c1' => 'maize'}
+   *        }
+   *
+   * Failing:
+   * keys  Set(2) {
+   *         Map(3) { 'c1' => 'red', 'otherPerson' => 0, 'c2' => 'red' },
+   *         Map(3) { 'c1' => 'maize', 'otherPerson' => 0, 'c2' => 'maize' }
+   *       }
+   */
+
   const newVars: MatchT<T> = new Map(vars)
   if (getVarsFromFact(newVars, node.condition, alphaFact)) {
+    const b = performance.now()
+    for (const k of vars.keys()) {
+      varKeys.add({
+        id: node.id,
+        fact: { new: token.fact.join(','), old: token.oldFact?.join(',') },
+        vars,
+      })
+    }
+    const a = performance.now()
+    msDoActivate += a - b
+    leftActCountAfter++
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
+    numTokens++
     const newToken = { fact: alphaFact, kind: token.kind }
     const isNew = !node.oldIdAttrs?.has(hashIdAttr(idAttr))
     const child = node.child
@@ -402,13 +469,11 @@ const leftActivationWithoutAlpha = <T>(
       })
     }
   } else {
-    const factsForId = [...node.alphaNode.facts.values()]
-    factsForId.forEach((facts) => {
-      const alphas = [...facts.values()]
-      alphas.forEach((alphaFact) => {
+    for (const fact of node.alphaNode.facts.values()) {
+      for (const alphaFact of fact.values()) {
         leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
-      })
-    })
+      }
+    }
   }
 }
 
@@ -440,6 +505,7 @@ const leftActivationOnMemoryNode = <T>(
       node.lastMatchId += 1
       match = { id: node.lastMatchId }
     }
+    matchVarCount++
     match.vars = new Map(vars)
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
@@ -471,7 +537,6 @@ const leftActivationOnMemoryNode = <T>(
       }
     }
   }
-
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
     leftActivationWithoutAlpha(session, node.child, idAttrs, vars, token)
   }
@@ -500,16 +565,16 @@ const rightActivationWithJoinNode = <T>(
     }
   } else {
     node.parent.matches.forEach((match) => {
-      const vars: MatchT<T> = new Map(match.match.vars)
+      // const store = match.match.vars.inherit(token.fact)
+      const newVars: MatchT<T> = new Map(match.match.vars)
       const idName = node.idName
-      if (idName && idName !== '' && vars?.get(idName) != token.fact[0]) {
+      if (idName && idName !== '' && newVars?.get(idName) != token.fact[0]) {
         return
       }
-      if (!vars) {
+      if (!newVars) {
         throw new Error('Expected vars to not be undefinied???')
       }
 
-      const newVars = new Map(vars)
       if (getVarsFromFact(newVars, node.condition, token.fact)) {
         const newIdAttrs = [...match.idAttrs]
         newIdAttrs.push(idAttr)
