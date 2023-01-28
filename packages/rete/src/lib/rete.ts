@@ -293,13 +293,11 @@ const subscribeToProduction = <T, U>(
 // We'd need a map
 const getVarFromFactViaJoinPath = <T>(
   session: Session<T>,
+  _id: number,
   joinPath: number[],
   conditionName: string,
   factIdOrVal: FactFragment<T>
 ): boolean => {
-  if (conditionName === 'c2') {
-    console.log('c2')
-  }
   const key = joinPathToKey(joinPath)
   const matchedVars = session.joinPathToMatches.get(key)?.matchedVars
   if (matchedVars === undefined) {
@@ -309,7 +307,8 @@ const getVarFromFactViaJoinPath = <T>(
     return true
   } else if (matchedVars.get(conditionName) == factIdOrVal) {
     return true
-  } else if (!matchedVars.has(conditionName)) {
+  } else if (!matchedVars.has(conditionName) || session.dirtyIdAttrs.has(_id)) {
+    console.log(`dirty`, key)
     matchedVars.set(conditionName, factIdOrVal)
     return true
   } else {
@@ -421,11 +420,11 @@ const getVarsFromFact = <T>(
   const idAttr = session.idAttrNodes.get(hashIdAttr(getIdAttr(fact)))
   if (!idAttr)
     throw new Error(`idAttr missing in session.idAttrNodes for fact ${fact}?`)
+  const newPath = [...joinPath, idAttr._id]
   for (let i = 0; i < condition.vars.length; i++) {
     const v = condition.vars[i]
-    const initialVars = new Map(matchedVars)
     if (v.field === Field.IDENTIFIER) {
-      getVarFromFactViaJoinPath(session, joinPath, v.name, fact[0])
+      getVarFromFactViaJoinPath(session, idAttr._id, newPath, v.name, fact[0])
       const varResult = getVarFromFact(matchedVars, v.name, fact[0])
       const joinResult = compileMatchesAlongJoinPath(
         joinPath,
@@ -433,24 +432,22 @@ const getVarsFromFact = <T>(
       )
       const newVars = matchedVars
       if (!varResult) {
+        session.dirtyIdAttrs.delete(idAttr._id)
         return { setVar: false, newPath: joinPath }
       }
     } else if (v.field === Field.ATTRIBUTE) {
       throw new Error(`Attributes can not contain vars: ${v}`)
     } else if (v.field === Field.VALUE) {
-      getVarFromFactViaJoinPath(session, joinPath, v.name, fact[2])
-      const joinResult = compileMatchesAlongJoinPath(
-        joinPath,
-        session.joinPathToMatches
-      )
-      const newVars = matchedVars
+      getVarFromFactViaJoinPath(session, idAttr._id, newPath, v.name, fact[2])
       const varResult = getVarFromFact(matchedVars, v.name, fact[2])
       if (!varResult) {
+        session.dirtyIdAttrs.delete(idAttr._id)
         return { setVar: false, newPath: joinPath }
       }
     }
   }
-  return { setVar: true, newPath: [...joinPath, idAttr._id] }
+  session.dirtyIdAttrs.delete(idAttr._id)
+  return { setVar: true, newPath }
 }
 
 const isVarChanged = <T>(
@@ -462,28 +459,6 @@ const isVarChanged = <T>(
     matchedVars.get(conditionName) != factIdOrVal &&
     matchedVars.get(conditionName) !== undefined
   )
-}
-
-const isVarsChanged = <T>(
-  matchedVars: MatchedVars<T>,
-  condition: Condition<T>,
-  fact: Fact<T>
-): boolean => {
-  for (let i = 0; i < condition.vars.length; i++) {
-    const v = condition.vars[i]
-    if (v.field === Field.IDENTIFIER) {
-      if (isVarChanged(matchedVars, v.name, fact[0])) {
-        return true
-      }
-    } else if (v.field === Field.ATTRIBUTE) {
-      throw new Error(`Attributes can not contain vars: ${v}`)
-    } else if (v.field === Field.VALUE) {
-      if (isVarChanged(matchedVars, v.name, fact[2])) {
-        return true
-      }
-    }
-  }
-  return false
 }
 
 const leftActivationFromVars = <T>(
@@ -562,11 +537,7 @@ const leftActivationWithoutAlpha = <T>(
       if (!alphaFacts)
         throw new Error(`Expected to have alpha facts for ${node.idName}`)
       alphaFacts.forEach((alphaFact) => {
-        const idAttr = session.idAttrNodes.get(
-          hashIdAttr([alphaFact[0], alphaFact[1]])
-        )!
         const newMatchedVars = new Map(matchedVars)
-        //const newPath = [...joinPath, idAttr._id]
         const result = getVarsFromFact(
           newMatchedVars,
           node.condition,
@@ -591,11 +562,6 @@ const leftActivationWithoutAlpha = <T>(
     for (const fact of node.alphaNode.facts.values()) {
       for (const alphaFact of fact.values()) {
         const newMatchedVars = new Map(matchedVars)
-
-        // const idAttr = session.idAttrNodes.get(
-        //   hashIdAttr([alphaFact[0], alphaFact[1]])
-        // )!
-        // const newPath = [...joinPath, idAttr._id]
         const result = getVarsFromFact(
           newMatchedVars,
           node.condition,
@@ -777,7 +743,7 @@ const rightActivationWithJoinNode = <T>(
         leftActivationOnMemoryNode(
           session,
           child,
-          path,
+          result.newPath,
           newIdAttrs,
           newVars,
           token,
@@ -788,6 +754,20 @@ const rightActivationWithJoinNode = <T>(
   }
 }
 
+const markFactDirty = <T>(session: Session<T>, fact: Fact<T>) => {
+  const idAttr = getIdAttr(fact)
+  const idAttrHash = hashIdAttr(idAttr)
+
+  const key = session.idAttrNodes.get(idAttrHash)?._id
+  if (key) {
+    for (const [k, _] of session.joinPathToMatches) {
+      if (Number.isInteger(k / key)) {
+        session.dirtyIdAttrs.add(key)
+      }
+    }
+  }
+}
+
 const rightActivationWithAlphaNode = <T>(
   session: Session<T>,
   node: AlphaNode<T>,
@@ -795,21 +775,6 @@ const rightActivationWithAlphaNode = <T>(
 ) => {
   const idAttr = getIdAttr(token.fact)
   const idAttrHash = hashIdAttr(idAttr)
-  if (token.kind === TokenKind.RETRACT || token.kind === TokenKind.UPDATE) {
-    const idAttr = getIdAttr(token.fact)
-    const idAttrHash = hashIdAttr(idAttr)
-
-    const key = session.idAttrNodes.get(idAttrHash)?._id
-    if (key) {
-      for (const [k, _] of session.joinPathToMatches) {
-        const result = k / key
-        const isInt = Number.isInteger(result)
-        if (Number.isInteger(k / key)) {
-          session.joinPathToMatches.get(k)?.matchedVars.clear()
-        }
-      }
-    }
-  }
   const [id, attr] = idAttr
   if (token.kind === TokenKind.INSERT) {
     if (!node.facts.has(id.toString())) {
@@ -825,12 +790,14 @@ const rightActivationWithAlphaNode = <T>(
     }
     session.idAttrNodes.get(idAttrHash)!.alphaNodes.add(node)
   } else if (token.kind === TokenKind.RETRACT) {
+    markFactDirty(session, token.fact)
     node.facts.get(id.toString())?.delete(attr.toString())
     session.idAttrNodes.get(idAttrHash)!.alphaNodes.delete(node)
     if (session.idAttrNodes.get(idAttrHash)!.alphaNodes.size == 0) {
       session.idAttrNodes.delete(idAttrHash)
     }
   } else if (token.kind === TokenKind.UPDATE) {
+    markFactDirty(session, token.fact)
     const idAttr = node.facts.get(id.toString())
     if (idAttr === undefined) throw new Error(`Expected fact id to exist ${id}`)
     idAttr.set(attr.toString(), token.fact)
