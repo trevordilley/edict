@@ -307,8 +307,7 @@ const getVarFromFactViaJoinPath = <T>(
     return true
   } else if (matchedVars.get(conditionName) == factIdOrVal) {
     return true
-  } else if (!matchedVars.has(conditionName) || session.dirtyIdAttrs.has(_id)) {
-    console.log(`dirty`, key)
+  } else if (!matchedVars.has(conditionName) || session.dirtyIdAttrs.has(key)) {
     matchedVars.set(conditionName, factIdOrVal)
     return true
   } else {
@@ -399,11 +398,6 @@ const compileMatchesAlongJoinPath = <T>(
     //     `Could not find ${key} in session matches, is path ${joinPath} correct?`
     //   )
     for (const [k, v] of matched.matchedVars) {
-      if (result.has(k)) {
-        console.warn(
-          `Existing match in joinPath? Key: ${key}, path: ${joinPath}`
-        )
-      }
       result.set(k, v)
     }
   }
@@ -421,6 +415,7 @@ const getVarsFromFact = <T>(
   if (!idAttr)
     throw new Error(`idAttr missing in session.idAttrNodes for fact ${fact}?`)
   const newPath = [...joinPath, idAttr._id]
+  const newPathKey = joinPathToKey(newPath)
   for (let i = 0; i < condition.vars.length; i++) {
     const v = condition.vars[i]
     if (v.field === Field.IDENTIFIER) {
@@ -432,7 +427,7 @@ const getVarsFromFact = <T>(
       )
       const newVars = matchedVars
       if (!varResult) {
-        session.dirtyIdAttrs.delete(idAttr._id)
+        session.dirtyIdAttrs.delete(newPathKey)
         return { setVar: false, newPath: joinPath }
       }
     } else if (v.field === Field.ATTRIBUTE) {
@@ -441,12 +436,12 @@ const getVarsFromFact = <T>(
       getVarFromFactViaJoinPath(session, idAttr._id, newPath, v.name, fact[2])
       const varResult = getVarFromFact(matchedVars, v.name, fact[2])
       if (!varResult) {
-        session.dirtyIdAttrs.delete(idAttr._id)
+        session.dirtyIdAttrs.delete(newPathKey)
         return { setVar: false, newPath: joinPath }
       }
     }
   }
-  session.dirtyIdAttrs.delete(idAttr._id)
+  session.dirtyIdAttrs.delete(newPathKey)
   return { setVar: true, newPath }
 }
 
@@ -623,7 +618,7 @@ const leftActivationOnMemoryNode = <T>(
       match.joinPath,
       session.joinPathToMatches
     )
-    match.matchedVars = new Map(matchedVars)
+    match.matchedVars = joinPathMatches //new Map(matchedVars)
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
       !node.nodeType?.condFn ||
@@ -754,7 +749,7 @@ const rightActivationWithJoinNode = <T>(
   }
 }
 
-const markFactDirty = <T>(session: Session<T>, fact: Fact<T>) => {
+const markPathsWithFactDirty = <T>(session: Session<T>, fact: Fact<T>) => {
   const idAttr = getIdAttr(fact)
   const idAttrHash = hashIdAttr(idAttr)
 
@@ -762,7 +757,7 @@ const markFactDirty = <T>(session: Session<T>, fact: Fact<T>) => {
   if (key) {
     for (const [k, _] of session.joinPathToMatches) {
       if (Number.isInteger(k / key)) {
-        session.dirtyIdAttrs.add(key)
+        session.dirtyIdAttrs.add(k)
       }
     }
   }
@@ -790,14 +785,14 @@ const rightActivationWithAlphaNode = <T>(
     }
     session.idAttrNodes.get(idAttrHash)!.alphaNodes.add(node)
   } else if (token.kind === TokenKind.RETRACT) {
-    markFactDirty(session, token.fact)
+    markPathsWithFactDirty(session, token.fact)
     node.facts.get(id.toString())?.delete(attr.toString())
     session.idAttrNodes.get(idAttrHash)!.alphaNodes.delete(node)
     if (session.idAttrNodes.get(idAttrHash)!.alphaNodes.size == 0) {
       session.idAttrNodes.delete(idAttrHash)
     }
   } else if (token.kind === TokenKind.UPDATE) {
-    markFactDirty(session, token.fact)
+    markPathsWithFactDirty(session, token.fact)
     const idAttr = node.facts.get(id.toString())
     if (idAttr === undefined) throw new Error(`Expected fact id to exist ${id}`)
     idAttr.set(attr.toString(), token.fact)
