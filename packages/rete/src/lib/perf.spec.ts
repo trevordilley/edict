@@ -1,13 +1,4 @@
-import {
-  leftActCountAfter,
-  leftActCountBefore,
-  matchVarCount,
-  msDoActivate,
-  nonEmptyVarUpdates,
-  numTokens,
-  rete,
-  varKeys,
-} from './rete'
+import { rete } from './rete'
 import { Field, MatchT, vizOnlineUrl } from '@edict/rete'
 import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
@@ -200,7 +191,7 @@ describe('rete perf', () => {
     console.log(vizOnlineUrl(session))
 
     rete.insertFact(session, ['Delta', 'delta', 1])
-    const NUM_ENTITIES = 4
+    const NUM_ENTITIES = 1000
     for (let i = 0; i < NUM_ENTITIES; i++) {
       rete.insertFact(session, [i, 'A', 1])
       rete.insertFact(session, [i, 'B', 1])
@@ -216,12 +207,12 @@ describe('rete perf', () => {
     const y = rete.queryAll(session, b)
     const before = performance.now()
     let count = 0
-    // const { hz } = bench('packed5', () => {
-    //   const dt = Math.random()
-    //   rete.insertFact(session, ['Delta', 'delta', dt])
-    //   rete.fireRules(session)
-    //   count++
-    // })
+    const { hz } = bench('packed5', () => {
+      const dt = Math.random()
+      rete.insertFact(session, ['Delta', 'delta', dt])
+      rete.fireRules(session)
+      count++
+    })
     const after = performance.now()
     const measureMap = new Map<
       string,
@@ -239,32 +230,10 @@ describe('rete perf', () => {
       measureMap.get(name)!.avg = agg.total / agg.count
       results[name] = measureMap.get(name)
     })
-    console.log(
-      'nonEmptyVarSets ',
-      nonEmptyVarUpdates,
-      ' num tokens',
-      numTokens,
-      'before ',
-      leftActCountBefore,
-      ' after ',
-      leftActCountAfter,
-      ' total ',
-      leftActCountAfter + leftActCountBefore,
-      ' ms do activate ',
-      msDoActivate,
-      ' ms total ',
-      after - before,
-      ' count ',
-      count,
-      ' match var count ',
-      matchVarCount
-    )
-    console.log('keys ', varKeys)
-    expect(2).toBe(2)
-    // expect(hz).toBeGreaterThan(1)
-    // expect(hz).toBeGreaterThan(10)
-    // expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(1)
+    expect(hz).toBeGreaterThan(10)
+    expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(1000)
     // expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)
     // expect(hz).toBeGreaterThan(300_000)

@@ -1,10 +1,4 @@
-import {
-  leftActCountAfter,
-  leftActCountBefore,
-  msDoActivate,
-  rete,
-  varKeys,
-} from './rete'
+import { rete } from './rete'
 import { FactFragment, Field, MatchT } from './types'
 import { viz, vizOnlineUrl } from '@edict/rete'
 
@@ -295,23 +289,8 @@ describe('rete', () => {
     )
     rete.addProductionToSession(session, secondRule)
 
-    console.log('before facts, ', vizOnlineUrl(session))
     rete.insertFact(session, [Id.Alice, 'Color', 'red'])
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
-    console.log('second insert, ', vizOnlineUrl(session))
-    console.log(
-      'before ',
-      leftActCountBefore,
-      ' after ',
-      leftActCountAfter,
-      ' total ',
-      leftActCountAfter + leftActCountBefore,
-      ' ms do activate ',
-      msDoActivate,
-      ' count ',
-      count
-    )
-    console.log('keys ', varKeys)
     expect(count).toBe(3)
   })
 

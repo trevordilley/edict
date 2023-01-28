@@ -290,8 +290,6 @@ const subscribeToProduction = <T, U>(
 // $npc: {circle, speed, destX, destY},
 //
 // We'd need a map
-const varUpdateLog: any[] = []
-export const nonEmptyVarUpdates = 0
 const getVarFromFact = <T>(
   vars: MatchT<T>,
   conditionName: string,
@@ -369,13 +367,6 @@ const getVarsFromFact = <T>(
   }
   return true
 }
-export let leftActCountBefore = 0
-export let leftActCountAfter = 0
-export const msNoActivate = 0
-export let msDoActivate = 0
-export const varKeys = new Set<{ id: number; fact: any; vars: Map<any, any> }>()
-export let matchVarCount = 0
-export let numTokens = 0
 const leftActivationFromVars = <T>(
   session: Session<T>,
   node: JoinNode<T>,
@@ -396,7 +387,6 @@ const leftActivationFromVars = <T>(
   // way to thread the needle OR find that one path where we modify the vars when we
   // shouldn't and correct it. I'd definitely prefer NOT adding an immutability library
   // simply cause it splits the mental model into "mutable" world vs "immutable" world.
-  leftActCountBefore++
 
   /**
    * Var Log
@@ -416,21 +406,9 @@ const leftActivationFromVars = <T>(
 
   const newVars: MatchT<T> = new Map(vars)
   if (getVarsFromFact(newVars, node.condition, alphaFact)) {
-    const b = performance.now()
-    for (const k of vars.keys()) {
-      varKeys.add({
-        id: node.id,
-        fact: { new: token.fact.join(','), old: token.oldFact?.join(',') },
-        vars,
-      })
-    }
-    const a = performance.now()
-    msDoActivate += a - b
-    leftActCountAfter++
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
-    numTokens++
     const newToken = { fact: alphaFact, kind: token.kind }
     const isNew = !node.oldIdAttrs?.has(hashIdAttr(idAttr))
     const child = node.child
@@ -505,7 +483,6 @@ const leftActivationOnMemoryNode = <T>(
       node.lastMatchId += 1
       match = { id: node.lastMatchId }
     }
-    matchVarCount++
     match.vars = new Map(vars)
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
