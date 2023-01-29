@@ -180,7 +180,18 @@ export interface Debug<T> extends DebugOptions {
 
 export interface Session<T> {
   alphaNode: AlphaNode<T>
-  memoryNodeAdjacenyMatrix: number[][]
+
+  // If there is a value, then we're using a bit mask
+  // Left 15 bits is the index first condition id
+  // Right 15 bits is the last index condition id
+  //
+  // The matrix should be organized such that all dependent memory nodes are to the left,
+  // organized by nearest dependent to most distant.
+  // memoryNodeAdjacenyMatrix: (number | undefined)[][]
+  //
+  // //
+  // idAttrIdByConditionId: boolean[][]
+
   leafNodes: Map<string, MemoryNode<T>>
   idAttrNodes: Map<
     IdAttrsHash,

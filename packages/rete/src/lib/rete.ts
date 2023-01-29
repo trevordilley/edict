@@ -1035,6 +1035,8 @@ const initSession = <T>(
 
   const initMatch = () => defaultInitMatch()
 
+  // Started a spreadsheet thinking about this stuff
+  // here: packages/rete/docs/thinking-about-adj-arrays.xlsx
   const memoryNodeAdjacenyMatrix: number[][] = []
 
   return {
@@ -1051,7 +1053,7 @@ const initSession = <T>(
     autoFire,
     nextId,
     nextConditionId,
-    memoryNodeAdjacenyMatrix,
+    //memoryNodeAdjacenyMatrix,
     debug: {
       ...debug,
       numFramesSinceInit: 0,

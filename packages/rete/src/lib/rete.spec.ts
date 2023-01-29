@@ -626,7 +626,7 @@ describe('rete', () => {
     rete.addProductionToSession(session, rule2)
     rete.insertFact(session, [Id.Alice, 'LeftOf', Id.Zach])
     rete.fireRules(session)
-    console.log(viz(session))
+    console.log(vizOnlineUrl(session))
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(alice).toBe(Id.Alice)
