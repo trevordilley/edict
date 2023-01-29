@@ -42,9 +42,13 @@ export interface Token<T> {
 /** Matches **/
 
 export type Vars<T> = Map<string, T>
-export interface Var {
+export interface Binding {
   name: string
   field: Field
+}
+export interface Var {
+  id: number
+  binding: Binding
 }
 
 export interface Match<T> {
@@ -132,6 +136,7 @@ export interface Condition<T> {
 }
 
 export interface Production<T, U> {
+  session: Session<T>
   name: string
   conditions: Condition<T>[]
   convertMatchFn: ConvertMatchFn<T, U>
@@ -175,6 +180,7 @@ export interface Debug<T> extends DebugOptions {
 
 export interface Session<T> {
   alphaNode: AlphaNode<T>
+  memoryNodeAdjacenyMatrix: number[][]
   leafNodes: Map<string, MemoryNode<T>>
   idAttrNodes: Map<
     IdAttrsHash,
@@ -189,6 +195,7 @@ export interface Session<T> {
   autoFire: boolean
   initMatch: InitMatchFn<T>
   nextId: () => number
+  nextConditionId: () => number
   debug: Debug<T>
 }
 

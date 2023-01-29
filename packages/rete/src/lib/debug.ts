@@ -34,7 +34,7 @@ const conditionToString = <SCHEMA>(condition: Condition<SCHEMA>) => {
     .join('\n')
 
   const varStr = condition.vars
-    .map((v) => `${FIELD_TO_STR[v.field]}: ${v.name}`)
+    .map((v) => `${FIELD_TO_STR[v.binding.field]}: ${v.binding.name}`)
     .join('\n')
 
   return `-- nodes --\n ${nodeStr}\n\n -- vars -- \n ${varStr}`

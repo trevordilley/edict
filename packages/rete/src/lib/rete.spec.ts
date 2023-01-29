@@ -38,6 +38,7 @@ describe('rete', () => {
     let subResultsGeorgeAndThomas: MatchT<SmallSchema>[] = []
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'numCondsAndFacts',
+      session,
       convertMatchFn,
       thenFn: ({ vars }) => {
         expect(vars.get('a')).toBe(Id.Alice)
@@ -119,6 +120,7 @@ describe('rete', () => {
     const session = rete.initSession<SmallSchema>(false)
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'outOfOrder',
+      session,
       convertMatchFn,
       thenFn: ({ vars }) => {
         expect(vars.get('a')).toBe(Id.Alice)
@@ -232,6 +234,7 @@ describe('rete', () => {
     const firstRuleProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>(
       {
         name: 'firstRule',
+        session,
         convertMatchFn,
         thenFn: () => {
           rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
@@ -251,6 +254,7 @@ describe('rete', () => {
     rete.addProductionToSession(session, firstRuleProd)
     const secondRule = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'secondRule',
+      session,
       convertMatchFn,
       thenFn: (vars) => {
         count++
@@ -297,6 +301,7 @@ describe('rete', () => {
   it('duplicate facts', () => {
     const session = rete.initSession<SmallSchema>(false)
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
+      session,
       name: 'duplicateFacts',
       convertMatchFn,
     })
@@ -347,6 +352,7 @@ describe('rete', () => {
     const session = rete.initSession<SmallSchema>(false)
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'removingFacts',
+      session,
       convertMatchFn,
     })
 
@@ -399,6 +405,7 @@ describe('rete', () => {
     let zVal: FactFragment<SmallSchema> | undefined = undefined
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'updatingFacts',
+      session,
       convertMatchFn,
       thenFn: ({ vars }) => {
         zVal = vars.get('z')
@@ -459,6 +466,7 @@ describe('rete', () => {
     let thenFinallyCount = 0
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'updatingFacts',
+      session,
       convertMatchFn,
       thenFn: async ({ vars }) => {
         const p = await new Promise<FactFragment<SmallSchema> | undefined>(
@@ -532,6 +540,7 @@ describe('rete', () => {
     const session = rete.initSession<SmallSchema>(false)
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'updatingFacts',
+      session,
       convertMatchFn,
     })
 
@@ -585,6 +594,7 @@ describe('rete', () => {
     let zach: Id
     const rule1 = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
+      session,
       convertMatchFn,
       thenFn: ({ vars }) => {
         alice = vars.get('a') as Id
@@ -600,6 +610,7 @@ describe('rete', () => {
     rete.addProductionToSession(session, rule1)
     const rule2 = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule2',
+      session,
       convertMatchFn,
       thenFn: ({ vars }) => {
         zach = vars.get('z') as Id
@@ -628,6 +639,7 @@ describe('rete', () => {
     const session = rete.initSession<SmallSchema>(false)
     const rule1 = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
+      session,
       convertMatchFn,
       condFn: (vars) => {
         return vars.get('id2') != vars.get('id1')
@@ -697,6 +709,7 @@ describe('rete', () => {
     const session = rete.initSession<SmallSchema>(false)
     const rule1 = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
+      session,
       convertMatchFn,
     })
     rete.addConditionsToProduction(
@@ -747,6 +760,7 @@ describe('rete', () => {
     let count = 0
     const rule1 = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
+      session,
       convertMatchFn,
       thenFn: () => {
         count = count + 1
@@ -779,6 +793,7 @@ describe('rete', () => {
     const session = rete.initSession<SmallSchema>(false)
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
+      session,
       convertMatchFn,
     })
     rete.addConditionsToProduction(
@@ -810,6 +825,7 @@ describe('rete', () => {
     const session = rete.initSession<SmallSchema>(false)
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
+      session,
       convertMatchFn,
     })
     rete.addConditionsToProduction(
@@ -849,6 +865,7 @@ describe('rete', () => {
     const session = rete.initSession<SmallSchema>(true)
     const colorProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'color',
+      session,
       convertMatchFn,
     })
     rete.addConditionsToProduction(
@@ -863,6 +880,7 @@ describe('rete', () => {
 
     const leftOfProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'leftOf',
+      session,
       convertMatchFn,
     })
     rete.addConditionsToProduction(
@@ -877,6 +895,7 @@ describe('rete', () => {
 
     const rightOfProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rightOf',
+      session,
       convertMatchFn,
     })
     rete.addConditionsToProduction(
@@ -951,6 +970,7 @@ describe('rete', () => {
     const session = rete.initSession<SmallSchema>(true)
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
+      session,
       convertMatchFn,
     })
     rete.addConditionsToProduction(
@@ -980,6 +1000,7 @@ describe('rete', () => {
     const session = rete.initSession<SmallSchema>()
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'rule1',
+      session,
       convertMatchFn,
     })
     rete.addConditionsToProduction(

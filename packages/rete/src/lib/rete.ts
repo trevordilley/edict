@@ -8,6 +8,7 @@
 
 import {
   AlphaNode,
+  Binding,
   CondFn,
   Condition,
   ConvertMatchFn,
@@ -89,7 +90,7 @@ const addNodes = <T>(
   return result
 }
 
-function isVar(obj: any): obj is Var {
+function isBinding(obj: any): obj is Binding {
   return obj.name !== undefined && obj.field !== undefined
 }
 
@@ -98,7 +99,7 @@ function isVar(obj: any): obj is Var {
 
 const addConditionsToProduction = <T, U>(
   production: Production<T, U>,
-  id: number | string | Var,
+  id: number | string | Binding,
   attr: keyof T,
   value: Var | any,
   then: boolean
@@ -108,9 +109,9 @@ const addConditionsToProduction = <T, U>(
 
   fieldTypes.forEach((fieldType) => {
     if (fieldType === Field.IDENTIFIER) {
-      if (isVar(id)) {
-        const temp = id
-        temp.field = fieldType
+      if (isBinding(id)) {
+        const temp = { binding: id, id: production.session.nextConditionId() }
+        temp.binding.field = fieldType
         condition.vars.push(temp)
       } else {
         condition.nodes.push([fieldType, id])
@@ -118,9 +119,12 @@ const addConditionsToProduction = <T, U>(
     } else if (fieldType === Field.ATTRIBUTE) {
       condition.nodes.push([fieldType, attr])
     } else if (fieldType === Field.VALUE) {
-      if (isVar(value)) {
-        const temp = value
-        temp.field = fieldType
+      if (isBinding(value)) {
+        const temp: Var = {
+          binding: value,
+          id: production.session.nextConditionId(),
+        }
+        temp.binding.field = fieldType
         condition.vars.push(temp)
       } else {
         condition.nodes.push([fieldType, value])
@@ -182,13 +186,13 @@ const addProductionToSession = <T, U>(
       oldIdAttrs: new Set<number>(),
     }
     condition.vars.forEach((v) => {
-      if (bindings.has(v.name)) {
-        joinedBindings.add(v.name)
-        if (v.field === Field.IDENTIFIER) {
-          joinNode.idName = v.name
+      if (bindings.has(v.binding.name)) {
+        joinedBindings.add(v.binding.name)
+        if (v.binding.field === Field.IDENTIFIER) {
+          joinNode.idName = v.binding.name
         }
       } else {
-        bindings.add(v.name)
+        bindings.add(v.binding.name)
       }
     })
     if (parentMemNode) {
@@ -252,7 +256,10 @@ const addProductionToSession = <T, U>(
     const vars = node.condition.vars
     for (let j = 0; j < vars.length; j++) {
       const v = vars[j]
-      if (v.field === Field.VALUE && joinedBindings.has(v.name)) {
+      if (
+        v.binding.field === Field.VALUE &&
+        joinedBindings.has(v.binding.name)
+      ) {
         node.disableFastUpdates = true
         break
       }
@@ -353,14 +360,14 @@ const getVarsFromFact = <T>(
 ): boolean => {
   for (let i = 0; i < condition.vars.length; i++) {
     const v = condition.vars[i]
-    if (v.field === Field.IDENTIFIER) {
-      if (!getVarFromFact(vars, v.name, fact[0])) {
+    if (v.binding.field === Field.IDENTIFIER) {
+      if (!getVarFromFact(vars, v.binding.name, fact[0])) {
         return false
       }
-    } else if (v.field === Field.ATTRIBUTE) {
+    } else if (v.binding.field === Field.ATTRIBUTE) {
       throw new Error(`Attributes can not contain vars: ${v}`)
-    } else if (v.field === Field.VALUE) {
-      if (!getVarFromFact(vars, v.name, fact[2])) {
+    } else if (v.binding.field === Field.VALUE) {
+      if (!getVarFromFact(vars, v.binding.name, fact[2])) {
         return false
       }
     }
@@ -483,6 +490,7 @@ const leftActivationOnMemoryNode = <T>(
       node.lastMatchId += 1
       match = { id: node.lastMatchId }
     }
+    // compile the vars from the idAttr x joinNodes
     match.vars = new Map(vars)
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
@@ -1000,7 +1008,9 @@ const initSession = <T>(
   }
 ): Session<T> => {
   let nodeIdCounter = 0
+  let conditionIdCounter = 0
   const nextId = () => nodeIdCounter++
+  const nextConditionId = () => conditionIdCounter++
   const alphaNode: AlphaNode<T> = {
     id: nodeIdCounter,
     facts: new Map<string, Map<string, Fact<T>>>(),
@@ -1025,6 +1035,8 @@ const initSession = <T>(
 
   const initMatch = () => defaultInitMatch()
 
+  const memoryNodeAdjacenyMatrix: number[][] = []
+
   return {
     alphaNode,
     leafNodes,
@@ -1038,6 +1050,8 @@ const initSession = <T>(
     triggeredSubscriptionQueue: new Set<string>(),
     autoFire,
     nextId,
+    nextConditionId,
+    memoryNodeAdjacenyMatrix,
     debug: {
       ...debug,
       numFramesSinceInit: 0,
@@ -1049,6 +1063,7 @@ const initSession = <T>(
 
 const initProduction = <SCHEMA, U>(production: {
   name: string
+  session: Session<SCHEMA>
   convertMatchFn: ConvertMatchFn<SCHEMA, U>
   condFn?: CondFn<SCHEMA>
   thenFn?: ThenFn<SCHEMA, U>
