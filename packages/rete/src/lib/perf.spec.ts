@@ -3,6 +3,10 @@ import { Field, MatchT, vizOnlineUrl } from '@edict/rete'
 import { performance } from 'perf_hooks'
 import v8Profiler from 'v8-profiler-next'
 import * as fs from 'fs'
+import Immutable from 'immutable'
+import { enableMapSet, produce } from 'immer'
+
+enableMapSet()
 
 v8Profiler.setGenerateType(1)
 
@@ -121,33 +125,53 @@ it('test map instantiation', () => {
   const orig = new Map()
   orig.set('Delta', 1)
   orig.set('dt', 1)
-  const orig2 = new Map()
-  orig.set('Delta', 1)
-  orig.set('dt', 1)
 
-  const mut3 = new Map()
+  const imm = Immutable.Map().withMutations((map) => {
+    map.set('Delta', 1)
+    map.set('dt', 1)
+    return map
+  })
+
+  expect(imm.get('Delta')).toBe(1)
 
   let n = orig
   const b = performance.now()
-  for (let i = 0; i < 540_000; i++) {
+  for (let i = 0; i < 54_000; i++) {
     n = new Map(orig)
+    n.set('dt', 2)
+    expect(orig.get('dt')).toBe(1)
+    expect(n.get('dt')).toBe(2)
   }
   const a = performance.now()
-  const b2 = performance.now()
-  for (let i = 0; i < 540_000; i++) {
-    mut3.set(i % 1000, i)
+  const immb = performance.now()
+  for (let i = 0; i < 54_000; i++) {
+    const n = imm.withMutations((map) => {
+      map.set('Delta', 2)
+      map.set('dt', 2)
+      return map
+    })
+    expect(imm.get('dt')).toBe(1)
+    expect(n.get('dt')).toBe(2)
   }
-  const a2 = performance.now()
-  const b3 = performance.now()
-  let y
-  for (let i = 0; i < 540_000; i++) {
-    y = () => i
+  const imma = performance.now()
+
+  const im = produce(orig, (draft) => {
+    draft.set('Delta', 1)
+    draft.set('dt', 1)
+  })
+  const imb = performance.now()
+  for (let i = 0; i < 54_000; i++) {
+    const n = produce(im, (map) => {
+      map.set('Delta', 2)
+      map.set('dt', 2)
+      return map
+    })
+    expect(imm.get('dt')).toBe(1)
+    expect(n.get('dt')).toBe(2)
   }
-  const a3 = performance.now()
-  console.log('inst', a - b)
-  console.log('mut', a2 - b2)
-  console.log('fn', a3 - b3)
-  expect(2).toBe(2)
+  const ima = performance.now()
+
+  console.log('mut', a - b, 'imm', imma - immb, 'im', ima - imb)
 })
 
 describe('rete perf', () => {
