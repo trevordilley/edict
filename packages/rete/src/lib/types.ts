@@ -31,6 +31,11 @@ export enum TokenKind {
   RETRACT,
   UPDATE,
 }
+export interface Binding<T> {
+  name: string
+  value: FactFragment<T>
+  parentBinding?: Binding<T>
+}
 
 export interface Token<T> {
   fact: Fact<T>
@@ -41,7 +46,6 @@ export interface Token<T> {
 
 /** Matches **/
 
-export type Vars<T> = Map<string, T>
 export interface Var {
   name: string
   field: Field

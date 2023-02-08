@@ -8,6 +8,7 @@
 
 import {
   AlphaNode,
+  Binding,
   CondFn,
   Condition,
   ConvertMatchFn,
@@ -284,6 +285,61 @@ const subscribeToProduction = <T, U>(
   return ret
 }
 
+const bindingsToMatch = <T>(binding: Binding<T> | undefined) => {
+  const result: MatchT<T> = new Map()
+  let cur = binding
+  while (cur !== undefined) {
+    if (result.has(cur.name)) {
+      console.warn(
+        'TWO BINDINGS WITH SAME NAME FOUND??',
+        cur.name,
+        "here's the bindings",
+        binding
+      )
+    }
+    result.set(cur.name, cur.value)
+    cur = cur.parentBinding
+  }
+  return result
+}
+
+const matchToBindings = <T>(match: MatchT<T> | undefined) => {
+  if (match === undefined) return undefined
+  let cur: Binding<T> | undefined = undefined
+  for (const [k, v] of match.entries()) {
+    const binding: Binding<T> = {
+      name: k,
+      value: v,
+      parentBinding: cur,
+    }
+    cur = binding
+  }
+  return cur
+}
+
+const bindingWasSet = <T>(
+  binding: Binding<T> | undefined,
+  conditionName: string,
+  factIdorVal: FactFragment<T>
+): {
+  match: boolean
+  binding: Binding<T>
+} => {
+  let cur = binding
+  while (cur !== undefined) {
+    if (cur.name === conditionName && cur.value !== factIdorVal) {
+      return { match: false, binding: binding! }
+    }
+    cur = cur.parentBinding
+  }
+  const newBinding = {
+    name: conditionName,
+    value: factIdorVal,
+    parentBinding: binding,
+  }
+  return { match: true, binding: newBinding }
+}
+
 // MatchT represents a mapping from condition key to a value
 // So given this condidtion:
 //
@@ -293,15 +349,25 @@ const subscribeToProduction = <T, U>(
 const getVarFromFact = <T>(
   vars: MatchT<T>,
   conditionName: string,
-  factIdOrVal: FactFragment<T>
-): boolean => {
+  factIdOrVal: FactFragment<T>,
+  existingBindings?: Binding<T>
+): { match: boolean; binding?: Binding<T> } => {
+  const result = bindingWasSet(existingBindings, conditionName, factIdOrVal)
+
   // If the vars do not have this condition name, then match the condition name
   // to the factId or the value
   if (!vars.has(conditionName) || vars.get(conditionName) == factIdOrVal) {
     vars.set(conditionName, factIdOrVal)
-    return true
+    if (result.match !== true) {
+      console.warn(
+        'Inconsistency when binding: expected true but got not true!',
+        result
+      )
+    }
+
+    return { match: true, binding: result.binding }
   } else {
-    return false
+    return { match: false, binding: existingBindings }
   }
 }
 
@@ -349,23 +415,32 @@ const getVarFromFact = <T>(
 const getVarsFromFact = <T>(
   vars: MatchT<T>,
   condition: Condition<T>,
-  fact: Fact<T>
-): boolean => {
+  fact: Fact<T>,
+  token: Token<T>,
+  existingBindings?: Binding<T>
+): { match: boolean; binding?: Binding<T> } => {
+  let currentBinding = existingBindings
   for (let i = 0; i < condition.vars.length; i++) {
     const v = condition.vars[i]
     if (v.field === Field.IDENTIFIER) {
-      if (!getVarFromFact(vars, v.name, fact[0])) {
-        return false
+      const result = getVarFromFact(vars, v.name, fact[0], currentBinding)
+      if (!result.match) {
+        return result
+      } else {
+        currentBinding = result.binding
       }
     } else if (v.field === Field.ATTRIBUTE) {
       throw new Error(`Attributes can not contain vars: ${v}`)
     } else if (v.field === Field.VALUE) {
-      if (!getVarFromFact(vars, v.name, fact[2])) {
-        return false
+      const results = getVarFromFact(vars, v.name, fact[2], currentBinding)
+      if (!results.match) {
+        return results
+      } else {
+        currentBinding = results.binding
       }
     }
   }
-  return true
+  return { match: true, binding: currentBinding }
 }
 const leftActivationFromVars = <T>(
   session: Session<T>,
@@ -373,7 +448,8 @@ const leftActivationFromVars = <T>(
   idAttrs: IdAttrs<T>,
   vars: MatchT<T>,
   token: Token<T>,
-  alphaFact: Fact<T>
+  alphaFact: Fact<T>,
+  bindings: Binding<T>
 ) => {
   // If we change this from `new Map(vars)` to just `vars` suddenly we get 5000/ops
   // Try implementing this:https://github.com/paranim/pararules/pull/7/files
@@ -405,7 +481,14 @@ const leftActivationFromVars = <T>(
    */
 
   const newVars: MatchT<T> = new Map(vars)
-  if (getVarsFromFact(newVars, node.condition, alphaFact)) {
+  const bindResults = getVarsFromFact(
+    newVars,
+    node.condition,
+    alphaFact,
+    token,
+    bindings
+  )
+  if (bindResults.match) {
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
@@ -423,7 +506,8 @@ const leftActivationFromVars = <T>(
       newIdAttrs,
       newVars,
       newToken,
-      isNew
+      isNew,
+      bindResults.binding!
     )
   }
 }
@@ -433,7 +517,8 @@ const leftActivationWithoutAlpha = <T>(
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
   vars: MatchT<T>,
-  token: Token<T>
+  token: Token<T>,
+  binding: Binding<T>
 ) => {
   if (node.idName && node.idName != '') {
     const id = vars.get(node.idName)
@@ -443,13 +528,29 @@ const leftActivationWithoutAlpha = <T>(
       if (!alphaFacts)
         throw new Error(`Expected to have alpha facts for ${node.idName}`)
       alphaFacts.forEach((alphaFact) => {
-        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+        leftActivationFromVars(
+          session,
+          node,
+          idAttrs,
+          vars,
+          token,
+          alphaFact,
+          binding
+        )
       })
     }
   } else {
     for (const fact of node.alphaNode.facts.values()) {
       for (const alphaFact of fact.values()) {
-        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+        leftActivationFromVars(
+          session,
+          node,
+          idAttrs,
+          vars,
+          token,
+          alphaFact,
+          binding
+        )
       }
     }
   }
@@ -461,7 +562,8 @@ const leftActivationOnMemoryNode = <T>(
   idAttrs: IdAttrs<T>,
   vars: MatchT<T>,
   token: Token<T>,
-  isNew: boolean
+  isNew: boolean,
+  bindings: Binding<T>
 ) => {
   const idAttr = idAttrs[idAttrs.length - 1]
   const idAttrsHash = hashIdAttrs(idAttrs)
@@ -483,6 +585,7 @@ const leftActivationOnMemoryNode = <T>(
       node.lastMatchId += 1
       match = { id: node.lastMatchId }
     }
+    const bindingMatch = bindingsToMatch(bindings)
     match.vars = new Map(vars)
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
@@ -515,7 +618,14 @@ const leftActivationOnMemoryNode = <T>(
     }
   }
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
-    leftActivationWithoutAlpha(session, node.child, idAttrs, vars, token)
+    leftActivationWithoutAlpha(
+      session,
+      node.child,
+      idAttrs,
+      vars,
+      token,
+      bindings
+    )
   }
 }
 
@@ -527,7 +637,8 @@ const rightActivationWithJoinNode = <T>(
 ) => {
   if (node.parent === undefined) {
     const vars = session.initMatch()
-    if (getVarsFromFact(vars, node.condition, token.fact)) {
+    const bindings = getVarsFromFact(vars, node.condition, token.fact, token)
+    if (bindings.match) {
       if (!node.child) {
         throw new Error(`Unexpected undefined child for node ${node.idName}`)
       }
@@ -537,13 +648,15 @@ const rightActivationWithJoinNode = <T>(
         [idAttr],
         vars,
         token,
-        true
+        true,
+        bindings.binding!
       )
     }
   } else {
     node.parent.matches.forEach((match) => {
-      // const store = match.match.vars.inherit(token.fact)
+      // TODO: We need to find call sites where we need to consolidate the bindings into a match
       const newVars: MatchT<T> = new Map(match.match.vars)
+      const newBindings = matchToBindings(match.match.vars)
       const idName = node.idName
       if (idName && idName !== '' && newVars?.get(idName) != token.fact[0]) {
         return
@@ -551,8 +664,14 @@ const rightActivationWithJoinNode = <T>(
       if (!newVars) {
         throw new Error('Expected vars to not be undefinied???')
       }
-
-      if (getVarsFromFact(newVars, node.condition, token.fact)) {
+      const bindings = getVarsFromFact(
+        newVars,
+        node.condition,
+        token.fact,
+        token,
+        newBindings
+      )
+      if (bindings.match) {
         const newIdAttrs = [...match.idAttrs]
         newIdAttrs.push(idAttr)
         const child = node.child
@@ -565,7 +684,8 @@ const rightActivationWithJoinNode = <T>(
           newIdAttrs,
           newVars,
           token,
-          true
+          true,
+          bindings.binding!
         )
       }
     })
