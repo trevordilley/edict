@@ -8,6 +8,7 @@ import {
   Session,
 } from './types'
 import { hashIdAttr } from './utils'
+import { bindingsToMatch } from './rete'
 
 const FIELD_TO_STR = ['ID', 'ATTR', 'VAL']
 
@@ -50,7 +51,8 @@ const memoryNode = <SCHEMA>(node: MemoryNode<SCHEMA>): Node => {
       .join('\n')
     const enabled = v.match.enabled
     const varStr: string[] = []
-    v.match.vars?.forEach((vv, kk) => {
+    const vars = bindingsToMatch(v.match.bindings)
+    vars?.forEach((vv, kk) => {
       varStr.push(`${kk} => ${vv}`)
     })
     const matchStr = `\n\nmatch ${v.match.id} is ${

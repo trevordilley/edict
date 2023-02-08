@@ -285,7 +285,21 @@ const subscribeToProduction = <T, U>(
   return ret
 }
 
-const bindingsToMatch = <T>(binding: Binding<T> | undefined) => {
+const getValFromBindings = <T>(
+  bindings: Binding<T> | undefined,
+  key: string
+) => {
+  let cur = bindings
+  while (cur !== undefined) {
+    if (cur.name === key) {
+      return cur.value
+    }
+    cur = cur.parentBinding
+  }
+  return undefined
+}
+
+export const bindingsToMatch = <T>(binding: Binding<T> | undefined) => {
   const result: MatchT<T> = new Map()
   let cur = binding
   while (cur !== undefined) {
@@ -333,28 +347,11 @@ const bindingWasSet = <T>(
 //
 // We'd need a map
 const getVarFromFact = <T>(
-  vars: MatchT<T>,
   conditionName: string,
   factIdOrVal: FactFragment<T>,
   existingBindings?: Binding<T>
 ): { match: boolean; binding?: Binding<T> } => {
-  const result = bindingWasSet(existingBindings, conditionName, factIdOrVal)
-
-  // If the vars do not have this condition name, then match the condition name
-  // to the factId or the value
-  if (!vars.has(conditionName) || vars.get(conditionName) == factIdOrVal) {
-    vars.set(conditionName, factIdOrVal)
-    if (result.match !== true) {
-      console.warn(
-        'Inconsistency when binding: expected true but got not true!',
-        result
-      )
-    }
-
-    return { match: true, binding: result.binding }
-  } else {
-    return { match: false, binding: existingBindings }
-  }
+  return bindingWasSet(existingBindings, conditionName, factIdOrVal)
 }
 
 /// There's going to be a lot of facts
@@ -399,7 +396,6 @@ const getVarFromFact = <T>(
 /// That's why that one specific `new Map(vars)` to just `vars` is so effective.
 /// It's the last copy before assigning to `vars` which is passed to the thenFn's
 const getVarsFromFact = <T>(
-  vars: MatchT<T>,
   condition: Condition<T>,
   fact: Fact<T>,
   token: Token<T>,
@@ -409,7 +405,7 @@ const getVarsFromFact = <T>(
   for (let i = 0; i < condition.vars.length; i++) {
     const v = condition.vars[i]
     if (v.field === Field.IDENTIFIER) {
-      const result = getVarFromFact(vars, v.name, fact[0], currentBinding)
+      const result = getVarFromFact(v.name, fact[0], currentBinding)
       if (!result.match) {
         return result
       } else {
@@ -418,7 +414,7 @@ const getVarsFromFact = <T>(
     } else if (v.field === Field.ATTRIBUTE) {
       throw new Error(`Attributes can not contain vars: ${v}`)
     } else if (v.field === Field.VALUE) {
-      const results = getVarFromFact(vars, v.name, fact[2], currentBinding)
+      const results = getVarFromFact(v.name, fact[2], currentBinding)
       if (!results.match) {
         return results
       } else {
@@ -432,7 +428,6 @@ const leftActivationFromVars = <T>(
   session: Session<T>,
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
-  vars: MatchT<T>,
   token: Token<T>,
   alphaFact: Fact<T>,
   bindings: Binding<T>
@@ -466,9 +461,7 @@ const leftActivationFromVars = <T>(
    *       }
    */
 
-  const newVars: MatchT<T> = new Map(vars)
   const bindResults = getVarsFromFact(
-    newVars,
     node.condition,
     alphaFact,
     token,
@@ -490,7 +483,6 @@ const leftActivationFromVars = <T>(
       session,
       child,
       newIdAttrs,
-      newVars,
       newToken,
       isNew,
       bindResults.binding!
@@ -502,12 +494,11 @@ const leftActivationWithoutAlpha = <T>(
   session: Session<T>,
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
-  vars: MatchT<T>,
   token: Token<T>,
   binding: Binding<T>
 ) => {
   if (node.idName && node.idName != '') {
-    const id = vars.get(node.idName)
+    const id = getValFromBindings(binding, node.idName) //vars.get(node.idName)
     const idStr = id !== undefined ? `${id}` : undefined
     if (idStr !== undefined && node.alphaNode.facts.get(idStr)) {
       const alphaFacts = [...(node.alphaNode.facts.get(idStr)?.values() ?? [])]
@@ -518,7 +509,6 @@ const leftActivationWithoutAlpha = <T>(
           session,
           node,
           idAttrs,
-          vars,
           token,
           alphaFact,
           binding
@@ -532,7 +522,6 @@ const leftActivationWithoutAlpha = <T>(
           session,
           node,
           idAttrs,
-          vars,
           token,
           alphaFact,
           binding
@@ -546,7 +535,6 @@ const leftActivationOnMemoryNode = <T>(
   session: Session<T>,
   node: MemoryNode<T>,
   idAttrs: IdAttrs<T>,
-  vars: MatchT<T>,
   token: Token<T>,
   isNew: boolean,
   bindings: Binding<T>
@@ -571,12 +559,11 @@ const leftActivationOnMemoryNode = <T>(
       node.lastMatchId += 1
       match = { id: node.lastMatchId }
     }
-    match.vars = new Map(vars)
     match.bindings = bindings
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
       !node.nodeType?.condFn ||
-      (node.nodeType?.condFn(vars) ?? true)
+      (node.nodeType?.condFn(bindingsToMatch(bindings)) ?? true)
     node.matchIds.set(match.id, idAttrs)
     node.matches.set(idAttrsHash, { idAttrs, match })
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
@@ -604,14 +591,7 @@ const leftActivationOnMemoryNode = <T>(
     }
   }
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
-    leftActivationWithoutAlpha(
-      session,
-      node.child,
-      idAttrs,
-      vars,
-      token,
-      bindings
-    )
+    leftActivationWithoutAlpha(session, node.child, idAttrs, token, bindings)
   }
 }
 
@@ -622,8 +602,7 @@ const rightActivationWithJoinNode = <T>(
   token: Token<T>
 ) => {
   if (node.parent === undefined) {
-    const vars = session.initMatch()
-    const bindings = getVarsFromFact(vars, node.condition, token.fact, token)
+    const bindings = getVarsFromFact(node.condition, token.fact, token)
     if (bindings.match) {
       if (!node.child) {
         throw new Error(`Unexpected undefined child for node ${node.idName}`)
@@ -632,7 +611,6 @@ const rightActivationWithJoinNode = <T>(
         session,
         node.child,
         [idAttr],
-        vars,
         token,
         true,
         bindings.binding!
@@ -641,16 +619,15 @@ const rightActivationWithJoinNode = <T>(
   } else {
     node.parent.matches.forEach((match) => {
       // TODO: We need to find call sites where we need to consolidate the bindings into a match
-      const newVars: MatchT<T> = new Map(match.match.vars)
       const idName = node.idName
-      if (idName && idName !== '' && newVars?.get(idName) != token.fact[0]) {
+      if (
+        idName &&
+        idName !== '' &&
+        getValFromBindings(match.match.bindings, idName) != token.fact[0]
+      ) {
         return
       }
-      if (!newVars) {
-        throw new Error('Expected vars to not be undefinied???')
-      }
       const bindings = getVarsFromFact(
-        newVars,
         node.condition,
         token.fact,
         token,
@@ -667,7 +644,6 @@ const rightActivationWithJoinNode = <T>(
           session,
           child,
           newIdAttrs,
-          newVars,
           token,
           true,
           bindings.binding!
@@ -863,19 +839,12 @@ const fireRules = <T>(
           match.match.enabled
         ) {
           session.triggeredNodeIds.clear()
-          if (!match.match.vars) {
-            throw new Error(`expected match ${match.match.id} to have vars??`)
+          if (!match.match.bindings) {
+            throw new Error(
+              `expected match ${match.match.id} to have bindings??`
+            )
           }
-          if (process.env.NODE_ENV === 'development') {
-            if (session.debug.enabled) {
-              debugFrame?.triggeredRules.push({
-                ruleName: node.ruleName,
-                kind: 'then',
-                vars: match.match.vars,
-              })
-            }
-          }
-          node.nodeType?.thenFn?.(match.match.vars)
+          node.nodeType?.thenFn?.(bindingsToMatch(match.match.bindings))
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
       }
@@ -1178,8 +1147,9 @@ const queryAll = <T, U>(
   // then make it easy to query the data via key map paths or something. Iterating over all
   // matches could become cumbersome for large data sets
   session.leafNodes.get(prod.name)?.matches.forEach((match, _) => {
-    const { enabled, vars } = match.match
-    if (enabled && vars) {
+    const { enabled, bindings } = match.match
+    if (enabled && bindings) {
+      const vars = bindingsToMatch(bindings)
       if (!filter) {
         result.push(prod.convertMatchFn(vars))
       } else {
@@ -1238,12 +1208,12 @@ const get = <T, U>(
   if (!idAttrs) return
   const idAttrsHash = hashIdAttrs(idAttrs)
   const vars = session.leafNodes.get(prod.name)?.matches.get(idAttrsHash)
-    ?.match.vars
+    ?.match.bindings
   if (!vars) {
     console.warn('No vars??')
     return
   }
-  return prod.convertMatchFn(vars)
+  return prod.convertMatchFn(bindingsToMatch(vars))
 }
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>

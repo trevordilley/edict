@@ -53,7 +53,7 @@ export interface Var {
 
 export interface Match<T> {
   id: number
-  vars?: MatchT<T>
+  // vars?: MatchT<T>
   bindings?: Binding<T>
   enabled?: boolean
 }
