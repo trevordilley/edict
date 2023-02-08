@@ -303,14 +303,6 @@ export const bindingsToMatch = <T>(binding: Binding<T> | undefined) => {
   const result: MatchT<T> = new Map()
   let cur = binding
   while (cur !== undefined) {
-    if (result.has(cur.name)) {
-      console.warn(
-        'TWO BINDINGS WITH SAME NAME FOUND??',
-        cur.name,
-        "here's the bindings",
-        binding
-      )
-    }
     result.set(cur.name, cur.value)
     cur = cur.parentBinding
   }
