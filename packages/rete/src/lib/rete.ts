@@ -303,20 +303,6 @@ const bindingsToMatch = <T>(binding: Binding<T> | undefined) => {
   return result
 }
 
-const matchToBindings = <T>(match: MatchT<T> | undefined) => {
-  if (match === undefined) return undefined
-  let cur: Binding<T> | undefined = undefined
-  for (const [k, v] of match.entries()) {
-    const binding: Binding<T> = {
-      name: k,
-      value: v,
-      parentBinding: cur,
-    }
-    cur = binding
-  }
-  return cur
-}
-
 const bindingWasSet = <T>(
   binding: Binding<T> | undefined,
   conditionName: string,
@@ -585,8 +571,8 @@ const leftActivationOnMemoryNode = <T>(
       node.lastMatchId += 1
       match = { id: node.lastMatchId }
     }
-    const bindingMatch = bindingsToMatch(bindings)
     match.vars = new Map(vars)
+    match.bindings = bindings
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
       !node.nodeType?.condFn ||
@@ -656,7 +642,6 @@ const rightActivationWithJoinNode = <T>(
     node.parent.matches.forEach((match) => {
       // TODO: We need to find call sites where we need to consolidate the bindings into a match
       const newVars: MatchT<T> = new Map(match.match.vars)
-      const newBindings = matchToBindings(match.match.vars)
       const idName = node.idName
       if (idName && idName !== '' && newVars?.get(idName) != token.fact[0]) {
         return
@@ -669,7 +654,7 @@ const rightActivationWithJoinNode = <T>(
         node.condition,
         token.fact,
         token,
-        newBindings
+        match.match.bindings
       )
       if (bindings.match) {
         const newIdAttrs = [...match.idAttrs]
