@@ -8,6 +8,7 @@
 
 import {
   AlphaNode,
+  Binding,
   CondFn,
   Condition,
   ConvertMatchFn,
@@ -284,128 +285,94 @@ const subscribeToProduction = <T, U>(
   return ret
 }
 
-// MatchT represents a mapping from condition key to a value
-// So given this condidtion:
-//
-// $npc: {circle, speed, destX, destY},
-//
-// We'd need a map
-const getVarFromFact = <T>(
-  vars: MatchT<T>,
-  conditionName: string,
-  factIdOrVal: FactFragment<T>
-): boolean => {
-  // If the vars do not have this condition name, then match the condition name
-  // to the factId or the value
-  if (!vars.has(conditionName) || vars.get(conditionName) == factIdOrVal) {
-    vars.set(conditionName, factIdOrVal)
-    return true
-  } else {
-    return false
+const getValFromBindings = <T>(
+  bindings: Binding<T> | undefined,
+  key: string
+) => {
+  let cur = bindings
+  while (cur !== undefined) {
+    if (cur.name === key) {
+      return cur.value
+    }
+    cur = cur.parentBinding
   }
+  return undefined
 }
 
-/// There's going to be a lot of facts
-/// There's a small number of conditions
-/// There's a small number of vars
-/// However, we need a var map for every fact
-/// Do we just make a big map that hashes every fact token + attr/id?
-/// How do we inherit values from an existing map?
-//////// prime numbers????
-/// setting keys that already exist in a map is fast
+export const bindingsToMatch = <T>(binding: Binding<T> | undefined) => {
+  const result: MatchT<T> = new Map()
+  let cur = binding
+  while (cur !== undefined) {
+    result.set(cur.name, cur.value)
+    cur = cur.parentBinding
+  }
+  return result
+}
 
-/// namespace keys by token + fact? something like that? initial cost of setting keys
-/// but if they don't change that much maybe savings?
+const bindingWasSet = <T>(
+  binding: Binding<T> | undefined,
+  conditionName: string,
+  factIdorVal: FactFragment<T>
+) => {
+  let cur = binding
+  while (cur !== undefined) {
+    if (cur.name === conditionName && cur.value !== factIdorVal) {
+      return { didBindVar: false, binding: binding! }
+    }
+    cur = cur.parentBinding
+  }
+  const newBinding = {
+    name: conditionName,
+    value: factIdorVal,
+    parentBinding: binding,
+  }
+  return { didBindVar: true, binding: newBinding }
+}
 
-/// ideally we optimize for key reuse as much as possible.
-
-/// The challenge is two fold. Finding the right key to namespace on, and
-/// how do we only track changes rather than copy whole data sets?
-
-/// Perhaps we return an array of accessors to access key->vals by token?
-
-/// Javascript is single threaded so we can count on doing things one at
-/// a time here, so if we need an incrementing id we can leverage that
-
-/// I think it all comes down to a modification of `getVarsFromFact`,
-/// every time it's used we make a new map to make things immutable,
-
-/// instead we need to make it so all things that want their vars
-/// will know how to get them.
-
-/// matches have id's, we can use that I think.
-/// We can also assign other ids.
-
-/// These id's could correspond to array indexes, though be careful. `array.push` is as
-/// expensive as `map.set`, and those are each half as fast as doing `new Map()`
-
-/// The right step forward is to look at how the vars are READ, which will inform how
-/// they are WRITTEN.
-
-/// Matches are what is passed into convert match
-
-/// That's why that one specific `new Map(vars)` to just `vars` is so effective.
-/// It's the last copy before assigning to `vars` which is passed to the thenFn's
-const getVarsFromFact = <T>(
-  vars: MatchT<T>,
+const bindVarsFromFact = <T>(
   condition: Condition<T>,
-  fact: Fact<T>
-): boolean => {
+  fact: Fact<T>,
+  token: Token<T>,
+  existingBindings?: Binding<T>
+): { didBindVar: boolean; binding?: Binding<T> } => {
+  let currentBinding = existingBindings
   for (let i = 0; i < condition.vars.length; i++) {
     const v = condition.vars[i]
     if (v.field === Field.IDENTIFIER) {
-      if (!getVarFromFact(vars, v.name, fact[0])) {
-        return false
+      const result = bindingWasSet(currentBinding, v.name, fact[0])
+      if (!result.didBindVar) {
+        return result
+      } else {
+        currentBinding = result.binding
       }
     } else if (v.field === Field.ATTRIBUTE) {
       throw new Error(`Attributes can not contain vars: ${v}`)
     } else if (v.field === Field.VALUE) {
-      if (!getVarFromFact(vars, v.name, fact[2])) {
-        return false
+      const results = bindingWasSet(currentBinding, v.name, fact[2])
+      if (!results.didBindVar) {
+        return results
+      } else {
+        currentBinding = results.binding
       }
     }
   }
-  return true
+  return { didBindVar: true, binding: currentBinding }
 }
 const leftActivationFromVars = <T>(
   session: Session<T>,
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
-  vars: MatchT<T>,
   token: Token<T>,
-  alphaFact: Fact<T>
+  alphaFact: Fact<T>,
+  bindings: Binding<T>
 ) => {
-  // If we change this from `new Map(vars)` to just `vars` suddenly we get 5000/ops
-  // Try implementing this:https://github.com/paranim/pararules/pull/7/files
-  //
-  // I've tried using immer and immutable to get around the cost of this copy, but
-  // immutable doesn't actually give us any perf benefits, and immer has an issue
-  // because we save the created draft to node.match.vars which persists the proxy
-  // beyond the life cycle of the production.
-  //
-  // I'm still pretty sure immutability is the way to go, we just gotta figure out a
-  // way to thread the needle OR find that one path where we modify the vars when we
-  // shouldn't and correct it. I'd definitely prefer NOT adding an immutability library
-  // simply cause it splits the mental model into "mutable" world vs "immutable" world.
-
-  /**
-   * Var Log
-   *
-   * Passing:
-   * keys   Set(2) {
-   *          Map(1) { 'c1' => 'red' },
-   *          Map(1) { 'c1' => 'maize'}
-   *        }
-   *
-   * Failing:
-   * keys  Set(2) {
-   *         Map(3) { 'c1' => 'red', 'otherPerson' => 0, 'c2' => 'red' },
-   *         Map(3) { 'c1' => 'maize', 'otherPerson' => 0, 'c2' => 'maize' }
-   *       }
-   */
-
-  const newVars: MatchT<T> = new Map(vars)
-  if (getVarsFromFact(newVars, node.condition, alphaFact)) {
+  const bindResults = bindVarsFromFact(
+    node.condition,
+    alphaFact,
+    token,
+    bindings
+  )
+  if (bindResults.didBindVar) {
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
@@ -421,9 +388,9 @@ const leftActivationFromVars = <T>(
       session,
       child,
       newIdAttrs,
-      newVars,
       newToken,
-      isNew
+      isNew,
+      bindResults.binding!
     )
   }
 }
@@ -432,24 +399,38 @@ const leftActivationWithoutAlpha = <T>(
   session: Session<T>,
   node: JoinNode<T>,
   idAttrs: IdAttrs<T>,
-  vars: MatchT<T>,
-  token: Token<T>
+  token: Token<T>,
+  binding: Binding<T>
 ) => {
   if (node.idName && node.idName != '') {
-    const id = vars.get(node.idName)
+    const id = getValFromBindings(binding, node.idName) //vars.get(node.idName)
     const idStr = id !== undefined ? `${id}` : undefined
     if (idStr !== undefined && node.alphaNode.facts.get(idStr)) {
       const alphaFacts = [...(node.alphaNode.facts.get(idStr)?.values() ?? [])]
       if (!alphaFacts)
         throw new Error(`Expected to have alpha facts for ${node.idName}`)
       alphaFacts.forEach((alphaFact) => {
-        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+        leftActivationFromVars(
+          session,
+          node,
+          idAttrs,
+          token,
+          alphaFact,
+          binding
+        )
       })
     }
   } else {
     for (const fact of node.alphaNode.facts.values()) {
       for (const alphaFact of fact.values()) {
-        leftActivationFromVars(session, node, idAttrs, vars, token, alphaFact)
+        leftActivationFromVars(
+          session,
+          node,
+          idAttrs,
+          token,
+          alphaFact,
+          binding
+        )
       }
     }
   }
@@ -459,9 +440,9 @@ const leftActivationOnMemoryNode = <T>(
   session: Session<T>,
   node: MemoryNode<T>,
   idAttrs: IdAttrs<T>,
-  vars: MatchT<T>,
   token: Token<T>,
-  isNew: boolean
+  isNew: boolean,
+  bindings: Binding<T>
 ) => {
   const idAttr = idAttrs[idAttrs.length - 1]
   const idAttrsHash = hashIdAttrs(idAttrs)
@@ -483,11 +464,11 @@ const leftActivationOnMemoryNode = <T>(
       node.lastMatchId += 1
       match = { id: node.lastMatchId }
     }
-    match.vars = new Map(vars)
+    match.bindings = bindings
     match.enabled =
       node.type !== MEMORY_NODE_TYPE.LEAF ||
       !node.nodeType?.condFn ||
-      (node.nodeType?.condFn(vars) ?? true)
+      (node.nodeType?.condFn(bindingsToMatch(bindings)) ?? true)
     node.matchIds.set(match.id, idAttrs)
     node.matches.set(idAttrsHash, { idAttrs, match })
     if (node.type === MEMORY_NODE_TYPE.LEAF && node.nodeType?.trigger) {
@@ -515,7 +496,7 @@ const leftActivationOnMemoryNode = <T>(
     }
   }
   if (node.type !== MEMORY_NODE_TYPE.LEAF && node.child) {
-    leftActivationWithoutAlpha(session, node.child, idAttrs, vars, token)
+    leftActivationWithoutAlpha(session, node.child, idAttrs, token, bindings)
   }
 }
 
@@ -526,8 +507,8 @@ const rightActivationWithJoinNode = <T>(
   token: Token<T>
 ) => {
   if (node.parent === undefined) {
-    const vars = session.initMatch()
-    if (getVarsFromFact(vars, node.condition, token.fact)) {
+    const bindings = bindVarsFromFact(node.condition, token.fact, token)
+    if (bindings.didBindVar) {
       if (!node.child) {
         throw new Error(`Unexpected undefined child for node ${node.idName}`)
       }
@@ -535,24 +516,29 @@ const rightActivationWithJoinNode = <T>(
         session,
         node.child,
         [idAttr],
-        vars,
         token,
-        true
+        true,
+        bindings.binding!
       )
     }
   } else {
     node.parent.matches.forEach((match) => {
-      // const store = match.match.vars.inherit(token.fact)
-      const newVars: MatchT<T> = new Map(match.match.vars)
+      // TODO: We need to find call sites where we need to consolidate the bindings into a match
       const idName = node.idName
-      if (idName && idName !== '' && newVars?.get(idName) != token.fact[0]) {
+      if (
+        idName &&
+        idName !== '' &&
+        getValFromBindings(match.match.bindings, idName) != token.fact[0]
+      ) {
         return
       }
-      if (!newVars) {
-        throw new Error('Expected vars to not be undefinied???')
-      }
-
-      if (getVarsFromFact(newVars, node.condition, token.fact)) {
+      const bindings = bindVarsFromFact(
+        node.condition,
+        token.fact,
+        token,
+        match.match.bindings
+      )
+      if (bindings.didBindVar) {
         const newIdAttrs = [...match.idAttrs]
         newIdAttrs.push(idAttr)
         const child = node.child
@@ -563,9 +549,9 @@ const rightActivationWithJoinNode = <T>(
           session,
           child,
           newIdAttrs,
-          newVars,
           token,
-          true
+          true,
+          bindings.binding!
         )
       }
     })
@@ -758,19 +744,12 @@ const fireRules = <T>(
           match.match.enabled
         ) {
           session.triggeredNodeIds.clear()
-          if (!match.match.vars) {
-            throw new Error(`expected match ${match.match.id} to have vars??`)
+          if (!match.match.bindings) {
+            throw new Error(
+              `expected match ${match.match.id} to have bindings??`
+            )
           }
-          if (process.env.NODE_ENV === 'development') {
-            if (session.debug.enabled) {
-              debugFrame?.triggeredRules.push({
-                ruleName: node.ruleName,
-                kind: 'then',
-                vars: match.match.vars,
-              })
-            }
-          }
-          node.nodeType?.thenFn?.(match.match.vars)
+          node.nodeType?.thenFn?.(bindingsToMatch(match.match.bindings))
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
       }
@@ -1073,8 +1052,9 @@ const queryAll = <T, U>(
   // then make it easy to query the data via key map paths or something. Iterating over all
   // matches could become cumbersome for large data sets
   session.leafNodes.get(prod.name)?.matches.forEach((match, _) => {
-    const { enabled, vars } = match.match
-    if (enabled && vars) {
+    const { enabled, bindings } = match.match
+    if (enabled && bindings) {
+      const vars = bindingsToMatch(bindings)
       if (!filter) {
         result.push(prod.convertMatchFn(vars))
       } else {
@@ -1133,12 +1113,12 @@ const get = <T, U>(
   if (!idAttrs) return
   const idAttrsHash = hashIdAttrs(idAttrs)
   const vars = session.leafNodes.get(prod.name)?.matches.get(idAttrsHash)
-    ?.match.vars
+    ?.match.bindings
   if (!vars) {
     console.warn('No vars??')
     return
   }
-  return prod.convertMatchFn(vars)
+  return prod.convertMatchFn(bindingsToMatch(vars))
 }
 
 const contains = <T>(session: Session<T>, id: string, attr: keyof T): boolean =>
