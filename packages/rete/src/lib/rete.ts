@@ -838,12 +838,12 @@ const upsertFact = <T>(
   const idAttr = getIdAttr<T>(fact)
   const idAttrHash = hashIdAttr(idAttr)
   if (!session.idAttrNodes.has(idAttrHash)) {
-    nodes.forEach((n) => {
+    for (const n of nodes) {
       rightActivationWithAlphaNode(session, n, {
         fact,
         kind: TokenKind.INSERT,
       })
-    })
+    }
   } else {
     const existingNodes = session.idAttrNodes.get(idAttrHash)
     if (existingNodes === undefined) {
@@ -853,7 +853,7 @@ const upsertFact = <T>(
     // we use toSeq here to make a copy of the existingNodes, because
     // rightActivation will modify it
     const existingNodesCopy = new Set<AlphaNode<T>>(existingNodes.alphaNodes)
-    existingNodesCopy.forEach((n) => {
+    for (const n of existingNodesCopy) {
       if (!nodes.has(n)) {
         const oldFact = n.facts.get(fact[0].toString())?.get(fact[1].toString())
         if (oldFact === undefined) {
@@ -865,10 +865,10 @@ const upsertFact = <T>(
           kind: TokenKind.RETRACT,
         })
       }
-    })
+    }
 
     // update or insert facts, depending on whether the node already exists
-    nodes.forEach((n) => {
+    for (const n of nodes) {
       if (existingNodes.alphaNodes.has(n)) {
         const oldFact = n.facts.get(fact[0].toString())?.get(fact[1].toString())
         rightActivationWithAlphaNode(session, n, {
@@ -882,7 +882,7 @@ const upsertFact = <T>(
           kind: TokenKind.INSERT,
         })
       }
-    })
+    }
   }
 }
 const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
@@ -911,10 +911,13 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const idAttrHash = hashIdAttr(idAttr)
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set<AlphaNode<T>>()
-  session.idAttrNodes
-    .get(idAttrHash)
-    ?.alphaNodes?.forEach((i) => idAttrNodes.add(i))
-  idAttrNodes.forEach((node) => {
+  const alphaNodes = session.idAttrNodes.get(idAttrHash)?.alphaNodes ?? []
+
+  for (const alpha of alphaNodes) {
+    idAttrNodes.add(alpha)
+  }
+
+  for (const node of idAttrNodes) {
     const otherFact = node.facts
       .get(idAttr[0].toString())
       ?.get(idAttr[1].toString())
@@ -928,7 +931,7 @@ const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
       fact,
       kind: TokenKind.RETRACT,
     })
-  })
+  }
 
   if (session.autoFire) {
     fireRules(session)
