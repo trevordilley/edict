@@ -313,14 +313,11 @@ const bindingWasSet = <T>(
   binding: Binding<T> | undefined,
   conditionName: string,
   factIdorVal: FactFragment<T>
-): {
-  match: boolean
-  binding: Binding<T>
-} => {
+) => {
   let cur = binding
   while (cur !== undefined) {
     if (cur.name === conditionName && cur.value !== factIdorVal) {
-      return { match: false, binding: binding! }
+      return { didBindVar: false, binding: binding! }
     }
     cur = cur.parentBinding
   }
@@ -329,76 +326,21 @@ const bindingWasSet = <T>(
     value: factIdorVal,
     parentBinding: binding,
   }
-  return { match: true, binding: newBinding }
+  return { didBindVar: true, binding: newBinding }
 }
 
-// MatchT represents a mapping from condition key to a value
-// So given this condidtion:
-//
-// $npc: {circle, speed, destX, destY},
-//
-// We'd need a map
-const getVarFromFact = <T>(
-  conditionName: string,
-  factIdOrVal: FactFragment<T>,
-  existingBindings?: Binding<T>
-): { match: boolean; binding?: Binding<T> } => {
-  return bindingWasSet(existingBindings, conditionName, factIdOrVal)
-}
-
-/// There's going to be a lot of facts
-/// There's a small number of conditions
-/// There's a small number of vars
-/// However, we need a var map for every fact
-/// Do we just make a big map that hashes every fact token + attr/id?
-/// How do we inherit values from an existing map?
-//////// prime numbers????
-/// setting keys that already exist in a map is fast
-
-/// namespace keys by token + fact? something like that? initial cost of setting keys
-/// but if they don't change that much maybe savings?
-
-/// ideally we optimize for key reuse as much as possible.
-
-/// The challenge is two fold. Finding the right key to namespace on, and
-/// how do we only track changes rather than copy whole data sets?
-
-/// Perhaps we return an array of accessors to access key->vals by token?
-
-/// Javascript is single threaded so we can count on doing things one at
-/// a time here, so if we need an incrementing id we can leverage that
-
-/// I think it all comes down to a modification of `getVarsFromFact`,
-/// every time it's used we make a new map to make things immutable,
-
-/// instead we need to make it so all things that want their vars
-/// will know how to get them.
-
-/// matches have id's, we can use that I think.
-/// We can also assign other ids.
-
-/// These id's could correspond to array indexes, though be careful. `array.push` is as
-/// expensive as `map.set`, and those are each half as fast as doing `new Map()`
-
-/// The right step forward is to look at how the vars are READ, which will inform how
-/// they are WRITTEN.
-
-/// Matches are what is passed into convert match
-
-/// That's why that one specific `new Map(vars)` to just `vars` is so effective.
-/// It's the last copy before assigning to `vars` which is passed to the thenFn's
-const getVarsFromFact = <T>(
+const bindVarsFromFact = <T>(
   condition: Condition<T>,
   fact: Fact<T>,
   token: Token<T>,
   existingBindings?: Binding<T>
-): { match: boolean; binding?: Binding<T> } => {
+): { didBindVar: boolean; binding?: Binding<T> } => {
   let currentBinding = existingBindings
   for (let i = 0; i < condition.vars.length; i++) {
     const v = condition.vars[i]
     if (v.field === Field.IDENTIFIER) {
-      const result = getVarFromFact(v.name, fact[0], currentBinding)
-      if (!result.match) {
+      const result = bindingWasSet(currentBinding, v.name, fact[0])
+      if (!result.didBindVar) {
         return result
       } else {
         currentBinding = result.binding
@@ -406,15 +348,15 @@ const getVarsFromFact = <T>(
     } else if (v.field === Field.ATTRIBUTE) {
       throw new Error(`Attributes can not contain vars: ${v}`)
     } else if (v.field === Field.VALUE) {
-      const results = getVarFromFact(v.name, fact[2], currentBinding)
-      if (!results.match) {
+      const results = bindingWasSet(currentBinding, v.name, fact[2])
+      if (!results.didBindVar) {
         return results
       } else {
         currentBinding = results.binding
       }
     }
   }
-  return { match: true, binding: currentBinding }
+  return { didBindVar: true, binding: currentBinding }
 }
 const leftActivationFromVars = <T>(
   session: Session<T>,
@@ -424,42 +366,13 @@ const leftActivationFromVars = <T>(
   alphaFact: Fact<T>,
   bindings: Binding<T>
 ) => {
-  // If we change this from `new Map(vars)` to just `vars` suddenly we get 5000/ops
-  // Try implementing this:https://github.com/paranim/pararules/pull/7/files
-  //
-  // I've tried using immer and immutable to get around the cost of this copy, but
-  // immutable doesn't actually give us any perf benefits, and immer has an issue
-  // because we save the created draft to node.match.vars which persists the proxy
-  // beyond the life cycle of the production.
-  //
-  // I'm still pretty sure immutability is the way to go, we just gotta figure out a
-  // way to thread the needle OR find that one path where we modify the vars when we
-  // shouldn't and correct it. I'd definitely prefer NOT adding an immutability library
-  // simply cause it splits the mental model into "mutable" world vs "immutable" world.
-
-  /**
-   * Var Log
-   *
-   * Passing:
-   * keys   Set(2) {
-   *          Map(1) { 'c1' => 'red' },
-   *          Map(1) { 'c1' => 'maize'}
-   *        }
-   *
-   * Failing:
-   * keys  Set(2) {
-   *         Map(3) { 'c1' => 'red', 'otherPerson' => 0, 'c2' => 'red' },
-   *         Map(3) { 'c1' => 'maize', 'otherPerson' => 0, 'c2' => 'maize' }
-   *       }
-   */
-
-  const bindResults = getVarsFromFact(
+  const bindResults = bindVarsFromFact(
     node.condition,
     alphaFact,
     token,
     bindings
   )
-  if (bindResults.match) {
+  if (bindResults.didBindVar) {
     const idAttr = getIdAttr<T>(alphaFact)
     const newIdAttrs = [...idAttrs]
     newIdAttrs.push(idAttr)
@@ -594,8 +507,8 @@ const rightActivationWithJoinNode = <T>(
   token: Token<T>
 ) => {
   if (node.parent === undefined) {
-    const bindings = getVarsFromFact(node.condition, token.fact, token)
-    if (bindings.match) {
+    const bindings = bindVarsFromFact(node.condition, token.fact, token)
+    if (bindings.didBindVar) {
       if (!node.child) {
         throw new Error(`Unexpected undefined child for node ${node.idName}`)
       }
@@ -619,13 +532,13 @@ const rightActivationWithJoinNode = <T>(
       ) {
         return
       }
-      const bindings = getVarsFromFact(
+      const bindings = bindVarsFromFact(
         node.condition,
         token.fact,
         token,
         match.match.bindings
       )
-      if (bindings.match) {
+      if (bindings.didBindVar) {
         const newIdAttrs = [...match.idAttrs]
         newIdAttrs.push(idAttr)
         const child = node.child
