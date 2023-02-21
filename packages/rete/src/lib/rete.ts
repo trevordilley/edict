@@ -77,16 +77,16 @@ const addNodes = <T>(
   nodes: [Field, keyof T | FactId][]
 ): AlphaNode<T> => {
   let result = session.alphaNode
-  nodes.forEach(([testField, testValue]) => {
+  for (const node of nodes) {
     result = addNode(result, {
       id: session.nextId(),
-      testField: testField,
-      testValue: testValue,
+      testField: node[0],
+      testValue: node[1],
       successors: [],
       children: [],
       facts: new Map(),
     })
-  })
+  }
   return result
 }
 
@@ -106,8 +106,7 @@ const addConditionsToProduction = <T, U>(
 ) => {
   const condition: Condition<T> = { shouldTrigger: then, nodes: [], vars: [] }
   const fieldTypes = [Field.IDENTIFIER, Field.ATTRIBUTE, Field.VALUE]
-
-  fieldTypes.forEach((fieldType) => {
+  for (const fieldType of fieldTypes) {
     if (fieldType === Field.IDENTIFIER) {
       if (isVar(id)) {
         const temp = id
@@ -127,7 +126,7 @@ const addConditionsToProduction = <T, U>(
         condition.nodes.push([fieldType, value])
       }
     }
-  })
+  }
   production.conditions.push(condition)
 }
 
@@ -182,7 +181,7 @@ const addProductionToSession = <T, U>(
       ruleName: production.name,
       oldIdAttrs: new Set<number>(),
     }
-    condition.vars.forEach((v) => {
+    for (const v of condition.vars) {
       if (bindings.has(v.name)) {
         joinedBindings.add(v.name)
         if (v.field === Field.IDENTIFIER) {
@@ -191,7 +190,7 @@ const addProductionToSession = <T, U>(
       } else {
         bindings.add(v.name)
       }
-    })
+    }
     if (parentMemNode) {
       parentMemNode.child = joinNode
     }
@@ -952,10 +951,13 @@ const retractFactByIdAndAttr = <T>(
   }
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set<AlphaNode<T>>()
-  session.idAttrNodes
-    .get(hashIdAttr([id, attr]))
-    ?.alphaNodes?.forEach((i) => idAttrNodes.add(i))
-  idAttrNodes.forEach((node) => {
+  const alphaNodes =
+    session.idAttrNodes.get(hashIdAttr([id, attr]))?.alphaNodes ?? []
+  for (const alpha of alphaNodes) {
+    idAttrNodes.add(alpha)
+  }
+
+  for (const node of idAttrNodes) {
     const fact = node.facts.get(id)?.get(attr.toString())
     if (fact) {
       rightActivationWithAlphaNode(session, node, {
@@ -965,7 +967,7 @@ const retractFactByIdAndAttr = <T>(
     } else {
       console.warn('Missing fact during retraction?')
     }
-  })
+  }
   if (autoFire ?? session.autoFire) {
     fireRules(session)
   }
@@ -1054,8 +1056,9 @@ const queryAll = <T, U>(
   // I feel like we should cache the results of these matches until the next `fire()`
   // then make it easy to query the data via key map paths or something. Iterating over all
   // matches could become cumbersome for large data sets
-  session.leafNodes.get(prod.name)?.matches.forEach((match, _) => {
-    const { enabled, bindings } = match.match
+  const matches = session.leafNodes.get(prod.name)?.matches ?? []
+  for (const match of matches) {
+    const { enabled, bindings } = match[1].match
     if (enabled && bindings) {
       const vars = bindingsToMatch(bindings)
       if (!filter) {
@@ -1084,7 +1087,8 @@ const queryAll = <T, U>(
         }
       }
     }
-  })
+  }
+
   return result
 }
 
