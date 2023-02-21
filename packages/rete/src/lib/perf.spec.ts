@@ -207,7 +207,7 @@ describe('rete perf', () => {
     const y = rete.queryAll(session, b)
     const before = performance.now()
     let count = 0
-    const { hz } = profile('packed_5_maps', 'profiles/packages/rete', () =>
+    const { hz } = profile('packed_5', 'profiles/packages/rete', () =>
       bench('packed5', () => {
         const dt = Math.random()
         rete.insertFact(session, ['Delta', 'delta', dt])

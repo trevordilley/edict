@@ -824,9 +824,9 @@ const getAlphaNodesForFact = <T>(
       return
     }
     nodes.add(node)
-    node.children.forEach((child) => {
+    for (const child of node.children) {
       getAlphaNodesForFact(session, child, fact, false, nodes)
-    })
+    }
   }
 }
 
