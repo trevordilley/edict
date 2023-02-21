@@ -408,7 +408,7 @@ const leftActivationWithoutAlpha = <T>(
       const alphaFacts = [...(node.alphaNode.facts.get(idStr)?.values() ?? [])]
       if (!alphaFacts)
         throw new Error(`Expected to have alpha facts for ${node.idName}`)
-      alphaFacts.forEach((alphaFact) => {
+      for (const alphaFact of alphaFacts) {
         leftActivationFromVars(
           session,
           node,
@@ -417,7 +417,7 @@ const leftActivationWithoutAlpha = <T>(
           alphaFact,
           binding
         )
-      })
+      }
     }
   } else {
     for (const fact of node.alphaNode.facts.values()) {
@@ -588,7 +588,7 @@ const rightActivationWithAlphaNode = <T>(
     if (idAttr === undefined) throw new Error(`Expected fact id to exist ${id}`)
     idAttr.set(attr.toString(), token.fact)
   }
-  node.successors.forEach((child) => {
+  for (const child of node.successors) {
     if (token.kind === TokenKind.UPDATE && child.disableFastUpdates) {
       if (token.oldFact === undefined)
         throw new Error(`Expected token ${token.fact} to have an oldFact`)
@@ -603,7 +603,7 @@ const rightActivationWithAlphaNode = <T>(
     } else {
       rightActivationWithJoinNode(session, child, idAttr, token)
     }
-  })
+  }
 }
 
 const raiseRecursionLimitException = (
@@ -624,19 +624,22 @@ const raiseRecursionLimit = <T>(
   for (let i = executedNodes.length - 1; i >= 0; i--) {
     const currNodes = {}
     const nodeToTriggeredNodes = executedNodes[i]
-    nodeToTriggeredNodes.forEach((triggeredNodes, node) => {
+    for (const n of nodeToTriggeredNodes) {
+      const node = n[0]
+      const triggeredNodes = n[1]
+
       const obj = {}
-      triggeredNodes.forEach((triggeredNode) => {
+      for (const triggeredNode of triggeredNodes) {
         if (triggeredNode.ruleName in nodes) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           obj[triggeredNode.ruleName] = nodes[triggeredNode.ruleName]
         }
-      })
+      }
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       currNodes[node.ruleName] = obj
-    })
+    }
     nodes = currNodes
   }
 }
@@ -689,16 +692,18 @@ const fireRules = <T>(
     // reset state
     session.thenQueue.clear()
     session.thenFinallyQueue.clear()
-    thenQueue.forEach(([node]) => {
+    for (const nodeArr of thenQueue) {
+      const node = nodeArr[0]
       if (node.nodeType) {
         node.nodeType!.trigger = false
       }
-    })
-    thenFinallyQueue.forEach((node) => {
+    }
+
+    for (const node of thenFinallyQueue) {
       if (node.nodeType) {
         node.nodeType!.trigger = false
       }
-    })
+    }
 
     const nodeToTriggeredNodeIds = new Map<MemoryNode<T>, Set<MemoryNode<T>>>()
     const add = (
@@ -711,8 +716,13 @@ const fireRules = <T>(
       }
       const existing = t.get(nodeId) ?? new Set<MemoryNode<T>>()
       const ns = new Set<MemoryNode<T>>()
-      s.forEach((e) => ns.add(e))
-      existing.forEach((e) => ns.add(e))
+      for (const e of s) {
+        ns.add(e)
+      }
+
+      for (const e of existing) {
+        ns.add(e)
+      }
       t.set(nodeId, ns)
     }
 
@@ -726,14 +736,18 @@ const fireRules = <T>(
       Map<IdAttrsHash, { idAttrs: IdAttrs<T>; match: Match<T> }>
     > = new Map()
 
-    thenQueue.forEach(([node]) => {
+    for (const nodeArr of thenQueue) {
+      const node = nodeArr[0]
       if (!nodeToMatches.has(node)) {
         nodeToMatches.set(node, node.matches)
       }
-    })
+    }
 
     // Execute `then` blocks
-    thenQueue.forEach(([node, idAttrsHash]) => {
+    for (const then of thenQueue) {
+      const node = then[0]
+      const idAttrsHash = then[1]
+
       const matches = nodeToMatches.get(node)
       if (matches !== undefined && matches.has(idAttrsHash)) {
         const match = matches.get(idAttrsHash)
@@ -752,10 +766,10 @@ const fireRules = <T>(
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
       }
-    })
+    }
 
     // Execute `thenFinally` blocks
-    thenFinallyQueue.forEach((node) => {
+    for (const node of thenFinallyQueue) {
       session.triggeredNodeIds.clear()
       if (process.env.NODE_ENV === 'development') {
         if (session.debug.enabled) {
@@ -767,7 +781,7 @@ const fireRules = <T>(
       }
       node.nodeType?.thenFinallyFn?.()
       add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
-    })
+    }
 
     executedNodes.push(nodeToTriggeredNodeIds)
   }
@@ -776,10 +790,10 @@ const fireRules = <T>(
     session.subscriptionsOnProductions.size > 0 &&
     session.triggeredSubscriptionQueue.size > 0
   ) {
-    session.triggeredSubscriptionQueue.forEach((ts) => {
+    for (const ts of session.triggeredSubscriptionQueue) {
       const fn = session.subscriptionsOnProductions.get(ts)
       if (fn) fn()
-    })
+    }
   }
   session.triggeredSubscriptionQueue.clear()
   if (process.env.NODE_ENV === 'development') {
