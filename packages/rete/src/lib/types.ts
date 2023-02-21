@@ -178,6 +178,13 @@ export interface Debug<T> extends DebugOptions {
   mutationsSinceLastFire: Mutation<T>[]
 }
 
+
+// TODO: store the WMEs in a singular data structure and reference by index?
+// internally we would look up an id or attr by name once and use the index
+// Throughout the rest of the algorithm.
+//
+// This would likely simplify cacheline targeted optimizations and/or table 
+// oriented redactors?
 export interface Session<T> {
   alphaNode: AlphaNode<T>
   leafNodes: Map<string, MemoryNode<T>>
