@@ -169,8 +169,12 @@ export interface DebugFrame<T> {
 export const DEFAULT_MAX_FRAME_DUMPS = 40
 
 export interface DebugOptions {
-  enabled: boolean
+  enabled?: boolean
   maxFrameDumps?: number
+  onBeforeThen?: (node: MemoryNode<any>) => void
+  onAfterThen?: (node: MemoryNode<any>) => void
+  onBeforeThenFinally?: (node: MemoryNode<any>) => void
+  onAfterThenFinally?: (node: MemoryNode<any>) => void
 }
 export interface Debug<T> extends DebugOptions {
   numFramesSinceInit: number
@@ -178,12 +182,11 @@ export interface Debug<T> extends DebugOptions {
   mutationsSinceLastFire: Mutation<T>[]
 }
 
-
 // TODO: store the WMEs in a singular data structure and reference by index?
 // internally we would look up an id or attr by name once and use the index
 // Throughout the rest of the algorithm.
 //
-// This would likely simplify cacheline targeted optimizations and/or table 
+// This would likely simplify cacheline targeted optimizations and/or table
 // oriented redactors?
 export interface Session<T> {
   alphaNode: AlphaNode<T>

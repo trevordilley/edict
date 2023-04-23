@@ -762,7 +762,9 @@ const fireRules = <T>(
               `expected match ${match.match.id} to have bindings??`
             )
           }
+          session.debug?.onBeforeThen?.(node)
           node.nodeType?.thenFn?.(bindingsToMatch(match.match.bindings))
+          session.debug?.onAfterThen?.(node)
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
       }
@@ -779,7 +781,9 @@ const fireRules = <T>(
           })
         }
       }
+      session.debug?.onBeforeThenFinally?.(node)
       node.nodeType?.thenFinallyFn?.()
+      session.debug?.onAfterThenFinally?.(node)
       add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
     }
 
