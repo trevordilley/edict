@@ -2,6 +2,8 @@
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
 
+import { Tracer } from '@opentelemetry/api'
+
 export type ValueOf<T> = T[keyof T]
 export type FactFragment<SCHEMA> = FactId | keyof SCHEMA | ValueOf<SCHEMA>
 export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>
@@ -171,10 +173,13 @@ export const DEFAULT_MAX_FRAME_DUMPS = 40
 export interface DebugOptions {
   enabled?: boolean
   maxFrameDumps?: number
-  onBeforeThen?: (node: MemoryNode<any>) => void
-  onAfterThen?: (node: MemoryNode<any>) => void
-  onBeforeThenFinally?: (node: MemoryNode<any>) => void
-  onAfterThenFinally?: (node: MemoryNode<any>) => void
+  tracer?: Tracer
+  onBeforeFire?: () => any
+  onAfterFire?: (context: any) => void
+  onBeforeThen?: (node: MemoryNode<any>) => any
+  onAfterThen?: (node: MemoryNode<any>, context: any) => void
+  onBeforeThenFinally?: (node: MemoryNode<any>) => any
+  onAfterThenFinally?: (node: MemoryNode<any>, context: any) => void
 }
 export interface Debug<T> extends DebugOptions {
   numFramesSinceInit: number

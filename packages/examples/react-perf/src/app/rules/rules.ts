@@ -1,5 +1,11 @@
 import { edict } from '@edict/edict'
 import { Sex } from '@faker-js/faker'
+import {
+  BasicTracerProvider,
+  SimpleSpanProcessor,
+} from '@opentelemetry/sdk-trace-base'
+import { Span, trace } from '@opentelemetry/api'
+import { ZipkinExporter } from '@opentelemetry/exporter-zipkin'
 
 export enum ProvinceClassification {
   TINY = 'tiny',
@@ -57,9 +63,38 @@ export interface Civilian {
 
 export type Schema = Location & Civilian & Province
 
+const provider = new BasicTracerProvider()
+// const exporter =  new OTLPTraceExporter(
+// //   {
+// //   // optional - default url is http://localhost:4318/v1/traces
+// //   // url: "<your-otlp-endpoint>/v1/traces",
+// //   // // optional - collection of custom headers to be sent with each request, empty by default
+// //   // headers: {},
+// // }
+// ),
+provider.addSpanProcessor(new SimpleSpanProcessor(new ZipkinExporter({})))
+provider.register()
+const tracer = trace.getTracer('default')
 const session = edict<Schema>(true, {
-  onBeforeThen: (node) => console.log('before', node.ruleName),
-  onAfterThen: (node) => console.log('after', node.ruleName),
+  onBeforeFire: () => {
+    return tracer.startSpan('fireRules')
+  },
+  onAfterFire: (context: Span) => {
+    context.end()
+    // console.log(exporter.getFinishedSpans())
+  },
+  onBeforeThen: (node) => {
+    return tracer.startSpan(node.ruleName)
+  },
+  onAfterThen: (node, context: Span) => {
+    context.end()
+  },
+  onBeforeThenFinally: (node) => {
+    return tracer.startSpan(`thenFinally${node.ruleName}`)
+  },
+  onAfterThenFinally: (_, context: Span) => {
+    context.end()
+  },
 })
 
 const { rule } = session

@@ -41,6 +41,7 @@ import {
 } from './types'
 import * as _ from 'lodash'
 import { hashIdAttr, hashIdAttrs } from './utils'
+import { context, trace } from '@opentelemetry/api'
 
 declare const process: {
   env: {
@@ -652,6 +653,7 @@ const fireRules = <T>(
   if (session.insideRule) {
     return
   }
+  const rootCntx = session.debug?.onBeforeFire?.()
   let debugFrame: DebugFrame<T> | undefined = undefined
   let startingFacts: Fact<T>[] = []
   if (process.env.NODE_ENV === 'development') {
@@ -674,7 +676,21 @@ const fireRules = <T>(
   // noinspection InfiniteLoopJS
   // eslint-disable-next-line no-constant-condition
   let notFinishedExecuting = true
+  const rootSpan = session.debug.tracer?.startSpan('fireRules')
+  let itrSpan
+  let itrCtx
+  if (rootSpan) {
+    itrSpan = rootSpan
+    itrCtx = trace.setSpan(context.active(), itrSpan)
+  }
   while (notFinishedExecuting) {
+    if (itrSpan && itrCtx) {
+      const itrSpan = session.debug.tracer?.startSpan(
+        'iterate',
+        undefined,
+        itrCtx
+      )
+    }
     if (recursionLimit >= 0) {
       if (recurCount == recursionLimit) {
         raiseRecursionLimit(recursionLimit, executedNodes)
@@ -762,9 +778,9 @@ const fireRules = <T>(
               `expected match ${match.match.id} to have bindings??`
             )
           }
-          session.debug?.onBeforeThen?.(node)
+          const thenCnxt = session.debug?.onBeforeThen?.(node)
           node.nodeType?.thenFn?.(bindingsToMatch(match.match.bindings))
-          session.debug?.onAfterThen?.(node)
+          session.debug?.onAfterThen?.(node, thenCnxt)
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
       }
@@ -781,13 +797,14 @@ const fireRules = <T>(
           })
         }
       }
-      session.debug?.onBeforeThenFinally?.(node)
+      const cntx = session.debug?.onBeforeThenFinally?.(node)
       node.nodeType?.thenFinallyFn?.()
-      session.debug?.onAfterThenFinally?.(node)
+      session.debug?.onAfterThenFinally?.(node, cntx)
       add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
     }
 
     executedNodes.push(nodeToTriggeredNodeIds)
+    itrSpan?.end()
   }
 
   if (
@@ -814,6 +831,8 @@ const fireRules = <T>(
     }
   }
   //console.table(varUpdateLog)
+  rootSpan?.end()
+  session.debug?.onAfterFire?.(rootCntx)
   return { executedNodes, session }
 }
 
