@@ -57,13 +57,10 @@ export interface Civilian {
 
 export type Schema = Location & Civilian & Province
 
-const session = edict<Schema>(true, {
-  onBeforeThen: (node) => console.log('before', node.ruleName),
-  onAfterThen: (node) => console.log('after', node.ruleName),
-})
+const session = edict<Schema>(true)
 
 const { rule } = session
-export const { insert, retract, fire, debug } = session
+export const { insert, retract, fire } = session
 
 const CRIME_RATIO = 0.05
 

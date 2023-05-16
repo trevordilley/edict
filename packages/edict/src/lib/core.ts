@@ -12,8 +12,6 @@ import {
 import * as _ from 'lodash'
 import {
   ConvertMatchFn,
-  DebugOptions,
-  DEFAULT_MAX_FRAME_DUMPS,
   Field,
   PRODUCTION_ALREADY_EXISTS_BEHAVIOR,
   QueryFilter,
@@ -40,16 +38,11 @@ const valueKey = ({
 }) => `${VALUE_PREFIX}${id}_${String(attr)}`
 
 export const edict = <SCHEMA extends object>(
-  autoFire = true,
-  debug: DebugOptions = {
-    enabled: false,
-    maxFrameDumps: DEFAULT_MAX_FRAME_DUMPS,
-  }
+  autoFire = true
 ): IEdict<SCHEMA> => {
-  console.log(debug)
-  let session = rete.initSession<SCHEMA>(autoFire, debug)
+  let session = rete.initSession<SCHEMA>(autoFire)
   const reset = () => {
-    session = rete.initSession<SCHEMA>(autoFire, debug)
+    session = rete.initSession<SCHEMA>(autoFire)
   }
   const insert = (insertFacts: InsertEdictFact<SCHEMA>) => {
     // be dumb about this
@@ -302,10 +295,5 @@ export const edict = <SCHEMA extends object>(
     conditions,
     rule,
     reset,
-    debug: {
-      dotFile,
-      perf,
-      engineDebug: session.debug,
-    },
   }
 }

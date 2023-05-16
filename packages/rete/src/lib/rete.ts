@@ -12,9 +12,6 @@ import {
   CondFn,
   Condition,
   ConvertMatchFn,
-  DebugFrame,
-  DebugOptions,
-  DEFAULT_MAX_FRAME_DUMPS,
   ExecutedNodes,
   Fact,
   FactFragment,
@@ -652,20 +649,6 @@ const fireRules = <T>(
   if (session.insideRule) {
     return
   }
-  let debugFrame: DebugFrame<T> | undefined = undefined
-  let startingFacts: Fact<T>[] = []
-  if (process.env.NODE_ENV === 'development') {
-    if (session.debug.enabled) {
-      startingFacts = queryFullSession(session)
-      debugFrame = {
-        initialMutations: [...session.debug.mutationsSinceLastFire],
-        triggeredRules: [],
-        dt: 0,
-        startingFacts,
-        endingFacts: [],
-      }
-    }
-  }
   // Only for debugging purposes, should we remove for prod usage?
   const executedNodes: ExecutedNodes<T> = []
 
@@ -762,9 +745,7 @@ const fireRules = <T>(
               `expected match ${match.match.id} to have bindings??`
             )
           }
-          session.debug?.onBeforeThen?.(node)
           node.nodeType?.thenFn?.(bindingsToMatch(match.match.bindings))
-          session.debug?.onAfterThen?.(node)
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
       }
@@ -773,17 +754,7 @@ const fireRules = <T>(
     // Execute `thenFinally` blocks
     for (const node of thenFinallyQueue) {
       session.triggeredNodeIds.clear()
-      if (process.env.NODE_ENV === 'development') {
-        if (session.debug.enabled) {
-          debugFrame?.triggeredRules.push({
-            ruleName: node.ruleName,
-            kind: 'thenFinally',
-          })
-        }
-      }
-      session.debug?.onBeforeThenFinally?.(node)
       node.nodeType?.thenFinallyFn?.()
-      session.debug?.onAfterThenFinally?.(node)
       add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
     }
 
@@ -800,20 +771,6 @@ const fireRules = <T>(
     }
   }
   session.triggeredSubscriptionQueue.clear()
-  if (process.env.NODE_ENV === 'development') {
-    if (session.debug.enabled) {
-      const endingFacts = queryFullSession(session)
-      debugFrame!.endingFacts = endingFacts
-      session.debug.numFramesSinceInit = session.debug.numFramesSinceInit + 1
-      session.debug.frames.push(debugFrame!)
-      const maxFrames = session.debug.maxFrameDumps ?? DEFAULT_MAX_FRAME_DUMPS
-      if (maxFrames > -1 && session.debug.frames.length > maxFrames) {
-        session.debug.frames.shift()
-      }
-      session.debug.mutationsSinceLastFire = []
-    }
-  }
-  //console.table(varUpdateLog)
   return { executedNodes, session }
 }
 
@@ -906,24 +863,12 @@ const insertFact = <T>(session: Session<T>, fact: Fact<T>) => {
   const nodes = new Set<AlphaNode<T>>()
   getAlphaNodesForFact(session, session.alphaNode, fact, true, nodes)
   upsertFact(session, fact, nodes)
-  if (process.env.NODE_ENV === 'development') {
-    session.debug.mutationsSinceLastFire.push({
-      kind: 'insert',
-      fact,
-    })
-  }
   if (session.autoFire) {
     fireRules(session)
   }
 }
 
 const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
-  if (process.env.NODE_ENV === 'development') {
-    session.debug.mutationsSinceLastFire.push({
-      kind: 'retract',
-      fact,
-    })
-  }
   const idAttr = getIdAttr(fact)
   const idAttrHash = hashIdAttr(idAttr)
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
@@ -961,12 +906,6 @@ const retractFactByIdAndAttr = <T>(
   attr: keyof T,
   autoFire?: boolean
 ) => {
-  if (process.env.NODE_ENV === 'development') {
-    session.debug.mutationsSinceLastFire.push({
-      kind: 'retract',
-      fact: [id, attr, undefined],
-    })
-  }
   // Make a copy of idAttrNodes[idAttr], since rightActivationWithAlphaNode will modify it
   const idAttrNodes = new Set<AlphaNode<T>>()
   const alphaNodes =
@@ -994,13 +933,7 @@ const retractFactByIdAndAttr = <T>(
 const defaultInitMatch = <T>() => {
   return new Map<string, FactFragment<T>>()
 }
-const initSession = <T>(
-  autoFire = true,
-  debug: DebugOptions = {
-    enabled: false,
-    maxFrameDumps: 40,
-  }
-): Session<T> => {
+const initSession = <T>(autoFire = true): Session<T> => {
   let nodeIdCounter = 0
   const nextId = () => nodeIdCounter++
   const alphaNode: AlphaNode<T> = {
@@ -1040,12 +973,6 @@ const initSession = <T>(
     triggeredSubscriptionQueue: new Set<string>(),
     autoFire,
     nextId,
-    debug: {
-      ...debug,
-      numFramesSinceInit: 0,
-      frames: [],
-      mutationsSinceLastFire: [],
-    },
   }
 }
 

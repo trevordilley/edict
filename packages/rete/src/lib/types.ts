@@ -204,7 +204,6 @@ export interface Session<T> {
   autoFire: boolean
   initMatch: InitMatchFn<T>
   nextId: () => number
-  debug: Debug<T>
 }
 
 export type ExecutedNodes<T> = Map<MemoryNode<T>, Set<MemoryNode<T>>>[]

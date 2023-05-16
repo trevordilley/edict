@@ -9,7 +9,7 @@ const newDest = () => ({
   destY: Math.floor(Math.random() * HEIGHT),
 })
 // Start an edict session
-const { insert, rule, fire, retract, debug } = edict<{
+const { insert, rule, fire, retract } = edict<{
   speed: number
   dt: number
   destX: number
@@ -77,16 +77,12 @@ const create = (scene: Phaser.Scene) => {
   }
 }
 
-const { frames, capture } = debug.perf()
-
 const update = (scene: Phaser.Scene, time: number, deltaTime: number) => {
   // Continuously update the dt fact (delta time)
   insert({
     time: { dt: deltaTime },
   })
   fire()
-  const frame = capture()
-  console.log(frames)
 }
 // Phaser and React tom-foolerly
 const config = {

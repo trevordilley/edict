@@ -26,7 +26,7 @@ import { useEffect, useState } from 'react'
 import { useRule, useRuleOne } from './useRule'
 
 export const initializeSession = (autoFire = true) => {
-  const session = edict<Schema>(autoFire, { enabled: true })
+  const session = edict<Schema>(autoFire)
   const { insert, retract, conditions, rule, retractByConditions } = session
 
   const articleConditions = conditions(

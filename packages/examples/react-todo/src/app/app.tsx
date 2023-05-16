@@ -18,8 +18,7 @@ import { ITodo } from './types'
 // safety.
 
 const { rule, retract, insert } = edict<{ isComplete: boolean; title: string }>(
-  true,
-  { enabled: true }
+  true
 )
 
 const { subscribe, query } = rule('All Todos', ({ title, isComplete }) => ({
