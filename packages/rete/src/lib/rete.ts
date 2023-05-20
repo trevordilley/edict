@@ -20,16 +20,6 @@ import { retractFactByIdAndAttr } from './retractFactByIdAndAttr/retractFactById
 import { insertFact } from './insertFact/insertFact'
 import { retractFact } from './retractFact/retractFact'
 
-const raiseRecursionLimitException = (
-  limit: number,
-  additionalText?: string
-) => {
-  const msg = `Recursion limit hit. The current limit is ${limit} (set by the recursionLimit param of fireRules).`
-  throw new Error(
-    `${msg} ${additionalText}\n Try using the transient_ variants in your schema to prevent triggering rules in an infinite loop.`
-  )
-}
-
 export const rete = {
   get,
   queryAll,
