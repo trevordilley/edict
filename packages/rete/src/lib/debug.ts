@@ -8,7 +8,7 @@ import {
   Session,
 } from './types'
 import { hashIdAttr } from './utils'
-import { bindingsToMatch } from './rete'
+import { bindingsToMatch } from './bindingsToMatch/bindingsToMatch'
 
 const FIELD_TO_STR = ['ID', 'ATTR', 'VAL']
 
