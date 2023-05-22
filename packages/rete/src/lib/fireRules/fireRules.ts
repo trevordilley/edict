@@ -94,6 +94,21 @@ export const fireRules = <T>(
       }
     }
 
+    // Execute `thenAll` blocks
+    for (const [node, matches] of nodeToMatches) {
+      if (node.nodeType?.thenAllFn) {
+        session.triggeredNodeIds.clear()
+        const bindings = []
+        for (const [id, match] of matches.entries()) {
+          if (match?.match?.enabled) {
+            bindings.push(bindingsToMatch(match?.match.bindings!))
+          }
+        }
+        node.nodeType.thenAllFn?.(bindings)
+        add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
+      }
+    }
+
     // Execute `then` blocks
     for (const then of thenQueue) {
       const node = then[0]

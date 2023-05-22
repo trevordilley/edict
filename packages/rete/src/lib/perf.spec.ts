@@ -159,10 +159,13 @@ describe('rete perf', () => {
       const production = rete.initProduction<Schema, MatchT<Schema>>({
         name: `${name} production`,
         convertMatchFn,
-        thenFn: ({ vars }) => {
-          const id = vars.get(entJoin)!
-          const val = vars.get(valName) as number
-          rete.insertFact(session, [id, name, val * 2])
+
+        thenAllFn: ({ vars }) => {
+          for (const v of vars) {
+            const id = v.get(entJoin)!
+            const val = v.get(valName) as number
+            rete.insertFact(session, [id, name, val * 2])
+          }
         },
       })
       rete.addConditionsToProduction(
@@ -232,8 +235,8 @@ describe('rete perf', () => {
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
     expect(hz).toBeGreaterThan(80)
-    //   expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(1000)
     // expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)
     // expect(hz).toBeGreaterThan(300_000)
@@ -249,13 +252,15 @@ describe('rete perf', () => {
       const production = rete.initProduction<Schema, MatchT<Schema>>({
         name: `${first}-${second}`,
         convertMatchFn,
-        thenFn: ({ vars }) => {
-          const firstId = vars.get(firstJoin)!
-          const secondId = vars.get(secondJoin)!
-          const firstVal = vars.get(firstValName) as number
-          const secondVal = vars.get(secondValName) as number
-          rete.insertFact(session, [firstId, second, firstVal])
-          rete.insertFact(session, [secondId, first, secondVal])
+        thenAllFn: ({ vars }) => {
+          for (const v of vars) {
+            const firstId = v.get(firstJoin)!
+            const secondId = v.get(secondJoin)!
+            const firstVal = v.get(firstValName) as number
+            const secondVal = v.get(secondValName) as number
+            rete.insertFact(session, [firstId, second, firstVal])
+            rete.insertFact(session, [secondId, first, secondVal])
+          }
         },
       })
       rete.addConditionsToProduction(
@@ -286,7 +291,7 @@ describe('rete perf', () => {
     makeProduction('C', 'E')
 
     rete.insertFact(session, ['Delta', 'delta', 1])
-    const NUM_ENTITIES = 1
+    const NUM_ENTITIES = 100
     for (let i = 0; i < NUM_ENTITIES; i++) {
       const ab = `${i}ab`
       rete.insertFact(session, [ab, 'A', 0])
@@ -330,10 +335,12 @@ describe('rete perf', () => {
       const production = rete.initProduction<Schema, MatchT<Schema>>({
         name,
         convertMatchFn,
-        thenFn: ({ vars }) => {
-          const id = vars.get(joinId)!
-          const val = vars.get(valName) as number
-          rete.insertFact(session, [id, name, val * 2])
+        thenAllFn: ({ vars }) => {
+          for (const v of vars) {
+            const id = v.get(joinId)!
+            const val = v.get(valName) as number
+            rete.insertFact(session, [id, name, val * 2])
+          }
         },
       })
       rete.addConditionsToProduction(
@@ -372,8 +379,8 @@ describe('rete perf', () => {
     })
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
-    // expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(1000)
     // expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)
     // expect(hz).toBeGreaterThan(300_000)
@@ -386,10 +393,12 @@ describe('rete perf', () => {
     const spawnB = rete.initProduction<Schema, MatchT<Schema>>({
       name: 'Spawn B',
       convertMatchFn,
-      thenFn: ({ vars }) => {
-        const id = vars.get(joinId)!
-        const val = vars.get('a') as number
-        rete.insertFact(session, [`${id}B`, 'B', val * 2])
+      thenAllFn: ({ vars }) => {
+        for (const v of vars) {
+          const id = v.get(joinId)!
+          const val = v.get('a') as number
+          rete.insertFact(session, [`${id}B`, 'B', val * 2])
+        }
       },
     })
     rete.addConditionsToProduction(
@@ -410,9 +419,11 @@ describe('rete perf', () => {
     const retractB = rete.initProduction<Schema, MatchT<Schema>>({
       name: 'Retract B',
       convertMatchFn,
-      thenFn: ({ vars }) => {
-        const id = vars.get(joinId) as string
-        rete.retractFactByIdAndAttr(session, id, 'B')
+      thenAllFn: ({ vars }) => {
+        for (const v of vars) {
+          const id = v.get(joinId) as string
+          rete.retractFactByIdAndAttr(session, id, 'B')
+        }
       },
     })
     rete.addConditionsToProduction(
@@ -444,9 +455,9 @@ describe('rete perf', () => {
     })
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
-    // expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
-    // expect(hz).toBeGreaterThan(10_000)
+    expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)
     // expect(hz).toBeGreaterThan(300_000)
     // expect(hz).toBeGreaterThan(500_000)
@@ -458,10 +469,12 @@ describe('rete perf', () => {
     const spawnB = rete.initProduction<Schema, MatchT<Schema>>({
       name: 'Spawn B',
       convertMatchFn,
-      thenFn: ({ vars }) => {
-        const id = vars.get(joinId)!
-        const val = vars.get('a') as number
-        rete.insertFact(session, [id, 'B', val * 2])
+      thenAllFn: ({ vars }) => {
+        for (const v of vars) {
+          const id = v.get(joinId)!
+          const val = v.get('a') as number
+          rete.insertFact(session, [id, 'B', val * 2])
+        }
       },
     })
     rete.addConditionsToProduction(
@@ -482,9 +495,11 @@ describe('rete perf', () => {
     const retractB = rete.initProduction<Schema, MatchT<Schema>>({
       name: 'Retract B',
       convertMatchFn,
-      thenFn: ({ vars }) => {
-        const id = vars.get(joinId) as string
-        rete.retractFactByIdAndAttr(session, id, 'B')
+      thenAllFn: ({ vars }) => {
+        for (const v of vars) {
+          const id = v.get(joinId) as string
+          rete.retractFactByIdAndAttr(session, id, 'B')
+        }
       },
     })
     rete.addConditionsToProduction(
@@ -516,9 +531,9 @@ describe('rete perf', () => {
     })
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
-    // expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
-    // expect(hz).toBeGreaterThan(10_000)
+    expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)
     // expect(hz).toBeGreaterThan(300_000)
     // expect(hz).toBeGreaterThan(500_000)

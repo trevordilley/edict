@@ -93,6 +93,22 @@ export const addProductionToSession = <T, U>(
           })
         }
       }
+      if (production.thenFn && production.thenAllFn) {
+        throw new Error(
+          `Production ${production.name} has both a then() and thenAll(). Please use one or the other, but not both!`
+        )
+      }
+      const pThenAllFn = production.thenAllFn
+      if (pThenAllFn) {
+        const sess = { ...session, insideRule: true }
+        memNode.nodeType.thenAllFn = (vars) => {
+          pThenAllFn({
+            session: sess,
+            rule: production,
+            vars: vars.map((v) => production.convertMatchFn(v)),
+          })
+        }
+      }
       const pThenFinallyFn = production.thenFinallyFn
       if (pThenFinallyFn) {
         const sess = { ...session, insideRule: true }

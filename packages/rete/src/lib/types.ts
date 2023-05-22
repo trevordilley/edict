@@ -64,6 +64,14 @@ export type ThenFn<T, U> = (then: {
   rule: Production<T, U>
   vars: U
 }) => Promise<void> | void
+export type ThenAllFn<T, U> = (then: {
+  session: Session<T>
+  rule: Production<T, U>
+  vars: U[]
+}) => Promise<void> | void
+export type WrappedThenAllFn<SCHEMA> = (
+  vars: MatchT<SCHEMA>[]
+) => Promise<void> | void
 export type WrappedThenFn<SCHEMA> = (
   vars: MatchT<SCHEMA>
 ) => Promise<void> | void
@@ -112,6 +120,7 @@ export interface MemoryNode<T> {
 export interface LeafNode<T> {
   condFn?: CondFn<T>
   thenFn?: WrappedThenFn<T>
+  thenAllFn?: WrappedThenAllFn<T>
   thenFinallyFn?: WrappedThenFinallyFn
   trigger?: boolean
 }
@@ -146,6 +155,7 @@ export interface Production<T, U> {
   }>
   condFn?: CondFn<T>
   thenFn?: ThenFn<T, U>
+  thenAllFn?: ThenAllFn<T, U>
   thenFinallyFn?: ThenFinallyFn<T, U>
 }
 
