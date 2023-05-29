@@ -14,7 +14,7 @@ export const leftActivationWithoutAlpha = <T>(
     const id = getValFromBindings(binding, node.idName) //vars.get(node.idName)
     const idStr = id !== undefined ? `${id}` : undefined
     if (idStr !== undefined && node.alphaNode.facts.get(idStr)) {
-      const alphaFacts = [...(node.alphaNode.facts.get(idStr)?.values() ?? [])]
+      const alphaFacts = node.alphaNode.facts.get(idStr)?.values()
       if (!alphaFacts)
         throw new Error(`Expected to have alpha facts for ${node.idName}`)
       for (const alphaFact of alphaFacts) {
