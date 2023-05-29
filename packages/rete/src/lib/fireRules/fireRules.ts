@@ -105,14 +105,15 @@ export const fireRules = <T>(
         if (
           match !== undefined &&
           match.match !== undefined &&
-          match.match.enabled
+          match.match.enabled &&
+          match.match.bindings
         ) {
-          session.triggeredNodeIds.clear()
-          if (!match.match.bindings) {
-            throw new Error(
-              `expected match ${match.match.id} to have bindings??`
-            )
-          }
+          // session.triggeredNodeIds.clear()
+          // if (!match.match.bindings) {
+          //   throw new Error(
+          //     `expected match ${match.match.id} to have bindings??`
+          //   )
+          // }
           node.nodeType?.thenFn?.(bindingsToMatch(match.match.bindings))
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
