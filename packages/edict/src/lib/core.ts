@@ -48,9 +48,9 @@ export const edict = <SCHEMA extends object>(
     // be dumb about this
     const factTuples = insertFactToFact(insertFacts)
 
-    factTuples.forEach((fact) => {
-      rete.insertFact<SCHEMA>(session, fact)
-    })
+    for (let i = 0; i < factTuples.length; i++) {
+      rete.insertFact<SCHEMA>(session, factTuples[i])
+    }
   }
   const retract = (id: string, ...attrs: (keyof SCHEMA)[]) => {
     attrs.map((attr) => {
@@ -92,14 +92,14 @@ export const edict = <SCHEMA extends object>(
       // js object we want
       const result = {}
 
-      args.forEach((v, k) => {
+      for (const [k, v] of args) {
         if (k.startsWith(ID_PREFIX)) {
           const id = k.replace(ID_PREFIX, '')
           _.set(result, id, { id: args.get(k) })
         }
-      })
+      }
 
-      args.forEach((v, k) => {
+      for (const [k, v] of args) {
         if (k.startsWith(VALUE_PREFIX)) {
           const value = k.replace(VALUE_PREFIX, '')
           const [id, attr] = value.split('_')
@@ -108,7 +108,7 @@ export const edict = <SCHEMA extends object>(
           }
           _.set(result, `${id}.${attr}`, args.get(k))
         }
-      })
+      }
 
       return result as EnactArgs<SCHEMA, T>
     }
@@ -130,9 +130,12 @@ export const edict = <SCHEMA extends object>(
       // TODO: Do we need to do things this way?
       const schema = {} as unknown as SCHEMA
       const cond = conditions(schema)
-      _.keys(cond).forEach((id) => {
+      const keys = _.keys(cond)
+      for (let i = 0; i < keys.length; i++) {
+        const id = keys[i]
         const attrs = _.keys(_.get(cond, id)) as [keyof SCHEMA]
-        attrs.forEach((attr) => {
+        for (let j = 0; j < attrs.length; j++) {
+          const attr = attrs[j]
           const options: ConditionOptions<unknown> | undefined = _.get(
             cond,
             `${id}.${attr}`
@@ -176,8 +179,9 @@ export const edict = <SCHEMA extends object>(
             conditionValue,
             options?.then ?? true
           )
-        })
-      })
+        }
+      }
+
       rete.addProductionToSession(session, production, onAlreadyExists)
       const convertFilterArgs = (filter: QueryArgs<SCHEMA, T>) => {
         const joinIds = Object.keys(filter)
