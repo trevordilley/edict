@@ -26,6 +26,8 @@ export const rightActivationWithJoinNode = <T>(
       )
     }
   } else {
+    /// Fix this, for some reason if we try to do a `for...of` loop it breaks all the things...
+    // the foreach is creating a ton of allocations, we wanna stop that.
     node.parent.matches.forEach((match) => {
       // TODO: We need to find call sites where we need to consolidate the bindings into a match
       const idName = node.idName
