@@ -2,7 +2,6 @@ import {
   CondFn,
   ConvertMatchFn,
   Production,
-  ThenAllFn,
   ThenFinallyFn,
   ThenFn,
 } from '@edict/rete'
@@ -12,7 +11,6 @@ export const initProduction = <SCHEMA, U>(production: {
   convertMatchFn: ConvertMatchFn<SCHEMA, U>
   condFn?: CondFn<SCHEMA>
   thenFn?: ThenFn<SCHEMA, U>
-  thenAllFn?: ThenAllFn<SCHEMA, U>
   thenFinallyFn?: ThenFinallyFn<SCHEMA, U>
 }): Production<SCHEMA, U> => {
   return {
