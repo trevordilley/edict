@@ -31,7 +31,7 @@ export const upsertFact = <T>(
         const oldFact = n.facts.get(fact[0].toString())?.get(fact[1].toString())
         if (oldFact === undefined) {
           console.warn("Old fact doesn't exist?")
-          return
+          continue
         }
         rightActivationWithAlphaNode(session, n, {
           fact: oldFact,
