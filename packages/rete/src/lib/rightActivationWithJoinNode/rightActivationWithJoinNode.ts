@@ -26,7 +26,6 @@ export const rightActivationWithJoinNode = <T>(
       )
     }
   } else {
-    /*** START DEBUGGING CODE ***/
     const matches = node.parent.matches.values()
     for (const match of matches) {
       // TODO: We need to find call sites where we need to consolidate the bindings into a match
