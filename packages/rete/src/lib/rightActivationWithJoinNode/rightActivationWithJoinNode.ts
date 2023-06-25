@@ -26,7 +26,8 @@ export const rightActivationWithJoinNode = <T>(
       )
     }
   } else {
-    node.parent.matches.forEach((match) => {
+    const matches = node.parent.matches.values()
+    for (const match of matches) {
       // TODO: We need to find call sites where we need to consolidate the bindings into a match
       const idName = node.idName
       if (
@@ -34,7 +35,7 @@ export const rightActivationWithJoinNode = <T>(
         idName !== '' &&
         getValFromBindings(match.match.bindings, idName) != token.fact[0]
       ) {
-        return
+        continue
       }
       const bindings = bindVarsFromFact(
         node.condition,
@@ -58,6 +59,6 @@ export const rightActivationWithJoinNode = <T>(
           bindings.binding!
         )
       }
-    })
+    }
   }
 }

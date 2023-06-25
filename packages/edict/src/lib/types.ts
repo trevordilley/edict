@@ -49,6 +49,7 @@ export type EnactionArgs<
   T extends ConditionArgs<SCHEMA>
 > = {
   then?: (args: EnactArgs<SCHEMA, T>) => Promise<void> | void
+  thenAll?: (args: EnactArgs<SCHEMA, T>[]) => Promise<void> | void
   when?: (args: EnactArgs<SCHEMA, T>) => boolean
   thenFinally?: (
     getResults: () => EnactArgs<SCHEMA, T>[]

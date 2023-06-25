@@ -25,13 +25,15 @@ rule(
     time: { dt },
   })
 ).enact({
-  then: ({ $npc, time }) => {
-    const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y)
-    const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY)
-    const dir = dest.subtract(pos).normalize()
+  thenAll: (results) => {
+    for (const { $npc, time } of results) {
+      const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y)
+      const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY)
+      const dir = dest.subtract(pos).normalize()
 
-    $npc.circle.x = $npc.circle.x + dir.x * $npc.speed * time.dt
-    $npc.circle.y = $npc.circle.y + dir.y * $npc.speed * time.dt
+      $npc.circle.x = $npc.circle.x + dir.x * $npc.speed * time.dt
+      $npc.circle.y = $npc.circle.y + dir.y * $npc.speed * time.dt
+    }
   },
 })
 

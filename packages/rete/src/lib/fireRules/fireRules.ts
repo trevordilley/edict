@@ -94,6 +94,7 @@ export const fireRules = <T>(
       }
     }
 
+    debugger
     // Execute `thenAll` blocks
     for (const [node, matches] of nodeToMatches) {
       if (node.nodeType?.thenAllFn) {
