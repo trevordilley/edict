@@ -117,7 +117,20 @@ export const fireRules = <T>(
     // Execute `thenFinally` blocks
     for (const node of thenFinallyQueue) {
       session.triggeredNodeIds.clear()
-      node.nodeType?.thenFinallyFn?.()
+      node.nodeType?.thenFinallyFn?.(() => {
+        // TODO: This is duped code from queryAll(), with just a slight
+        // difference.
+        const matches = session.leafNodes.get(node.ruleName)?.matches ?? []
+        const results = []
+        for (const match of matches) {
+          const { enabled, bindings } = match[1].match
+          if (enabled && bindings) {
+            const vars = bindingsToMatch(bindings)
+            results.push(vars)
+          }
+        }
+        return results
+      })
       add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
     }
 

@@ -25,13 +25,15 @@ rule(
     time: { dt },
   })
 ).enact({
-  then: ({ $npc, time }) => {
-    const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y)
-    const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY)
-    const dir = dest.subtract(pos).normalize()
+  thenFinally: (matches) => {
+    for (const { $npc, time } of matches()) {
+      const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y)
+      const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY)
+      const dir = dest.subtract(pos).normalize()
 
-    $npc.circle.x = $npc.circle.x + dir.x * $npc.speed * time.dt
-    $npc.circle.y = $npc.circle.y + dir.y * $npc.speed * time.dt
+      $npc.circle.x = $npc.circle.x + dir.x * $npc.speed * time.dt
+      $npc.circle.y = $npc.circle.y + dir.y * $npc.speed * time.dt
+    }
   },
 })
 
@@ -46,14 +48,16 @@ rule(
     time: { dt },
   })
 ).enact({
-  then: ({ $npc }) => {
-    const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y)
-    const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY)
-    const distance = dest.distance(pos)
-    if (distance < 20) {
-      insert({
-        [$npc.id]: newDest(),
-      })
+  thenFinally: (matches) => {
+    for (const { $npc } of matches()) {
+      const pos = new Phaser.Math.Vector2($npc.circle.x, $npc.circle.y)
+      const dest = new Phaser.Math.Vector2($npc.destX, $npc.destY)
+      const distance = dest.distance(pos)
+      if (distance < 20) {
+        insert({
+          [$npc.id]: newDest(),
+        })
+      }
     }
   },
 })

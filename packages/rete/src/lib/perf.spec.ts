@@ -159,10 +159,13 @@ describe('rete perf', () => {
       const production = rete.initProduction<Schema, MatchT<Schema>>({
         name: `${name} production`,
         convertMatchFn,
-        thenFn: ({ vars }) => {
-          const id = vars.get(entJoin)!
-          const val = vars.get(valName) as number
-          rete.insertFact(session, [id, name, val * 2])
+        thenFinallyFn: (session, rule, matches) => {
+          const x = matches()
+          for (const vars of matches()) {
+            const id = vars.get(entJoin)!
+            const val = vars.get(valName) as number
+            rete.insertFact(session, [id, name, val * 2])
+          }
         },
       })
       rete.addConditionsToProduction(
@@ -232,8 +235,8 @@ describe('rete perf', () => {
     expect(hz).toBeGreaterThan(1)
     expect(hz).toBeGreaterThan(10)
     expect(hz).toBeGreaterThan(80)
-    //   expect(hz).toBeGreaterThan(100)
-    // expect(hz).toBeGreaterThan(1000)
+    expect(hz).toBeGreaterThan(100)
+    expect(hz).toBeGreaterThan(1000)
     // expect(hz).toBeGreaterThan(10_000)
     // expect(hz).toBeGreaterThan(100_000)
     // expect(hz).toBeGreaterThan(300_000)
@@ -249,13 +252,15 @@ describe('rete perf', () => {
       const production = rete.initProduction<Schema, MatchT<Schema>>({
         name: `${first}-${second}`,
         convertMatchFn,
-        thenFn: ({ vars }) => {
-          const firstId = vars.get(firstJoin)!
-          const secondId = vars.get(secondJoin)!
-          const firstVal = vars.get(firstValName) as number
-          const secondVal = vars.get(secondValName) as number
-          rete.insertFact(session, [firstId, second, firstVal])
-          rete.insertFact(session, [secondId, first, secondVal])
+        thenFinallyFn: (session, prodcution, matches) => {
+          for (const vars of matches()) {
+            const firstId = vars.get(firstJoin)!
+            const secondId = vars.get(secondJoin)!
+            const firstVal = vars.get(firstValName) as number
+            const secondVal = vars.get(secondValName) as number
+            rete.insertFact(session, [firstId, second, firstVal])
+            rete.insertFact(session, [secondId, first, secondVal])
+          }
         },
       })
       rete.addConditionsToProduction(

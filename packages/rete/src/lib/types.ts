@@ -59,22 +59,27 @@ export interface Match<T> {
 }
 
 /** functions **/
-export type ThenFn<T, U> = (then: {
-  session: Session<T>
-  rule: Production<T, U>
-  vars: U
+export type ThenFn<SCHEMA, CONVERT_SHAPE> = (then: {
+  session: Session<SCHEMA>
+  rule: Production<SCHEMA, CONVERT_SHAPE>
+  vars: CONVERT_SHAPE
 }) => Promise<void> | void
 export type WrappedThenFn<SCHEMA> = (
   vars: MatchT<SCHEMA>
 ) => Promise<void> | void
-export type ThenFinallyFn<T, U> = (
-  session: Session<T>,
-  rule: Production<T, U>
+export type ThenFinallyFn<SCHEMA, CONVERT_SHAPE> = (
+  session: Session<SCHEMA>,
+  rule: Production<SCHEMA, CONVERT_SHAPE>,
+  matchFn: () => CONVERT_SHAPE[]
 ) => Promise<void> | void
-export type WrappedThenFinallyFn = () => Promise<void> | void
-export type ConvertMatchFn<T, U> = (vars: MatchT<T>) => U
-export type CondFn<T> = (vars: MatchT<T>) => boolean
-export type InitMatchFn<T> = () => MatchT<T>
+export type WrappedThenFinallyFn<SCHEMA> = (
+  matches: () => MatchT<SCHEMA>[]
+) => Promise<void> | void
+export type ConvertMatchFn<SCHEMA, CONVERT_SHAPE> = (
+  vars: MatchT<SCHEMA>
+) => CONVERT_SHAPE
+export type CondFn<SCHEMA> = (vars: MatchT<SCHEMA>) => boolean
+export type InitMatchFn<SCHEMA> = () => MatchT<SCHEMA>
 
 /** Alpha Network **/
 export interface AlphaNode<T> {
@@ -112,7 +117,7 @@ export interface MemoryNode<T> {
 export interface LeafNode<T> {
   condFn?: CondFn<T>
   thenFn?: WrappedThenFn<T>
-  thenFinallyFn?: WrappedThenFinallyFn
+  thenFinallyFn?: WrappedThenFinallyFn<T>
   trigger?: boolean
 }
 
@@ -136,17 +141,17 @@ export interface Condition<T> {
   shouldTrigger: boolean
 }
 
-export interface Production<T, U> {
+export interface Production<SCHEMA, CONVERT_SHAPE> {
   name: string
-  conditions: Condition<T>[]
-  convertMatchFn: ConvertMatchFn<T, U>
+  conditions: Condition<SCHEMA>[]
+  convertMatchFn: ConvertMatchFn<SCHEMA, CONVERT_SHAPE>
   subscriptions: Set<{
-    callback: (results: U[]) => void
-    filter?: QueryFilter<T>
+    callback: (results: CONVERT_SHAPE[]) => void
+    filter?: QueryFilter<SCHEMA>
   }>
-  condFn?: CondFn<T>
-  thenFn?: ThenFn<T, U>
-  thenFinallyFn?: ThenFinallyFn<T, U>
+  condFn?: CondFn<SCHEMA>
+  thenFn?: ThenFn<SCHEMA, CONVERT_SHAPE>
+  thenFinallyFn?: ThenFinallyFn<SCHEMA, CONVERT_SHAPE>
 }
 
 interface Mutation<T> {

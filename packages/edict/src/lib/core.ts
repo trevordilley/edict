@@ -123,8 +123,8 @@ export const edict = <SCHEMA extends object>(
         convertMatchFn,
       })
       if (enaction?.thenFinally !== undefined) {
-        production.thenFinallyFn = (session) =>
-          enaction?.thenFinally?.(() => rete.queryAll(session, production))
+        production.thenFinallyFn = (session, rule, matches) =>
+          enaction?.thenFinally?.(() => matches())
       }
       // Cast to signal type info, not actually used
       // TODO: Do we need to do things this way?

@@ -50,9 +50,7 @@ export type EnactionArgs<
 > = {
   then?: (args: EnactArgs<SCHEMA, T>) => Promise<void> | void
   when?: (args: EnactArgs<SCHEMA, T>) => boolean
-  thenFinally?: (
-    getResults: () => EnactArgs<SCHEMA, T>[]
-  ) => Promise<void> | void
+  thenFinally?: (matches: () => EnactArgs<SCHEMA, T>[]) => Promise<void> | void
 }
 
 export interface QueryOneOptions {

@@ -19,6 +19,7 @@ export const addProductionToSession = <T, U>(
   alreadyExistsBehaviour = PRODUCTION_ALREADY_EXISTS_BEHAVIOR.ERROR
 ) => {
   if (session.leafNodes.has(production.name)) {
+    // TODO: Fix this so things work fine in hmr
     const message = `${production.name} already exists in session`
     if (alreadyExistsBehaviour === PRODUCTION_ALREADY_EXISTS_BEHAVIOR.QUIET)
       return
@@ -96,8 +97,10 @@ export const addProductionToSession = <T, U>(
       const pThenFinallyFn = production.thenFinallyFn
       if (pThenFinallyFn) {
         const sess = { ...session, insideRule: true }
-        memNode.nodeType.thenFinallyFn = () => {
-          pThenFinallyFn(sess, production)
+        memNode.nodeType.thenFinallyFn = (fn) => {
+          pThenFinallyFn(sess, production, () =>
+            fn().map((v) => production.convertMatchFn(v))
+          )
         }
       }
 
