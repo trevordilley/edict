@@ -1,4 +1,4 @@
-import { edict } from './core'
+import { edict } from '../core'
 
 type People = [id: number, color: string, leftOf: number, height: number][]
 enum Id {

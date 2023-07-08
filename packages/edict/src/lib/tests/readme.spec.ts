@@ -1,4 +1,4 @@
-import { edict } from './core'
+import { edict } from '../core'
 
 describe('Examples in readme...', () => {
   it('foobar works', () => {

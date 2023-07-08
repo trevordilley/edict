@@ -1,4 +1,4 @@
-import { edict } from './core'
+import { edict } from '../core'
 import { Schema } from 'inspector'
 
 type Characters = [id: number, x: number, y: number][]

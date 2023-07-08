@@ -1,4 +1,4 @@
-import { insertFactToFact } from './utils'
+import { insertFactToFact } from '../utils'
 
 describe('Utils...', () => {
   it('Should parse a simple object into the IR', () => {

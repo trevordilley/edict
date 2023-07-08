@@ -14,23 +14,26 @@ describe('it performs...', () => {
 
     const MAX_NUMS = 1000
     const raw = []
-    for (var i = 0; i < MAX_NUMS; i++) {
+    for (let i = 0; i < MAX_NUMS; i++) {
       raw.push(i)
     }
     const data = _.chunk(raw, 2)
 
-    for (var i = 0; i < data.length; i++) {
+    for (let i = 0; i < data.length; i++) {
       const [A, B] = data[i]
 
       session
         .rule(`Match a: ${A}, b: ${B}`, ({ a, b }) => ({
           $e: {
+            // Match is effed up
             a: { match: A },
             b: { match: B },
           },
         }))
         .enact({
           then: ({ $e }) => {
+            const Aa = $e.a
+            console.log(Aa)
             session.insert({ [$e.id]: { ab: $e.a + $e.b } })
           },
         })
@@ -95,7 +98,7 @@ describe('it performs...', () => {
       }))
       .enact()
 
-    for (var i = 0; i < data.length; i++) {
+    for (let i = 0; i < data.length; i++) {
       const [A, B] = data[i]
       session.insert({ [`${i}`]: { a: A, b: B } })
     }
