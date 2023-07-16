@@ -158,7 +158,7 @@ export const edict = <SCHEMA extends object>(
           }
 
           let conditionValue
-          if (match) {
+          if (match !== undefined) {
             conditionValue = match
           } else if (join) {
             conditionValue = {
