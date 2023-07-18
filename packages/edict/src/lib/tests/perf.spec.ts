@@ -25,6 +25,12 @@ type CompanySchema = {
 }
 
 describe('company price scheduling...', function () {
+  const performanceMeasures: {
+    name: string
+    max?: number
+    min?: number
+    med?: number
+  }[] = []
   const NUM_COMPANIES = 10_000
   let id = 0
   const session = edict<CompanySchema>()
@@ -90,10 +96,24 @@ describe('company price scheduling...', function () {
     },
   ]
 
-  it('inserts quickly', () => {
+  it('inserts quickly despite their being a lot of rules', () => {
     const perf = []
+    const companies: [number, CompanySchema][] = []
     for (let i = 0; i < NUM_COMPANIES; i++) {
       const [id, data] = companyFac()
+      if (i % NUM_COMPANIES === 0) {
+        session
+          .rule(`match for company ${data.name} with id ${id}`, ({ name }) => ({
+            $company: {
+              name: { match: data.name },
+            },
+          }))
+          .enact()
+      }
+      companies.push([id, data])
+    }
+    for (let i = 0; i < companies.length; i++) {
+      const [id, data] = companies[i]
       const b = performance.now()
       session.insert({
         [id]: data,
@@ -104,7 +124,7 @@ describe('company price scheduling...', function () {
     const max = _.max(perf)
     const min = _.min(perf)
     const med = median(perf)
-    console.log({ max, min, med })
+    performanceMeasures.push({ name: 'simple inserts', max, min, med })
     expect(1).toBe(1)
 
     const randomPerfs: number[] = []
@@ -122,7 +142,12 @@ describe('company price scheduling...', function () {
     const rMax = _.max(randomPerfs)
     const rMin = _.min(randomPerfs)
     const rMed = median(randomPerfs)
-    console.log({ rMax, rMin, rMed })
+    performanceMeasures.push({
+      name: 'random basePrice updates',
+      max: rMax,
+      min: rMin,
+      med: rMed,
+    })
   })
 
   it("let's add a few complex companies", () => {
@@ -201,7 +226,12 @@ describe('company price scheduling...', function () {
       const max = _.max(perf)
       const min = _.min(perf)
       const med = median(perf)
-      console.log('complex companies inserted', { max, min, med })
+      performanceMeasures.push({
+        name: 'complex companies inserted',
+        max,
+        min,
+        med,
+      })
 
       const cPerfs = []
       for (let i = 0; i < 100; i++) {
@@ -223,7 +253,12 @@ describe('company price scheduling...', function () {
       const cMax = _.max(cPerfs)
       const cMin = _.min(cPerfs)
       const cMed = median(cPerfs)
-      console.log({ cMax, cMin, cMed })
+      performanceMeasures.push({
+        name: 'parent companies updated',
+        max: cMax,
+        min: cMin,
+        med: cMed,
+      })
 
       const oPerf = []
       for (let i = 0; i < overrideIds.length; i++) {
@@ -239,8 +274,16 @@ describe('company price scheduling...', function () {
       const oMax = _.max(oPerf)
       const oMin = _.min(oPerf)
       const oMed = median(oPerf)
-      console.log({ oMax, oMin, oMed })
+      performanceMeasures.push({
+        name: 'override parent pricing',
+        max: oMax,
+        min: oMin,
+        med: oMed,
+      })
     }
     console.log('num companies', id)
+  })
+  afterAll(() => {
+    console.table(performanceMeasures)
   })
 })
