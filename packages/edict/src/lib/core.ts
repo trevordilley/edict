@@ -207,6 +207,9 @@ export const edict = <SCHEMA extends object>(
         return filters
       }
 
+      const get = <SCHEMA>(id: string, attr: SCHEMA) => {
+        session
+      }
       const query = (filter?: QueryArgs<SCHEMA, T>) => {
         if (!filter) return rete.queryAll(session, production)
         return rete.queryAll(session, production, convertFilterArgs(filter))

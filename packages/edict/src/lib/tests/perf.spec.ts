@@ -24,6 +24,9 @@ type CompanySchema = {
   overrideParent: boolean
 }
 
+const HIGHEST_MAX_MS = 1000
+const HIGHEST_MIN_MS = 300
+
 describe('company price scheduling...', function () {
   const performanceMeasures: {
     name: string
@@ -148,6 +151,11 @@ describe('company price scheduling...', function () {
       min: rMin,
       med: rMed,
     })
+    for (const measure of performanceMeasures) {
+      expect(measure.max).toBeLessThan(HIGHEST_MAX_MS)
+      expect(measure.min).toBeLessThan(HIGHEST_MIN_MS)
+      expect(measure.med).toBeLessThan(HIGHEST_MAX_MS)
+    }
   })
 
   it("let's add a few complex companies", () => {
@@ -281,7 +289,11 @@ describe('company price scheduling...', function () {
         med: oMed,
       })
     }
-    console.log('num companies', id)
+    for (const measure of performanceMeasures) {
+      expect(measure.max).toBeLessThan(HIGHEST_MAX_MS)
+      expect(measure.min).toBeLessThan(HIGHEST_MIN_MS)
+      expect(measure.med).toBeLessThan(HIGHEST_MAX_MS)
+    }
   })
   afterAll(() => {
     console.table(performanceMeasures)
