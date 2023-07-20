@@ -8,6 +8,7 @@ import {
 } from '@edict/rete'
 import { raiseRecursionLimit } from '../raiseRecursionLimit/raiseRecursionLimit'
 import { bindingsToMatch } from '../bindingsToMatch/bindingsToMatch'
+import { AuditRuleTrigger, AuditRuleTriggerState } from '../audit/audit'
 
 const DEFAULT_RECURSION_LIMIT = 16
 export const fireRules = <T>(
@@ -108,7 +109,17 @@ export const fireRules = <T>(
           match.match.enabled &&
           match.match.bindings
         ) {
+          session.auditor?.log({
+            rule: node.ruleName,
+            trigger: AuditRuleTrigger.THEN,
+            state: AuditRuleTriggerState.ENTER,
+          })
           node.nodeType?.thenFn?.(bindingsToMatch(match.match.bindings))
+          session.auditor?.log({
+            rule: node.ruleName,
+            trigger: AuditRuleTrigger.THEN,
+            state: AuditRuleTriggerState.EXIT,
+          })
           add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
         }
       }
@@ -117,7 +128,17 @@ export const fireRules = <T>(
     // Execute `thenFinally` blocks
     for (const node of thenFinallyQueue) {
       session.triggeredNodeIds.clear()
+      session.auditor?.log({
+        rule: node.ruleName,
+        trigger: AuditRuleTrigger.THEN_FINALLY,
+        state: AuditRuleTriggerState.ENTER,
+      })
       node.nodeType?.thenFinallyFn?.()
+      session.auditor?.log({
+        rule: node.ruleName,
+        trigger: AuditRuleTrigger.THEN_FINALLY,
+        state: AuditRuleTriggerState.ENTER,
+      })
       add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
     }
 

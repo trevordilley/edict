@@ -1,6 +1,7 @@
 import { rete } from './rete'
 import { FactFragment, Field, MatchT } from './types'
 import { viz, vizOnlineUrl } from '@edict/rete'
+import { AuditorMode, consoleAuditor } from './audit/audit'
 
 type People = [id: number, color: string, leftOf: number, height: number][]
 enum Id {
@@ -226,17 +227,15 @@ describe('rete', () => {
 
   it('inserting inside a rule can trigger rule more than once', () => {
     let count = 0
-
-    const session = rete.initSession<SmallSchema>(true)
+    const auditor = consoleAuditor(AuditorMode.BATCH)
+    const session = rete.initSession<SmallSchema>(true, auditor)
     const firstRuleProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>(
       {
         name: 'firstRule',
         convertMatchFn,
         thenFn: () => {
           rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
-          console.log('first then insert, ', vizOnlineUrl(session))
           rete.insertFact(session, [Id.Charlie, 'Color', 'gold'])
-          console.log('second then insert, ', vizOnlineUrl(session))
         },
       }
     )
@@ -290,6 +289,7 @@ describe('rete', () => {
 
     rete.insertFact(session, [Id.Alice, 'Color', 'red'])
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
+    auditor.flush()
     expect(count).toBe(3)
   })
 
@@ -528,7 +528,8 @@ describe('rete', () => {
   })
 
   it('updating facts in different alpha nodes', () => {
-    const session = rete.initSession<SmallSchema>(false)
+    const auditor = consoleAuditor(AuditorMode.BATCH)
+    const session = rete.initSession<SmallSchema>(false, auditor)
     const production = rete.initProduction<SmallSchema, MatchT<SmallSchema>>({
       name: 'updatingFacts',
       convertMatchFn,
@@ -574,6 +575,7 @@ describe('rete', () => {
     rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Xavier])
     console.log('fire2', vizOnlineUrl(session))
     rete.fireRules(session)
+    auditor.flush()
     const newResults = rete.queryAll(session, production)
     expect(newResults.length).toBe(0)
   })

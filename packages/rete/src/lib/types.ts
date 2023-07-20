@@ -2,6 +2,8 @@
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
 
+import { Auditor } from './audit/audit'
+
 export type ValueOf<T> = T[keyof T]
 export type FactFragment<SCHEMA> = FactId | keyof SCHEMA | ValueOf<SCHEMA>
 export type MatchT<SCHEMA> = Map<string, FactFragment<SCHEMA>>
@@ -204,6 +206,7 @@ export interface Session<T> {
   autoFire: boolean
   initMatch: InitMatchFn<T>
   nextId: () => number
+  auditor?: Auditor
 }
 
 export type ExecutedNodes<T> = Map<MemoryNode<T>, Set<MemoryNode<T>>>[]

@@ -7,8 +7,12 @@ import {
   Session,
 } from '@edict/rete'
 import { defaultInitMatch } from '../defaultInitMatch/defaultInitMatch'
+import { Auditor } from '../audit/audit'
 
-export const initSession = <T>(autoFire = true): Session<T> => {
+export const initSession = <T>(
+  autoFire = true,
+  auditor?: Auditor
+): Session<T> => {
   let nodeIdCounter = 0
   const nextId = () => nodeIdCounter++
   const alphaNode: AlphaNode<T> = {
@@ -36,6 +40,7 @@ export const initSession = <T>(autoFire = true): Session<T> => {
   const initMatch = () => defaultInitMatch()
 
   return {
+    auditor,
     alphaNode,
     leafNodes,
     idAttrNodes,

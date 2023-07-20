@@ -1,3 +1,4 @@
+import { AuditorMode, consoleAuditor } from 'packages/rete/src/lib/audit/audit'
 import { edict } from '../core'
 
 type People = [id: number, color: string, leftOf: number, height: number][]
@@ -28,7 +29,8 @@ type Schema = {
 
 describe('edict...', () => {
   it('test', () => {
-    const { rule, insert, fire } = edict<Schema>(false)
+    const auditor = consoleAuditor(AuditorMode.BATCH)
+    const { rule, insert, fire } = edict<Schema>(false, auditor)
     const results = rule(
       'number of conditions != number of facts',
       ({ LeftOf, RightOf, Height }) => ({
@@ -79,7 +81,7 @@ describe('edict...', () => {
     })
 
     fire()
-
+    auditor.flush()
     const allResults = results.query()
     expect(allResults.length).toBe(3)
   })

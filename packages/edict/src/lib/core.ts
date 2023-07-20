@@ -19,6 +19,7 @@ import {
   viz,
 } from '@edict/rete'
 import { insertFactToFact } from './utils'
+import { Auditor } from 'packages/rete/src/lib/audit/audit'
 
 export const attr = <T>(): T => undefined as any
 
@@ -38,11 +39,12 @@ const valueKey = ({
 }) => `${VALUE_PREFIX}${id}_${String(attr)}`
 
 export const edict = <SCHEMA extends object>(
-  autoFire = true
+  autoFire = true,
+  auditor?: Auditor
 ): IEdict<SCHEMA> => {
-  let session = rete.initSession<SCHEMA>(autoFire)
+  let session = rete.initSession<SCHEMA>(autoFire, auditor)
   const reset = () => {
-    session = rete.initSession<SCHEMA>(autoFire)
+    session = rete.initSession<SCHEMA>(autoFire, auditor)
   }
   const insert = (insertFacts: InsertEdictFact<SCHEMA>) => {
     // be dumb about this
