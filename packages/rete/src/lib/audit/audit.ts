@@ -54,10 +54,13 @@ export const consoleAuditor = (
   const createLogEntry = (record: AuditRecord): string => {
     let delta
     if ('action' in record) {
+      const insertColor = `[32m`
+      const retractionColor = `[31m`
       if (record.action === AuditAction.UPDATE) {
-        delta = `+[${record.fact}], -[${record.oldFact}]`
+        delta = `\x1b[32m+[${record.fact}], \x1b[31m-[${record.oldFact}]`
       } else {
-        const symbol = record.action === AuditAction.INSERTION ? '+' : '-'
+        const symbol =
+          record.action === AuditAction.INSERTION ? `\x1b[32m+` : '\x1b[31m-'
         delta = `${symbol}[${record.fact}]`
       }
       const action =
@@ -66,7 +69,7 @@ export const consoleAuditor = (
           : record.action === AuditAction.RETRACTION
           ? 'Retract'
           : 'Update'
-      return `${action}: ${delta}`
+      return `${delta}`
     } else {
       const state =
         record.state === AuditRuleTriggerState.ENTER ? 'Entered' : 'Exited'
@@ -77,8 +80,18 @@ export const consoleAuditor = (
   }
 
   const log = (record: AuditRecord) => {
-    if (mode === AuditorMode.STREAM) console.log(createLogEntry(record))
-    else buffer.push(record)
+    if (mode === AuditorMode.STREAM) {
+      const entry = createLogEntry(record)
+      if ('action' in record) {
+        console.log(entry)
+      } else {
+        if (record.state === AuditRuleTriggerState.ENTER) {
+          console.group(entry)
+        } else {
+          console.groupEnd()
+        }
+      }
+    } else buffer.push(record)
   }
 
   const flush = () => {

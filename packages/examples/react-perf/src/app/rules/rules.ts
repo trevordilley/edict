@@ -1,5 +1,6 @@
 import { edict } from '@edict/edict'
 import { Sex } from '@faker-js/faker'
+import { consoleAuditor } from '../../../../../rete/src/lib/audit/audit'
 
 export enum ProvinceClassification {
   TINY = 'tiny',
@@ -57,7 +58,8 @@ export interface Civilian {
 
 export type Schema = Location & Civilian & Province
 
-const session = edict<Schema>(true)
+const consoleAud = consoleAuditor()
+const session = edict<Schema>(true, consoleAud)
 
 const { rule } = session
 export const { insert, retract, fire } = session
