@@ -1,5 +1,17 @@
 import { edict } from '@edict/edict'
 import { Sex } from '@faker-js/faker'
+import { Resource } from '@opentelemetry/resources'
+import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
+import {
+  BatchSpanProcessor,
+  ConsoleSpanExporter,
+  WebTracerProvider,
+} from '@opentelemetry/sdk-trace-web'
+import {
+  consoleAuditor,
+  tracerAuditor,
+} from '../../../../../rete/src/lib/audit/audit'
+import { trace } from '@opentelemetry/api'
 
 export enum ProvinceClassification {
   TINY = 'tiny',
@@ -57,7 +69,24 @@ export interface Civilian {
 
 export type Schema = Location & Civilian & Province
 
-const session = edict<Schema>(true)
+const resource = Resource.default().merge(
+  new Resource({
+    [SemanticResourceAttributes.SERVICE_NAME]: 'service-name-here',
+    [SemanticResourceAttributes.SERVICE_VERSION]: '0.1.0',
+  })
+)
+
+const provider = new WebTracerProvider({
+  resource: resource,
+})
+const exporter = new ConsoleSpanExporter()
+const processor = new BatchSpanProcessor(exporter)
+provider.addSpanProcessor(processor)
+
+provider.register()
+const auditor = tracerAuditor(trace.getTracer('my-tracer'))
+const consoleAud = consoleAuditor()
+const session = edict<Schema>(true, auditor)
 
 const { rule } = session
 export const { insert, retract, fire } = session

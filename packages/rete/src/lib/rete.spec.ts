@@ -1,7 +1,16 @@
 import { rete } from './rete'
 import { FactFragment, Field, MatchT } from './types'
 import { viz, vizOnlineUrl } from '@edict/rete'
-import { AuditorMode, consoleAuditor } from './audit/audit'
+import { AuditorMode, consoleAuditor, tracerAuditor } from './audit/audit'
+import { registerInstrumentations } from '@opentelemetry/instrumentation'
+import { Resource } from '@opentelemetry/resources'
+import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
+import {
+  BatchSpanProcessor,
+  ConsoleSpanExporter,
+  WebTracerProvider,
+} from '@opentelemetry/sdk-trace-web'
+import { trace } from '@opentelemetry/api'
 
 type People = [id: number, color: string, leftOf: number, height: number][]
 enum Id {
@@ -226,8 +235,27 @@ describe('rete', () => {
   })
 
   it('inserting inside a rule can trigger rule more than once', () => {
+    registerInstrumentations({
+      instrumentations: [],
+    })
+
+    const resource = Resource.default().merge(
+      new Resource({
+        [SemanticResourceAttributes.SERVICE_NAME]: 'service-name-here',
+        [SemanticResourceAttributes.SERVICE_VERSION]: '0.1.0',
+      })
+    )
+
+    const provider = new WebTracerProvider({
+      resource: resource,
+    })
+    const exporter = new ConsoleSpanExporter()
+    const processor = new BatchSpanProcessor(exporter)
+    provider.addSpanProcessor(processor)
+
+    provider.register()
     let count = 0
-    const auditor = consoleAuditor(AuditorMode.BATCH)
+    const auditor = tracerAuditor(trace.getTracer('my-tracer'))
     const session = rete.initSession<SmallSchema>(true, auditor)
     const firstRuleProd = rete.initProduction<SmallSchema, MatchT<SmallSchema>>(
       {
@@ -289,7 +317,7 @@ describe('rete', () => {
 
     rete.insertFact(session, [Id.Alice, 'Color', 'red'])
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
-    auditor.flush()
+    provider.forceFlush()
     expect(count).toBe(3)
   })
 

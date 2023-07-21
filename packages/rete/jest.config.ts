@@ -2,6 +2,7 @@
 export default {
   displayName: 'rete',
   preset: '../../jest.preset.js',
+  testEnvironment: 'node',
   globals: {
     'ts-jest': {
       tsconfig: '<rootDir>/tsconfig.spec.json',
@@ -12,4 +13,4 @@ export default {
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../coverage/packages/rete',
-};
+}

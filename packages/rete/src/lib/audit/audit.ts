@@ -1,3 +1,5 @@
+import { Span, Tracer } from '@opentelemetry/api'
+
 export enum AuditAction {
   INSERTION,
   UPDATE,
@@ -90,6 +92,60 @@ export const consoleAuditor = (
   const currentBuffer = () => buffer
 
   const reset = () => (buffer.length = 0)
+
+  return {
+    log,
+    currentBuffer,
+    reset,
+    flush,
+  }
+}
+
+export const tracerAuditor = (tracer: Tracer) => {
+  const spans: Span[] = [tracer.startSpan('root')]
+  const currentSpan = () => spans[spans.length - 1]
+  const log = (record: AuditRecord) => {
+    let delta
+    if ('action' in record) {
+      if (record.action === AuditAction.UPDATE) {
+        delta = `+[${record.fact}], -[${record.oldFact}]`
+      } else {
+        const symbol = record.action === AuditAction.INSERTION ? '+' : '-'
+        delta = `${symbol}[${record.fact}]`
+      }
+      const action =
+        record.action === AuditAction.INSERTION
+          ? 'Insert'
+          : record.action === AuditAction.RETRACTION
+          ? 'Retract'
+          : 'Update'
+      const result = `${action}: ${delta}`
+      currentSpan().addEvent(result)
+    } else {
+      const state =
+        record.state === AuditRuleTriggerState.ENTER ? 'Entered' : 'Exited'
+      const trigger =
+        record.trigger === AuditRuleTrigger.THEN ? 'then()' : 'thenFinally()'
+      const result = `${record.rule} ${state} ${trigger}`
+
+      if (record.state === AuditRuleTriggerState.ENTER) {
+        spans.push(tracer.startSpan(result))
+      } else {
+        currentSpan().addEvent(result)
+        spans.pop()?.end()
+      }
+    }
+  }
+
+  const flush = () => {
+    for (const span of spans) span.end()
+  }
+
+  const currentBuffer = () => []
+
+  const reset = () => {
+    for (const span of spans) span.end()
+  }
 
   return {
     log,
