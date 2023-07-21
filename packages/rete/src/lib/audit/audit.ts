@@ -20,11 +20,13 @@ export type AuditRecord =
       // Fix this type lol
       fact: [any, any, any]
       oldFact?: [any, any, any]
+      meta?: any
     }
   | {
       rule: string
       trigger: AuditRuleTrigger
       state: AuditRuleTriggerState
+      meta?: any
     }
 
 export enum AuditorMode {
@@ -50,16 +52,21 @@ export const consoleAuditor = (
   const buffer: AuditRecord[] = []
 
   const createLogEntry = (record: AuditRecord): string => {
+    let delta
     if ('action' in record) {
-      const actionSymbol =
+      if (record.action === AuditAction.UPDATE) {
+        delta = `+[${record.fact}], -[${record.oldFact}]`
+      } else {
+        const symbol = record.action === AuditAction.INSERTION ? '+' : '-'
+        delta = `${symbol}[${record.fact}]`
+      }
+      const action =
         record.action === AuditAction.INSERTION
-          ? '+'
+          ? 'Insert'
           : record.action === AuditAction.RETRACTION
-          ? '-'
-          : '<=='
-      return `${record.fact.join(',')} ${actionSymbol} ${
-        record.oldFact?.join(',') ?? ''
-      }`
+          ? 'Retract'
+          : 'Update'
+      return `${action}: ${delta}`
     } else {
       const state =
         record.state === AuditRuleTriggerState.ENTER ? 'Entered' : 'Exited'
@@ -75,6 +82,7 @@ export const consoleAuditor = (
   }
 
   const flush = () => {
+    if (buffer.length === 0) return
     console.log(buffer.map((r) => createLogEntry(r)).join('\n'))
     buffer.length = 0
   }
