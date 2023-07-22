@@ -2,7 +2,7 @@ import { AlphaNode, Fact, Session, TokenKind } from '@edict/rete'
 import { getIdAttr } from '../getIdAttr/getIdAttr'
 import { hashIdAttr } from '../utils'
 import { rightActivationWithAlphaNode } from '../rightActivationWithAlphaNode/rightActivationWithAlphaNode'
-import { AuditAction } from '../audit/audit'
+import { AuditAction, AuditRecordType } from '../audit/audit'
 
 export const upsertFact = <T>(
   session: Session<T>,
@@ -14,6 +14,7 @@ export const upsertFact = <T>(
     const idAttrHash = hashIdAttr(idAttr)
     if (!session.idAttrNodes.has(idAttrHash)) {
       session.auditor?.log({
+        tag: AuditRecordType.FACT,
         fact,
         action: AuditAction.INSERTION,
       })
@@ -51,6 +52,7 @@ export const upsertFact = <T>(
       }
       if (didRetract) {
         session.auditor?.log({
+          tag: AuditRecordType.FACT,
           fact,
           action: AuditAction.RETRACTION,
         })
@@ -81,12 +83,14 @@ export const upsertFact = <T>(
       }
       if (didUpdate === true) {
         session.auditor?.log({
+          tag: AuditRecordType.FACT,
           fact,
           action: AuditAction.UPDATE,
           oldFact: oldFactRecord,
         })
       } else if (didUpdate === false) {
         session.auditor?.log({
+          tag: AuditRecordType.FACT,
           fact,
           action: AuditAction.INSERTION,
         })

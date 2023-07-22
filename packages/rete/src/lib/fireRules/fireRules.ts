@@ -8,7 +8,11 @@ import {
 } from '@edict/rete'
 import { raiseRecursionLimit } from '../raiseRecursionLimit/raiseRecursionLimit'
 import { bindingsToMatch } from '../bindingsToMatch/bindingsToMatch'
-import { AuditRuleTrigger, AuditRuleTriggerState } from '../audit/audit'
+import {
+  AuditEntryState,
+  AuditRecordType,
+  AuditRuleTrigger,
+} from '../audit/audit'
 
 const DEFAULT_RECURSION_LIMIT = 16
 export const fireRules = <T>(
@@ -19,6 +23,11 @@ export const fireRules = <T>(
     if (session.insideRule) {
       return
     }
+    session.auditor?.log({
+      state: AuditEntryState.ENTER,
+      tag: AuditRecordType.FIRE,
+    })
+
     // Only for debugging purposes, should we remove for prod usage?
     const executedNodes: ExecutedNodes<T> = []
 
@@ -114,15 +123,17 @@ export const fireRules = <T>(
             match.match.bindings
           ) {
             session.auditor?.log({
+              tag: AuditRecordType.RULE,
               rule: node.ruleName,
               trigger: AuditRuleTrigger.THEN,
-              state: AuditRuleTriggerState.ENTER,
+              state: AuditEntryState.ENTER,
             })
             node.nodeType?.thenFn?.(bindingsToMatch(match.match.bindings))
             session.auditor?.log({
+              tag: AuditRecordType.RULE,
               rule: node.ruleName,
               trigger: AuditRuleTrigger.THEN,
-              state: AuditRuleTriggerState.EXIT,
+              state: AuditEntryState.EXIT,
             })
             add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
           }
@@ -133,15 +144,17 @@ export const fireRules = <T>(
       for (const node of thenFinallyQueue) {
         session.triggeredNodeIds.clear()
         session.auditor?.log({
+          tag: AuditRecordType.RULE,
           rule: node.ruleName,
           trigger: AuditRuleTrigger.THEN_FINALLY,
-          state: AuditRuleTriggerState.ENTER,
+          state: AuditEntryState.ENTER,
         })
         node.nodeType?.thenFinallyFn?.()
         session.auditor?.log({
+          tag: AuditRecordType.RULE,
           rule: node.ruleName,
           trigger: AuditRuleTrigger.THEN_FINALLY,
-          state: AuditRuleTriggerState.ENTER,
+          state: AuditEntryState.ENTER,
         })
         add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
       }
@@ -159,6 +172,10 @@ export const fireRules = <T>(
       }
     }
     session.triggeredSubscriptionQueue.clear()
+    session.auditor?.log({
+      state: AuditEntryState.ENTER,
+      tag: AuditRecordType.FIRE,
+    })
     return { executedNodes, session }
   } catch (e) {
     session.auditor?.flush()

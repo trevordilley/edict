@@ -9,13 +9,19 @@ export enum AuditRuleTrigger {
   THEN_FINALLY,
 }
 
-export enum AuditRuleTriggerState {
+export enum AuditEntryState {
   ENTER,
   EXIT,
 }
 
+export enum AuditRecordType {
+  FACT,
+  RULE,
+  FIRE,
+}
 export type AuditRecord =
   | {
+      tag: AuditRecordType.FACT
       action: AuditAction
       // Fix this type lol
       fact: [any, any, any]
@@ -23,10 +29,15 @@ export type AuditRecord =
       meta?: any
     }
   | {
+      tag: AuditRecordType.RULE
       rule: string
       trigger: AuditRuleTrigger
-      state: AuditRuleTriggerState
+      state: AuditEntryState
       meta?: any
+    }
+  | {
+      tag: AuditRecordType.FIRE
+      state: AuditEntryState
     }
 
 export enum AuditorMode {
@@ -47,48 +58,58 @@ export interface Auditor {
 }
 
 export const consoleAuditor = (
-  mode: AuditorMode = AuditorMode.STREAM
+  mode: AuditorMode = AuditorMode.STREAM,
+  colorizeOutput = true
 ): Auditor => {
   const buffer: AuditRecord[] = []
-
+  // use this to search through firings of rules?
+  let fireId = 0
   const createLogEntry = (record: AuditRecord): string => {
     let delta
-    if ('action' in record) {
-      const insertColor = `[32m`
-      const retractionColor = `[31m`
+    const insertColor = colorizeOutput ? `\x1b[32m` : ''
+    const retractionColor = colorizeOutput ? `\x1b[31m` : ''
+    const thenColor = colorizeOutput ? `\x1b[34m` : ''
+    const thenFinallyColor = colorizeOutput ? `\x1b[36m` : ''
+    if (record.tag === AuditRecordType.FACT) {
       if (record.action === AuditAction.UPDATE) {
-        delta = `\x1b[32m+[${record.fact}], \x1b[31m-[${record.oldFact}]`
+        delta = `${insertColor}+[${record.fact}], ${retractionColor}-[${record.oldFact}]`
       } else {
         const symbol =
-          record.action === AuditAction.INSERTION ? `\x1b[32m+` : '\x1b[31m-'
+          record.action === AuditAction.INSERTION
+            ? `${insertColor}+`
+            : `${retractionColor}-`
         delta = `${symbol}[${record.fact}]`
       }
-      const action =
-        record.action === AuditAction.INSERTION
-          ? 'Insert'
-          : record.action === AuditAction.RETRACTION
-          ? 'Retract'
-          : 'Update'
       return `${delta}`
-    } else {
-      const state =
-        record.state === AuditRuleTriggerState.ENTER ? 'Entered' : 'Exited'
+    } else if (record.tag === AuditRecordType.RULE) {
       const trigger =
-        record.trigger === AuditRuleTrigger.THEN ? 'then()' : 'thenFinally()'
-      return `${record.rule} ${state} ${trigger}`
+        record.trigger === AuditRuleTrigger.THEN
+          ? `${thenColor}then()`
+          : `${thenFinallyColor}thenFinally()`
+      return `${record.rule} ${trigger}`
+    } else {
+      fireId++
+      return `fire ${fireId}`
     }
   }
 
   const log = (record: AuditRecord) => {
     if (mode === AuditorMode.STREAM) {
       const entry = createLogEntry(record)
-      if ('action' in record) {
+      if (record.tag === AuditRecordType.FACT) {
+        console.timeStamp(entry)
         console.log(entry)
-      } else {
-        if (record.state === AuditRuleTriggerState.ENTER) {
+      } else if (record.tag === AuditRecordType.RULE) {
+        if (record.state === AuditEntryState.ENTER) {
           console.group(entry)
         } else {
           console.groupEnd()
+        }
+      } else if (record.tag === AuditRecordType.FIRE) {
+        if (record.state === AuditEntryState.ENTER) {
+          console.time(entry)
+        } else {
+          console.timeEnd(entry)
         }
       }
     } else buffer.push(record)
