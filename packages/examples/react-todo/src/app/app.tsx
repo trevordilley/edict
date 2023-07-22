@@ -1,6 +1,7 @@
 import { edict } from '@edict/edict'
 import { FC, useEffect, useState } from 'react'
 import { ITodo } from './types'
+import { consoleAuditor } from '../../../../rete/src/lib/audit/audit'
 
 // Edict is a simple state management library leveraging a reactive rule-based
 // approach to simplify and decouple logic from data
@@ -16,9 +17,10 @@ import { ITodo } from './types'
 // The `factSchema` is a mapping from name to type via the `attr()`
 // function. Providing a fact schema will provide comprehensive type
 // safety.
-
+const auditor = consoleAuditor()
 const { rule, retract, insert } = edict<{ isComplete: boolean; title: string }>(
-  true
+  true,
+  auditor
 )
 
 const { subscribe, query } = rule('All Todos', ({ title, isComplete }) => ({
@@ -41,7 +43,6 @@ export const useTodosRule = () => {
   const [todos, setTodos] = useState(query())
   useEffect(() => {
     return subscribe((results) => {
-      console.log(results)
       setTodos(results)
     })
   })
