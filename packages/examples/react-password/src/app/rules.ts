@@ -1,4 +1,5 @@
 import { edict } from '@edict/edict'
+import { consoleAuditor } from '../../../../rete/src/lib/audit/audit'
 
 interface Schema {
   meetsCriteria: boolean
@@ -7,7 +8,7 @@ interface Schema {
   password: string
 }
 
-export const session = edict<Schema>(true)
+export const session = edict<Schema>(true, consoleAuditor())
 
 const MIN_LENGTH = 12
 session
