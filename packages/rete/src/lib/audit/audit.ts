@@ -101,7 +101,7 @@ export const consoleAuditor = (
         console.log(entry)
       } else if (record.tag === AuditRecordType.RULE) {
         if (record.state === AuditEntryState.ENTER) {
-          console.group(entry)
+          console.groupCollapsed(entry)
         } else {
           console.groupEnd()
         }
