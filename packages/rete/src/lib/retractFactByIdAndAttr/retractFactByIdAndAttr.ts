@@ -21,7 +21,7 @@ export const retractFactByIdAndAttr = <T>(
   for (const node of idAttrNodes) {
     const fact = node.facts.get(id)?.get(attr.toString())
     if (fact) {
-      session.auditor?.log({
+      session.auditor?.log?.({
         tag: AuditRecordType.FACT,
         action: AuditAction.RETRACTION,
         fact,

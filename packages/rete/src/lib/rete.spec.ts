@@ -1,6 +1,5 @@
 import { rete } from './rete'
 import { FactFragment, Field, MatchT } from './types'
-import { viz, vizOnlineUrl } from '@edict/rete'
 import { AuditorMode, consoleAuditor } from './audit/audit'
 
 type People = [id: number, color: string, leftOf: number, height: number][]
@@ -565,7 +564,6 @@ describe('rete', () => {
     )
     rete.addProductionToSession(session, production)
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
-    console.log('fire0', vizOnlineUrl(session))
     rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Zach])
     rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
     rete.insertFact(session, [Id.Yair, 'RightOf', Id.Bob])
@@ -573,7 +571,6 @@ describe('rete', () => {
     const results = rete.queryAll(session, production)
     expect(results.length).toBe(1)
     rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Xavier])
-    console.log('fire2', vizOnlineUrl(session))
     rete.fireRules(session)
     auditor.flush()
     const newResults = rete.queryAll(session, production)
@@ -616,7 +613,6 @@ describe('rete', () => {
     rete.addProductionToSession(session, rule2)
     rete.insertFact(session, [Id.Alice, 'LeftOf', Id.Zach])
     rete.fireRules(session)
-    console.log(viz(session))
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     expect(alice).toBe(Id.Alice)
@@ -772,7 +768,6 @@ describe('rete', () => {
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
     rete.insertFact(session, [Id.Alice, 'Color', 'red'])
     rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
-    console.log(viz(session))
     expect(count).toBe(1)
   })
 

@@ -13,7 +13,7 @@ export const upsertFact = <T>(
     const idAttr = getIdAttr<T>(fact)
     const idAttrHash = hashIdAttr(idAttr)
     if (!session.idAttrNodes.has(idAttrHash)) {
-      session.auditor?.log({
+      session.auditor?.log?.({
         tag: AuditRecordType.FACT,
         fact,
         action: AuditAction.INSERTION,
@@ -51,7 +51,7 @@ export const upsertFact = <T>(
         }
       }
       if (didRetract) {
-        session.auditor?.log({
+        session.auditor?.log?.({
           tag: AuditRecordType.FACT,
           fact,
           action: AuditAction.RETRACTION,
@@ -68,6 +68,9 @@ export const upsertFact = <T>(
             ?.get(fact[1].toString())
           didUpdate = true
           oldFactRecord = oldFact
+          if (oldFact && fact[2] === oldFact[2]) {
+            continue
+          }
           rightActivationWithAlphaNode(session, n, {
             fact,
             kind: TokenKind.UPDATE,
@@ -82,14 +85,14 @@ export const upsertFact = <T>(
         }
       }
       if (didUpdate === true) {
-        session.auditor?.log({
+        session.auditor?.log?.({
           tag: AuditRecordType.FACT,
           fact,
           action: AuditAction.UPDATE,
           oldFact: oldFactRecord,
         })
       } else if (didUpdate === false) {
-        session.auditor?.log({
+        session.auditor?.log?.({
           tag: AuditRecordType.FACT,
           fact,
           action: AuditAction.INSERTION,
@@ -97,7 +100,7 @@ export const upsertFact = <T>(
       }
     }
   } catch (e) {
-    session.auditor?.flush()
+    session.auditor?.flush?.()
     throw e
   }
 }

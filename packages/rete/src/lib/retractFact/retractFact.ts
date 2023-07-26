@@ -27,7 +27,7 @@ export const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
           `Expected fact ${fact} to be in node.facts at id: ${idAttr[0]}, attr: ${idAttr[1]}`
         )
       }
-      session.auditor?.log({
+      session.auditor?.log?.({
         action: AuditAction.RETRACTION,
         fact,
         tag: AuditRecordType.FACT,
@@ -41,7 +41,7 @@ export const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
       fireRules(session)
     }
   } catch (e) {
-    session.auditor?.flush()
+    session.auditor?.flush?.()
     throw e
   }
 }

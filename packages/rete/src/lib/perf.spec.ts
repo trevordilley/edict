@@ -1,5 +1,5 @@
 import { rete } from './rete'
-import { Field, MatchT, vizOnlineUrl } from '@edict/rete'
+import { Field, MatchT } from '@edict/rete'
 import { performance } from 'perf_hooks'
 // import v8Profiler from 'v8-profiler-next'
 
@@ -187,7 +187,6 @@ describe('rete perf', () => {
     makeProduction('C')
     makeProduction('D')
     makeProduction('E')
-    console.log(vizOnlineUrl(session))
 
     rete.insertFact(session, ['Delta', 'delta', 1])
     const NUM_ENTITIES = 1000

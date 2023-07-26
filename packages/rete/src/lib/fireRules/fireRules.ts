@@ -23,7 +23,7 @@ export const fireRules = <T>(
     if (session.insideRule) {
       return
     }
-    session.auditor?.log({
+    session.auditor?.log?.({
       state: AuditEntryState.ENTER,
       tag: AuditRecordType.FIRE,
     })
@@ -123,14 +123,14 @@ export const fireRules = <T>(
             match.match.bindings
           ) {
             if (node.nodeType?.thenFn !== undefined) {
-              session.auditor?.log({
+              session.auditor?.log?.({
                 tag: AuditRecordType.RULE,
                 rule: node.ruleName,
                 trigger: AuditRuleTrigger.THEN,
                 state: AuditEntryState.ENTER,
               })
               node.nodeType.thenFn(bindingsToMatch(match.match.bindings))
-              session.auditor?.log({
+              session.auditor?.log?.({
                 tag: AuditRecordType.RULE,
                 rule: node.ruleName,
                 trigger: AuditRuleTrigger.THEN,
@@ -146,14 +146,14 @@ export const fireRules = <T>(
       for (const node of thenFinallyQueue) {
         session.triggeredNodeIds.clear()
         if (node.nodeType?.thenFinallyFn !== undefined) {
-          session.auditor?.log({
+          session.auditor?.log?.({
             tag: AuditRecordType.RULE,
             rule: node.ruleName,
             trigger: AuditRuleTrigger.THEN_FINALLY,
             state: AuditEntryState.ENTER,
           })
           node.nodeType.thenFinallyFn()
-          session.auditor?.log({
+          session.auditor?.log?.({
             tag: AuditRecordType.RULE,
             rule: node.ruleName,
             trigger: AuditRuleTrigger.THEN_FINALLY,
@@ -176,13 +176,13 @@ export const fireRules = <T>(
       }
     }
     session.triggeredSubscriptionQueue.clear()
-    session.auditor?.log({
+    session.auditor?.log?.({
       state: AuditEntryState.ENTER,
       tag: AuditRecordType.FIRE,
     })
     return { executedNodes, session }
   } catch (e) {
-    session.auditor?.flush()
+    session.auditor?.flush?.()
     throw e
   }
 }

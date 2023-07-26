@@ -39,6 +39,7 @@ export const rightActivationWithAlphaNode = <T>(
     if (token.kind === TokenKind.UPDATE && child.disableFastUpdates) {
       if (token.oldFact === undefined)
         throw new Error(`Expected token ${token.fact} to have an oldFact`)
+
       rightActivationWithJoinNode(session, child, idAttr, {
         fact: token.oldFact,
         kind: TokenKind.RETRACT,
