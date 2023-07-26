@@ -69,10 +69,11 @@ export const consoleAuditor = (
     const insertColor = colorizeOutput ? `\x1b[32m` : ''
     const retractionColor = colorizeOutput ? `\x1b[31m` : ''
     const thenColor = colorizeOutput ? `\x1b[34m` : ''
+    const updateColor = thenColor
     const thenFinallyColor = colorizeOutput ? `\x1b[36m` : ''
     if (record.tag === AuditRecordType.FACT) {
       if (record.action === AuditAction.UPDATE) {
-        delta = `${insertColor}+[${record.fact}], ${retractionColor}-[${record.oldFact}]`
+        delta = `${retractionColor}-[${record.oldFact}] ${updateColor}--> ${insertColor}+[${record.fact}] `
       } else {
         const symbol =
           record.action === AuditAction.INSERTION
