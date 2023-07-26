@@ -7,8 +7,8 @@ interface Schema {
   reason: string
   password: string
 }
-
-export const session = edict<Schema>(true, consoleAuditor())
+export const auditor = consoleAuditor()
+export const session = edict<Schema>(true, auditor)
 
 const MIN_LENGTH = 12
 session

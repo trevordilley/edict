@@ -118,12 +118,12 @@ export const edict = <SCHEMA extends object>(
     const enact = (enaction?: EnactionArgs<SCHEMA, T>) => {
       const production = rete.initProduction<SCHEMA, EnactArgs<SCHEMA, T>>({
         name: name,
-        thenFn: (args) => {
-          enaction?.then?.(args.vars)
-        },
         condFn: (args) => enaction?.when?.(convertMatchFn(args)) ?? true,
         convertMatchFn,
       })
+      if (enaction?.then !== undefined) {
+        production.thenFn = (args) => enaction?.then?.(args.vars)
+      }
       if (enaction?.thenFinally !== undefined) {
         production.thenFinallyFn = (session) =>
           enaction?.thenFinally?.(() => rete.queryAll(session, production))

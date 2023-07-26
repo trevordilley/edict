@@ -122,19 +122,21 @@ export const fireRules = <T>(
             match.match.enabled &&
             match.match.bindings
           ) {
-            session.auditor?.log({
-              tag: AuditRecordType.RULE,
-              rule: node.ruleName,
-              trigger: AuditRuleTrigger.THEN,
-              state: AuditEntryState.ENTER,
-            })
-            node.nodeType?.thenFn?.(bindingsToMatch(match.match.bindings))
-            session.auditor?.log({
-              tag: AuditRecordType.RULE,
-              rule: node.ruleName,
-              trigger: AuditRuleTrigger.THEN,
-              state: AuditEntryState.EXIT,
-            })
+            if (node.nodeType?.thenFn !== undefined) {
+              session.auditor?.log({
+                tag: AuditRecordType.RULE,
+                rule: node.ruleName,
+                trigger: AuditRuleTrigger.THEN,
+                state: AuditEntryState.ENTER,
+              })
+              node.nodeType.thenFn(bindingsToMatch(match.match.bindings))
+              session.auditor?.log({
+                tag: AuditRecordType.RULE,
+                rule: node.ruleName,
+                trigger: AuditRuleTrigger.THEN,
+                state: AuditEntryState.EXIT,
+              })
+            }
             add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
           }
         }
@@ -143,19 +145,21 @@ export const fireRules = <T>(
       // Execute `thenFinally` blocks
       for (const node of thenFinallyQueue) {
         session.triggeredNodeIds.clear()
-        session.auditor?.log({
-          tag: AuditRecordType.RULE,
-          rule: node.ruleName,
-          trigger: AuditRuleTrigger.THEN_FINALLY,
-          state: AuditEntryState.ENTER,
-        })
-        node.nodeType?.thenFinallyFn?.()
-        session.auditor?.log({
-          tag: AuditRecordType.RULE,
-          rule: node.ruleName,
-          trigger: AuditRuleTrigger.THEN_FINALLY,
-          state: AuditEntryState.ENTER,
-        })
+        if (node.nodeType?.thenFinallyFn !== undefined) {
+          session.auditor?.log({
+            tag: AuditRecordType.RULE,
+            rule: node.ruleName,
+            trigger: AuditRuleTrigger.THEN_FINALLY,
+            state: AuditEntryState.ENTER,
+          })
+          node.nodeType.thenFinallyFn()
+          session.auditor?.log({
+            tag: AuditRecordType.RULE,
+            rule: node.ruleName,
+            trigger: AuditRuleTrigger.THEN_FINALLY,
+            state: AuditEntryState.EXIT,
+          })
+        }
         add(nodeToTriggeredNodeIds, node, session.triggeredNodeIds)
       }
 
