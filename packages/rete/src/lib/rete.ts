@@ -19,6 +19,7 @@ import { fireRules } from './fireRules/fireRules'
 import { retractFactByIdAndAttr } from './retractFactByIdAndAttr/retractFactByIdAndAttr'
 import { insertFact } from './insertFact/insertFact'
 import { retractFact } from './retractFact/retractFact'
+import { retrieveFactValueByIdAttr } from './retrieveFactValueByIdAttr/retrieveFactValueByIdAttr'
 
 export const rete = {
   get,
@@ -31,6 +32,7 @@ export const rete = {
   retractFactByIdAndAttr,
   insertFact,
   contains,
+  retrieveFactValueByIdAttr,
   addProductionToSession,
   addConditionsToProduction,
   subscribeToProduction,

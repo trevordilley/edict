@@ -84,6 +84,10 @@ export type Enact<SCHEMA extends object, T extends ConditionArgs<SCHEMA>> = (
 
 export interface IEdict<SCHEMA extends object> {
   insert: (args: InsertEdictFact<SCHEMA>) => void
+  get: <ATTR extends keyof SCHEMA>(
+    id: string,
+    attr: ATTR
+  ) => SCHEMA[ATTR] | undefined
   retract: (id: string, ...attrs: (keyof SCHEMA)[]) => void
   retractByConditions: (
     id: string,

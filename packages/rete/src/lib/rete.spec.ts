@@ -378,6 +378,9 @@ describe('rete', () => {
     )
     rete.addProductionToSession(session, production)
     rete.insertFact(session, [Id.Bob, 'Color', 'blue'])
+    expect(rete.retrieveFactValueByIdAttr(session, Id.Bob, 'Color')).toBe(
+      'blue'
+    )
     rete.insertFact(session, [Id.Yair, 'LeftOf', Id.Zach])
     rete.insertFact(session, [Id.Alice, 'Color', 'maize'])
     rete.insertFact(session, [Id.Yair, 'RightOf', Id.Bob])
@@ -387,6 +390,9 @@ describe('rete', () => {
     expect(results.length).toBe(1)
 
     rete.retractFact(session, [Id.Yair, 'RightOf', Id.Bob])
+    expect(
+      rete.retrieveFactValueByIdAttr(session, Id.Yair, 'RightOf')
+    ).toBeUndefined()
     rete.fireRules(session)
     const newResults = rete.queryAll(session, production)
     expect(newResults.length).toBe(0)

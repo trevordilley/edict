@@ -60,6 +60,10 @@ export const edict = <SCHEMA extends object>(
     })
   }
 
+  const get = <T extends keyof SCHEMA>(id: string, attr: T) => {
+    return rete.retrieveFactValueByIdAttr(session, id, attr)
+  }
+
   const retractByConditions = (
     id: string,
     conditions: { [key in keyof SCHEMA]?: any }
@@ -209,9 +213,6 @@ export const edict = <SCHEMA extends object>(
         return filters
       }
 
-      const get = <SCHEMA>(id: string, attr: SCHEMA) => {
-        session
-      }
       const query = (filter?: QueryArgs<SCHEMA, T>) => {
         if (!filter) return rete.queryAll(session, production)
         return rete.queryAll(session, production, convertFilterArgs(filter))
@@ -267,6 +268,7 @@ export const edict = <SCHEMA extends object>(
         queryOne,
         subscribe,
         subscribeOne,
+        get,
         rule: production,
       }
     }
@@ -297,6 +299,7 @@ export const edict = <SCHEMA extends object>(
   }
 
   return {
+    get,
     insert,
     retract,
     retractByConditions,

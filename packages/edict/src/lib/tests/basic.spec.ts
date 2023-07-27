@@ -30,7 +30,7 @@ type Schema = {
 describe('edict...', () => {
   it('test', () => {
     const auditor = consoleAuditor(AuditorMode.BATCH)
-    const { rule, insert, fire } = edict<Schema>(false, auditor)
+    const { rule, insert, fire, get } = edict<Schema>(false, auditor)
     const results = rule(
       'number of conditions != number of facts',
       ({ LeftOf, RightOf, Height }) => ({
@@ -79,7 +79,7 @@ describe('edict...', () => {
         Height: 72,
       },
     })
-
+    expect(get(Id.George, 'Height')).toBe(72)
     fire()
     auditor.flush()
     const allResults = results.query()
@@ -141,7 +141,7 @@ describe('edict...', () => {
   })
 
   it('join value with id', () => {
-    const { insert, fire, rule } = edict<Schema>(true)
+    const { insert, rule, get } = edict<Schema>(true)
 
     const results = rule('join', ({ Color, Height }) => ({
       [Id.Bob]: {
@@ -172,12 +172,12 @@ describe('edict...', () => {
         LeftOf: Id.Charlie,
       },
     })
-
+    expect(get(Id.Charlie, 'Color')).toBe('green')
     expect(results.query().length).toBe(1)
   })
 
   it('adding facts out of order', () => {
-    const { rule, insert, fire } = edict<Schema>()
+    const { rule, insert, fire, get } = edict<Schema>()
 
     const results = rule(
       'adding facts out of order',
@@ -227,6 +227,7 @@ describe('edict...', () => {
     insert({ [Id.Yair]: { RightOf: Id.Bob } })
     insert({ [Id.Alice]: { LeftOf: Id.David } })
     insert({ [Id.David]: { Color: 'white' } })
+    expect(get(Id.David, 'Color')).toBe('white')
     fire()
     expect(results.query().length).toBe(1)
   })
@@ -305,7 +306,7 @@ describe('edict...', () => {
   })
 
   it('Async then and thenFinally work', async () => {
-    const { rule, insert, fire } = edict<Schema>(false)
+    const { rule, insert, get, fire } = edict<Schema>(false)
     let thenFinallyCount = 0
     rule('Filters work', ({ Color }) => ({
       $person: {
@@ -370,11 +371,13 @@ describe('edict...', () => {
     await new Promise((r) => setTimeout(r, 0))
     const results = heightQuery.query()
     expect(results.length).toBe(4)
-    results.forEach(({ $person: { Color, Height } }) => {
+    results.forEach(({ $person: { id, Color, Height } }) => {
       if (Color === 'red') expect(Height).toBe(10)
       if (Color === 'blue') expect(Height).toBe(20)
       if (Color === 'orange') expect(Height).toBe(30)
     })
+    const h = get('tom', 'Height')
+    expect(get('tom', 'Height')).toBe(30)
     expect(thenFinallyCount).toBe(1)
   })
 })
