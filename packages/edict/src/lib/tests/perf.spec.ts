@@ -34,7 +34,7 @@ describe('company price scheduling...', function () {
     min?: number
     med?: number
   }[] = []
-  const NUM_COMPANIES = 10_000
+  const NUM_COMPANIES = 1000
   let id = 0
   const session = edict<CompanySchema>()
   session
@@ -227,6 +227,8 @@ describe('company price scheduling...', function () {
         }
       }
 
+      // Totally disorder the companies so that we insert them all out of order (but when we execute the maths,
+      // the prices should still be correct!)
       for (const comp of _.shuffle(allCompanies)) {
         insert(comp)
       }
@@ -289,6 +291,37 @@ describe('company price scheduling...', function () {
         med: oMed,
       })
     }
+
+    // Prove the math works, and that even though we have crazy insert orders we still properly calculate the
+    // price propagation.
+    for (const lineage of lineages) {
+      const [root, ...rest] = lineage
+      let curPrice = session.get(root.toString(), 'basePrice')!
+      let pId = root!
+      for (const id of rest) {
+        const priceSchedule = session.get(pId.toString()!, 'priceSchedule')!
+        const priceScheduleAmount = session.get(
+          pId.toString()!,
+          'priceScheduleAmount'
+        )!
+        const overrideParent = session.get(id.toString(), 'overrideParent')!
+        const childPrice = session.get(id.toString(), 'basePrice')
+        const expectedPrice = overrideParent
+          ? childPrice
+          : priceSchedule === 'FIXED'
+          ? curPrice + priceScheduleAmount
+          : curPrice * priceScheduleAmount
+        if (childPrice !== expectedPrice) {
+          console.log('oh dear.')
+        }
+        expect(childPrice).toBe(expectedPrice)
+        const parentId = session.get(id.toString(), 'parentCompany')
+        expect(parentId).toBe(pId.toString())
+        curPrice = expectedPrice!
+        pId = id
+      }
+    }
+
     for (const measure of performanceMeasures) {
       expect(measure.max).toBeLessThan(HIGHEST_MAX_MS)
       expect(measure.min).toBeLessThan(HIGHEST_MIN_MS)

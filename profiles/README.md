@@ -2,7 +2,7 @@
 Describes how to generate and use cpu profiles
 
 ## Making Profiles
-The `perf.RENAMETORUN.ts` test will generate cpu profiles on each run
+The `perf.spec.ts` test will generate cpu profiles on each run
 
 ## Reading the profiles
 You can either drag/drop these profiles onto http://speedscope.app or 

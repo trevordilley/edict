@@ -12,7 +12,7 @@ Essentially, `edict` does not need to be the fastest library, but it should at l
 be an acceptable choice (instead of a total non-starter).
 
 ## Testing Performance
-The [perf.RENAMETORUN.ts](../src/lib/perf.spec.ts) file has several tests based on this
+The [perf.spec.ts](../src/lib/perf.spec.ts) file has several tests based on this
 [benchmark repo](https://github.com/noctjs/ecs-benchmark). Ideally `edict` can eventually be
 a reasonable entry on its table. As of Dec 28, 2022 that is not true. Having `edict` on those tables
 would be ridiculous.
