@@ -1,29 +1,30 @@
 import { ExecutedNodes } from '@edict/rete'
 
+export const recursionLimitMessage = <T>(
+  limit: number,
+  executedNodes: ExecutedNodes<T>
+) => {
+  let rules: string[] = []
+  for (const node of executedNodes) {
+    const key = [...node.keys()][0]
+    rules.push(key.ruleName)
+  }
+  // Start at the end, cause we're definitely deep into the loop
+  // at the end!
+  rules.reverse()
+  const endIdx = rules.indexOf(rules[0], 1)
+  const text =
+    endIdx === 1
+      ? `${rules[0]} is triggering itself!`
+      : `Cycle detected! ${rules.slice(0, endIdx).reverse().join(' -> ')}`
+
+  throw new Error(
+    `${text}\nRecursion limit hit. The current limit is ${limit} (set by the recursionLimit param of fireRules).\n NOTE: The first rule mentioned may not be the beginning of the cycle!`
+  )
+}
 export const raiseRecursionLimit = <T>(
   limit: number,
   executedNodes: ExecutedNodes<T>
 ) => {
-  let nodes = {}
-  for (let i = executedNodes.length - 1; i >= 0; i--) {
-    const currNodes = {}
-    const nodeToTriggeredNodes = executedNodes[i]
-    for (const n of nodeToTriggeredNodes) {
-      const node = n[0]
-      const triggeredNodes = n[1]
-
-      const obj = {}
-      for (const triggeredNode of triggeredNodes) {
-        if (triggeredNode.ruleName in nodes) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          obj[triggeredNode.ruleName] = nodes[triggeredNode.ruleName]
-        }
-      }
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      currNodes[node.ruleName] = obj
-    }
-    nodes = currNodes
-  }
+  throw new Error(recursionLimitMessage(limit, executedNodes))
 }

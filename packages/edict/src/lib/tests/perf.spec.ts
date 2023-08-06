@@ -48,7 +48,7 @@ describe('company price scheduling...', function () {
         },
         $child: {
           parentCompany: { join: '$parent' },
-          basePrice: { then: false },
+          basePrice,
           overrideParent: { match: false },
         },
       })

@@ -23,6 +23,7 @@ export const fireRules = <T>(
     if (session.insideRule) {
       return
     }
+    session.insideRule = true
     session.auditor?.log?.({
       state: AuditEntryState.ENTER,
       tag: AuditRecordType.FIRE,
@@ -180,8 +181,10 @@ export const fireRules = <T>(
       state: AuditEntryState.ENTER,
       tag: AuditRecordType.FIRE,
     })
+    session.insideRule = false
     return { executedNodes, session }
   } catch (e) {
+    session.insideRule = false
     session.auditor?.flush?.()
     throw e
   }

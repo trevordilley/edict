@@ -3,6 +3,7 @@
 
 import { PRODUCTION_ALREADY_EXISTS_BEHAVIOR } from '@edict/rete'
 
+export type Pojo = { [key: string]: object }
 export type ConditionOptions<T> = { then?: boolean; match?: T; join?: string }
 export type Condition<SCHEMA extends object> = {
   [ATTR in keyof SCHEMA]: ConditionOptions<SCHEMA[ATTR]>
