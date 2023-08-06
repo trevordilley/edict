@@ -48,7 +48,7 @@ describe('raiseRecursionLimit...', () => {
     makeCyclicProduction(session, 'c', 'd')
     makeCyclicProduction(session, 'f', 'g')
     rete.insertFact(session, ['npc', 'a', 1])
-    rete.fireRules(session)
+    expect(() => rete.fireRules(session)).toThrow()
   })
 
   it('describes cycles correctly', () => {
@@ -56,7 +56,7 @@ describe('raiseRecursionLimit...', () => {
 
     makeCyclicProduction(session, 'a', 'a')
     rete.insertFact(session, ['npc', 'a', 1])
-    rete.fireRules(session)
+    expect(() => rete.fireRules(session)).toThrow()
   })
 
   it('detects correct cyle even if other rules present', () => {
