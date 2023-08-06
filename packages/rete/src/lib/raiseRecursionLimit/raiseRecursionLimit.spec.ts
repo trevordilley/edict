@@ -61,9 +61,15 @@ describe('raiseRecursionLimit...', () => {
 
   it('detects correct cyle even if other rules present', () => {
     const session = rete.initSession<Schema>(false)
-  })
-
-  it('productions with lots of other conditions?', () => {
-    const session = rete.initSession<Schema>(false)
+    makeCyclicProduction(session, 'b', 'c')
+    makeCyclicProduction(session, 'c', 'd')
+    makeCyclicProduction(session, 'a', 'e')
+    makeCyclicProduction(session, 'e', 'f')
+    makeCyclicProduction(session, 'f', 'g')
+    makeCyclicProduction(session, 'g', 'a')
+    rete.insertFact(session, ['npc', 'b', 1])
+    rete.fireRules(session)
+    rete.insertFact(session, ['npc', 'a', 1])
+    rete.fireRules(session)
   })
 })
