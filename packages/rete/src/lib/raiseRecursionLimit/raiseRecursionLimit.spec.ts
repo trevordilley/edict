@@ -70,6 +70,6 @@ describe('raiseRecursionLimit...', () => {
     rete.insertFact(session, ['npc', 'b', 1])
     rete.fireRules(session)
     rete.insertFact(session, ['npc', 'a', 1])
-    rete.fireRules(session)
+    expect(() => rete.fireRules(session)).toThrow()
   })
 })
