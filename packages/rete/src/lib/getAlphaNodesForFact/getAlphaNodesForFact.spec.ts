@@ -1,5 +1,8 @@
 import { getAlphaNodesForFact } from './getAlphaNodesForFact'
-import { TestingSchema, testingSimpleSession } from '../testingUtils.spec'
+import {
+  TestingSchema,
+  testingSimpleSession,
+} from '../../tests/testingUtils.spec'
 import { insertFact } from '../insertFact/insertFact'
 import { AlphaNode, Fact, Field } from '@edict/rete'
 

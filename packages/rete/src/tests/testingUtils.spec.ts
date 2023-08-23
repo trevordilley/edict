@@ -1,8 +1,8 @@
 import { Field, MatchT } from '@edict/rete'
-import { initSession } from './initSession/initSession'
-import { initProduction } from './initProduction/initProduction'
-import { addProductionToSession } from './addProductionToSession/addProductionToSession'
-import { addConditionsToProduction } from './addConditionsToProduction/addConditionsToProduction'
+import { initSession } from '../lib/initSession/initSession'
+import { initProduction } from '../lib/initProduction/initProduction'
+import { addProductionToSession } from '../lib/addProductionToSession/addProductionToSession'
+import { addConditionsToProduction } from '../lib/addConditionsToProduction/addConditionsToProduction'
 
 export interface TestingSchema {
   A: number

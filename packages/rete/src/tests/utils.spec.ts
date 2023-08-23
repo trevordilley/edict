@@ -1,4 +1,4 @@
-import { hashIdAttrs } from './utils'
+import { hashIdAttrs } from '../lib/utils'
 
 describe('hashing idAttrs...', () => {
   it('different arrays of idAttrs hash uniquely', () => {

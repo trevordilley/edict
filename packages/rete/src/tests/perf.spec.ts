@@ -1,4 +1,4 @@
-import { rete } from './rete'
+import { rete } from '../lib/rete'
 import { Field, MatchT } from '@edict/rete'
 import { performance } from 'perf_hooks'
 // import v8Profiler from 'v8-profiler-next'
