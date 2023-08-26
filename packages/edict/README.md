@@ -1,31 +1,68 @@
-# `edict`
+# `edict` is an efficient rule engine in Typescript
 
-Organize your business logic in terms of rules which trigger reactively!
+`edict` enables declarative reactive programming against _data patterns_.
 
-With `edict`, you can express your business logic as a set of rules.
+* **Declarative**: dependencies between rules are managed by `edict`, the right logic will execute in the right order without explicitly being defined.
+* **Reactive**: Logic is triggered efficiently when the data changes.
+* **Data _patterns_**: Instead of reacting to a specific value, `edict` can react to the creation/mutation of relationships between data points.
 
-> Why `edict`? What makes this library special?
->
-> First it is built upon the Rete algorithm (see [acknowledgements](#acknowledgements)!), which enables efficient rule execution on large databases of facts.
->
-> Second, it takes advantage of javascripts syntax to write rules declaratively. Generally, rule engines need to create a new syntax entirely to make writing rules less cumbersome. Javascript has a couple key syntax features which we use liberally to make writing rules enjoyable.
+We call the data patterns _rules_.
+
+```typescript
+type CompanySchema = {
+  name: string
+  basePrice: number
+  markupKind: "FIXED" | "PERCENT"
+  markupAmount: number
+  parentCompany: string
+  overrideParent: boolean
+}
+
+// Sessions contain facts and rules
+const session = edict<CompanySchema>()
+
+session.rule(
+    // Rules can have descriptive names
+    'Child companies apply a markup to their price based on their parent companies price',
+   
+    // Schema should be destructured so we can use the names easily
+    ({ basePrice, markupKind, markupAmount }) => ({
+      // Prefixing an $ to an id means "all ids that have these attributes", a join. 
+      $parent: {
+        basePrice,
+      },
+      
+      $child: {
+        // $child will match only if the `parentCompany` value matches the $parent id  
+        parentCompany: { join: '$parent' },
+        basePrice,
+        
+        // Only match $child who are not overriding their parent
+        overrideParent: { match: false },
+        markupKind,
+        markupAmount,
+      },
+    })
+  )
+  .enact({
+    then: ({ $parent, $child }) => {
+      session.insert({
+        [$child.id]: {
+          basePrice:
+            $child.markupKind === 'FIXED'
+              ? $parent.basePrice + $child.markupAmount
+              : $parent.basePrice * $child.markupAmount,
+        },
+      })
+    },
+  })
+```
 
 ## Installation
 
-```bash
-yarn add @edict/edict 
-
-# or...
-
-npm i @edict/edict 
-```
+`yarn add @edict/edict` or `npm i @edict/edict`
 
 ## Usage
-
-We'll explore usage by example.
-
-In this example we'll build an application that figures out which users are
-having a birthday!
 
 ### The Schema
 
@@ -36,20 +73,20 @@ facts.
 
 ```typescript
 type Schema = {
-  name: string
-  email: string
-  birthDay: Date
-  isCelebratingBirthDay: boolean
-  sibling: string
-  todaysDate: Date
-}
+  name: string,
+  email: string,
+  birthDay: Date,
+  isCelebratingBirthDay: boolean,
+  sibling: string,
+  todaysDate: Date,
+};
 
 // This `session` will maintain it's own database of facts and rules. It also will
 // expose functions to add/remove new rules and facts, query the facts etc.
 //
 // `edict` does not create "global" data, each invocation of `edict()` creates
 // new independent sessions
-const mySession = edict<Schema>()
+const mySession = edict<Schema>();
 ```
 
 One the key benefits to having an attribute schema is type-safety. `edict` will not allow you to insert
@@ -57,63 +94,62 @@ facts with attributes not declared in the schema for that session. The other rea
 with proper editor tooling (auto-completion!) it's trivial to explore the space of possible facts and attributes!
 
 ### The Session
-
 The value returned from `edict()` is your _session_. With this session you can
 add rules, insert facts, and query the current state of its fact database. All of this
 is contained to the instance of the session, which means you can have several `edict` sessions
-running at once. Perhaps you have a edict session managing global application state, and smaller more
+running at once. Perhaps you have a core session managing global application state, and smaller more
 specific sessions managing the state of a component, or a session accumulating facts along some request middleware.
 `edict` is helpful at any scale!
 
 Now let's create our first rule!
 
 ```typescript
-const { rule } = mySession
+const { rule } = mySession;
 
-const results = rule(
-  'When a birthday is today, celebrate the birthday!',
-  ({ birthDay, todaysDate }) => ({
-    // "today" matches the id when inserting the fact (see above)
-    today: {
-      todaysDate,
-    },
+const results = rule('When a birthday is today, celebrate the birthday!',
+  ({ birthDay, todaysDate }) =>
+    ({
+      // Matches the fact with id `today` with attribute `todaysDate`
+      // This would be inserted like this: `session.insert({today: { todaysDate: new Date() }})`
+      today: {
+        todaysDate,
+      },
 
-    // "$user" is a _bound_ id. By prefixing the id with "$" you signal to edict that
-    // you want to match ANY fact with the following attributes. This allows you to "join"
-    // many facts to be processed by this rule!
-    $user: {
-      birthDay,
-    },
-  })
-)
-  // `rule()` returns an object with `enact()`
-  // `enact()` let's you apply reactions to the
-  // rule you've defined, and adds it to the session
-  .enact({
-    // "when" filters out facts, runs before "then"
-    when: ({ $user, today }) => {
-      // Match users who have a birthday today!
-      return (
-        $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
-        $user.birthDay.getDate() === today.todaysDate.getDate()
-      )
-    },
+      // "$user" is a _bound_ id. By prefixing the id with "$" you signal to edict that
+      // you want to match ANY facts with the following attributes that have the same id. 
+      // This allows you to "join" many facts to be processed by this rule!
+      $user: {
+        birthDay,
+      },
+    }))
+    // `rule()` returns an object with `enact()` 
+    // `enact()` let's you apply reactions to the
+    // rule you've defined, and adds it to the session
+    .enact({
+      // "when" filters out facts, runs before "then"
+      when: ({ $user, today }) => {
+        // Match users who have a birthday today!
+        return (
+          $user.birthDay.getMonth() === today.todaysDate.getMonth() &&
+          $user.birthDay.getDate() === today.todaysDate.getDate()
+        )
+     },
 
-    then: ({ $user }) => {
-      insert({ [$user.id]: { isCelebratingBirthDay: true } })
-    },
-  })
+     then: ({ $user }) => {
+      insert({ [$user.id]: { isCelebratingBirthDay: true } });
+     },
+});
 ```
 
 ### Inserting Facts
 
 Now that we have our session, let's insert some facts.
 
-_Note! You need to define rules before your facts are inserted!_
+*Note! You need to define rules before your facts are inserted!*
 
 ```typescript
 // Here is how you would insert multiple facts about different people with names and emails
-const { insert } = mySession
+const { insert } = mySession;
 
 insert({
   // "bob" is the "id", it could be an integer, uuid, whatever makes sense for your application!
@@ -133,18 +169,18 @@ insert({
     name: 'Jack Maxwell',
     email: 'jack@gmail.com',
     birthDay: new Date('2022-03-02'),
-    sibling: 'jill',
+    sibling: "jill"
   },
   jill: {
     name: 'Jill Maxwell',
     email: 'jill@gmail.com',
     birthDay: new Date('2022-03-02'),
-    sibling: 'jack',
+    sibling: "jack"
   },
 
   // Let's pretend it's Tom, Jack and Jill's birthdays!
-  today: { todaysDate: new Date('2022-03-02') },
-})
+  today: {todaysDate: new Date('2022-03-02')},
+});
 ```
 
 > Under the hood, facts are represented as entity-attribute-value tuples. So the
@@ -199,15 +235,16 @@ like queries, and allow you to pull out a subset of the facts matching the condi
 of the rule!
 
 ```typescript
-const usersCelebratingBirthdays = rule(
-  'All users celebrating their birthday',
-  ({ name, isCelebratingBirthDay }) => ({
+const usersCelebratingBirthdays = rule("All users celebrating their birthday", ({ name, isCelebratingBirthDay }) =>
+  ({
     $user: {
-      name,
+      name, 
       isCelebratingBirthDay,
     },
   })
-).enact({ when: ({ $user }) => $user.isCelebratingBirthDay })
+).enact(
+  { when: ({$user}) => $user.isCelebratingBirthDay }
+)
 
 const { fire } = mySession
 
@@ -217,15 +254,12 @@ const { fire } = mySession
 // use-case.
 fire()
 
-const users = usersCelebratingBirthdays.query()
+const users = usersCelebratingBirthdays.query();
 
-users.forEach(({ $user }) =>
-  console.log(`${$user.name} is celebrating their birthday!`)
-)
+users.forEach(({$user}) => console.log(`${$user.name} is celebrating their birthday!`));
 ```
 
 #### Use filters to get specific results
-
 Sometimes we want to get very specific subsets of facts, say all the data for
 a particular user, but we don't want to make a whole rule specifically for that
 user.
@@ -238,13 +272,12 @@ the fact we want
 
 const jack = usersCelebratingBirthdays.query({
   $name: {
-    ids: ['jack'],
-  },
+      ids: ["jack"]
+  }
 })
 ```
 
 The object passed into `query` has this shape:
-
 ```
 {
   sameIdAsCondition: {
@@ -256,20 +289,19 @@ The object passed into `query` has this shape:
 
 It can be cumbersome to deal with an array of results if you _know_ there
 will just be a single result. In that case you can use `queryOne()`
-
 ```typescript
-// Return the first matching fact. This is nice if you expect there to be
+
+// Return the first matching fact. This is nice if you expect there to be 
 // just one result (say for an id you know is unique). Returns `undefined`
 // if nothing matches
 const justJack = usersCelebratingBirthdays.queryOne({
-  $name: {
-    ids: ['jack'],
-  },
-})
+    $name: {
+        ids: ["jack"]
+    }
+}) 
 ```
 
 ### Subscriptions
-
 To make integrating with reactive frameworks like React or RxJs easy, `edict` also provides
 subscription functions. They follow the same patterns as `query()` and `queryOne()`,
 exposing `subscribe()` and `subscribeOne()`. These functions also take filter objects
@@ -277,9 +309,9 @@ just like `query()`
 
 ```typescript
 // Whenever facts which would trigger this rule are inserted, the callback
-// passed into subscribe will be called.
-const unsub = usersCelebratingBirthdays.subscribe((users) => {
-  console.log(users)
+// passed into subscribe will be called. 
+const unsub = usersCelebratingBirthdays.subscribe(users => {
+    console.log(users)
 })
 
 // To stop subscribing, just call the returned callback
@@ -287,52 +319,44 @@ unsub()
 
 // You can use a filter object as well, and if you expect a single result there
 // is a `subscribeOne` variation
-const unsubOne = usersCelebratingBirthdays.subscribeOne(
-  (jack) => {
+const unsubOne = usersCelebratingBirthdays.subscribeOne(jack => {
     console.log(jack)
-  },
-  {
-    // The filter arg is the second argument
+},
+  { // The filter arg is the second argument
     $users: {
-      ids: ['jack'],
-    },
-  }
-)
+        ids: ["jack"]
+    }
+})
 
 // Then unsub later:
 unsubOne()
 ```
 
 #### Integrating with React
-
 It's not too hard to integrate this nicely with React, and other frameworks
 and libraries should be just as simple (honestly, React is probably the most
 complex one to integrate with). Below is an example `useBirthdayCelebrators` hook
 
 ```typescript
 const useBirthdayCelebrators = () => {
-  const [celebrators, setCelebrators] = useState(
-    usersCelebratingBirthdays.query()
-  )
-  useEffect(() => {
-    return usersCelebratingBirthdays.subscribe((users) => setCelebrators(users))
-  })
-  return celebrators
+    const [celebrators, setCelebrators] = useState(usersCelebratingBirthdays.query())
+    useEffect(() => {
+        return usersCelebratingBirthdays.subscribe(users => setCelebrators(users))
+    })
+    return celebrators
 }
 ```
 
 You'll probably be making quite a few hooks, and it can get tedious doing the above,
 here's a general hook you can use with a given rule so you can focus on data transforming
-in hooks instead of plumbing
+instead of plumbing
 
 ```typescript
+
 // These examples should help expose the types you'll need to
 // work with if you want to make general purpose subscriptions
 // to rules in other frameworks like RxJs
-export const useRuleOne = <
-  SCHEMA extends object,
-  T extends ConditionArgs<SCHEMA>
->(
+export const useRuleOne = <SCHEMA extends object, T extends ConditionArgs<SCHEMA>>(
   rule: EnactionResults<SCHEMA, T>,
   filter?: QueryArgs<SCHEMA, T>
 ) => {
@@ -350,30 +374,28 @@ export const useRule = <SCHEMA extends object, T extends ConditionArgs<SCHEMA>>(
   return match
 }
 ```
-
 You can rewrite the `useBirthdayCelebrators` hook with `useRule` like so...
 
 ```typescript
-const useBirthdayCelebrators = () => useRule(usersCelebratingBirthdays)
+const useBirthdayCelebrators = () => useRule(usersCelebratingBirthdays) 
 ```
 
 ### Complex Conditions (joins and matches)
 
 #### Id joins with $
-
 In a rules conditions, any id starting with a `$` is considered a
 _joined id_. Instead of matching on a _specific_ id, the rule will
 any set of facts which have the same id AND have an entry for each
 attribute.
 
 The above examples already leverage this, but let's look in a bit more detail
-
 ```typescript
-const results = rule('All users with a birtday', ({ birthDay }) => ({
-  $user: {
-    birthDay,
-  },
-})).enact()
+const results = rule('All users with a birtday', ({ birthDay }) =>
+    ({
+      $user: {
+        birthDay,
+      },
+    })).enact()
 ```
 
 because `$user` starts with a `$`, this rule will apply to all facts which
@@ -381,42 +403,40 @@ have an entry for `birthDay`.
 
 #### Attribute joins to relate ids
 
-> **TODO: Make a test for these examples**
->
-> There might be issues in the code below, but the spirit of it is correct!
-
 Sometimes, you may want to match facts based on their relationship to
 each other. The example below illustrates such a condition
 
 ```typescript
-rule('Users with same birthday', ({ name, birthDay }) => ({
-  $userA: {
-    name,
-    birthDay,
-    sibling: { join: '$userB' },
-  },
-  $userB: {
-    name,
-    birthDay,
-    sibling: { join: '$userA' },
-  },
-})).enact({
-  when: ({ $userA, $userB }) =>
-    console.log(`${$userA.name} and ${$userB.name} are siblings!`),
-})
+rule("Users with same birthday", ({ name, birthDay }) =>
+  ({
+    $userA: {
+      name,
+      birthDay,
+      sibling: { join: "$userB" }
+    },
+    $userB: { 
+      name,
+      birthDay,
+      sibling: { join: "$userA" }
+    },
+  })
+).enact(
+  {
+    when: ({$userA, $userB}) => console.log(`${$userA.name} and ${$userB.name} are siblings!`)
+  }
+)
 ```
 
 #### Constraining matches to a specific value
-
 To match your conditions only when a specific value is supplied, you can use
 the `{match: someValue}` option on an attribute
 
 ```typescript
-const bobsBirthDay = rule('Users born on 2008-01-19', ({ name }) => ({
+const bobsBirthDay = rule("Users born on 2008-01-19", ({name}) => ({
   $user: {
     name,
-    birthDay: { match: new Date('2008-01-19') },
-  },
+    birthDay: {match: new Date("2008-01-19")}
+  }
 })).enact()
 
 const bob = bobsBirthDay.queryOne()
@@ -426,96 +446,80 @@ console.log(bob.$user.name)
 ```
 
 ## Avoiding infinite loops
-
 Sometimes a rule may run an `insert` or `retract` that causes
 a rule (or several) to re-trigger infinitely. The solution to this is to mark
 which attributes in your conditions should not cause a retrigger.
 
 ```typescript
-rule('Updating the date', ({ todaysDate }) => ({
+rule("Updating the date",({todaysDate}) => ({
   today: {
-    todaysDate,
-  },
+      todaysDate
+  } 
 })).enact({
-  then: ({ today }) => {
-    // This rule will trigger infinitely
-    insert({
-      today: {
-        todaysDate: `${new Date()}`,
-      },
-    })
-  },
+  then: ({today}) => {
+      // This rule will trigger infinitely 
+      insert({
+        today: {
+            todaysDate: `${new Date()}`
+        }
+      })
+  }
 })
 ```
-
 To remedy this, you can use the `{then: false}` option on an attribute
 to ensure the rule can't re-trigger itself in the same `fire()` if that
 specific attribute is changed
 
 ```typescript
-rule('Updating the date', () => ({
+rule("Updating the date",() => ({
   today: {
-    todaysDate: { then: false },
-  },
+    todaysDate: {then: false}
+  }
 })).enact({
-  then: ({ today }) => {
+  then: ({today}) => {
     // This rule will trigger once.
     // This is obviously a contrived example, generally if
-    // an attribute is causing an infinite trigger, that is a
+    // an attribute is causing an infinite trigger, that is a 
     // bug
     insert({
       today: {
-        todaysDate: `${new Date()}`,
-      },
+        todaysDate: `${new Date()}`
+      }
     })
-  },
+  }
 })
 ```
-
 ## Debugging
 
-> The tooling around this is still very much under active development!
+`edict` supplies a `consoleAuditor()` which when added a session will log nested output to the console
+such that it's a little easier to see what facts have been inserted/updated/retracted, and within what rule.
 
-When creating a new `edict` session, you can pass in an option to enable debugging
-
-**NOTE: Enabling profile WILL IMPACT PERFORMANCE!!!**
+If you're working in a node application, you'll want to hook into Chrome Devtools to see use the nice nesting
+features.
 
 ```typescript
-const session = edict<Schema>(
-  // Autofire defaults to false
-  false,
 
-  // `enabled: true` turns on debug profiling
-  { enabled: true }
+const auditor = consoleAuditor()
+const session = edict<Schema>(
+  false,
+  auditor
 )
 ```
 
-With profiling enabled, you now have access to various tools
+Then in your browser console you'll be able to enjoy output like this:
+![Log output in browser console using auditor](https://github.com/trevordilley/edict/blob/main/docs/imgs/auditor-screenshot.png)
 
-```typescript
-// A 'frame' is all the rules executed in a given `fire()`. Contains
-// The initial mutations applied on the first trigger, and then a list of
-// rules triggered until the `fire()` completed. Includes timing data for the
-// entire frame. The number of retained frames is equal to the value
-// of `maxFrameDumps` (defaults to 40)
-session.engineDebug.frames
+## Acknowledgements!
 
-// How many frames have been created since starting the session,
-// useful to determine if you're overfiring (especially if `autoFire` is true)
-session.engineDebug.numFramesSinceInit
+`edict` is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle rules](https://github.com/oakes/odoyle-rules) and [Pararules](https://github.com/oakes/pararules)!
+`edict` aims to bring their ideas into the TypeScript ecosystem!
 
-// An array of the inserts and retractions that have
-// been added since the last `fire()` call.
-session.engineDebug.mutationsSinceLastFire
+`edict` leverages the powerful and efficient Rete Algorithm. The [@edict/rete](https://github.com/trevordilley/edict/tree/main/packages/rete) package used in `edict`
+is an extremely literal port of [Pararules engine.nim](https://github.com/paranim/pararules/blob/master/src/pararules/engine.nim). This library wouldn't have been
+remotely possible without Zach's work. This library stands on his shoulders in every way!
 
-// Returns a ton of `performance` API data
-session.perf()
+(Also, if Javascript didn't allow `$` in the variable names, or allow the simple syntax of json attribute names, this libraries API wouldn't have worked either.)
 
-// Dumps a string that is a graphviz dotfile which diagrams
-// the rete network. Probably not that useful to you
-session.dotFile()
-```
+I'd also like to thank my youngest child for waking me up at god-awful early hours to "flatten his blanket" and "turn his pillow the other way", allowing me plenty of
+early mornings to keep on this work!
 
-Future changes in this space will be visualizations of rule
-execution, and delta's between the fact database before a `fire()` and after a
-`fire()` completes.
