@@ -3,7 +3,7 @@
 `edict` enables declarative reactive programming against _data patterns_.
 
 * **Declarative**: dependencies between rules are managed by `edict`, the right logic will execute in the right order without explicitly being defined.
-* **Reactive**: Logic is triggered when the _right_ data changes efficiently.
+* **Reactive**: Logic is triggered efficiently when the data changes.
 * **Data _patterns_**: Instead of reacting to a specific value, `edict` can react to the creation/mutation of relationships between data points.
 
 We call the data patterns _rules_. 
