@@ -4,7 +4,7 @@ import { hashIdAttr } from '../utils'
 import { rightActivationWithAlphaNode } from '../rightActivationWithAlphaNode/rightActivationWithAlphaNode'
 import { fireRules } from '../fireRules/fireRules'
 import _ from 'lodash'
-import { AuditAction, AuditRecordType } from '../audit/audit'
+import { AuditAction, AuditRecordType } from '../audit'
 
 export const retractFact = <T>(session: Session<T>, fact: Fact<T>) => {
   try {

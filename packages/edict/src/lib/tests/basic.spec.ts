@@ -1,4 +1,4 @@
-import { AuditorMode, consoleAuditor } from 'packages/rete/src/lib/audit/audit'
+import { AuditorMode, consoleAuditor } from 'packages/rete/src/lib/audit'
 import { edict } from '../core'
 
 type People = [id: number, color: string, leftOf: number, height: number][]

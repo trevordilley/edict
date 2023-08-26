@@ -2,7 +2,7 @@
 // So for a fact ["bob", "age", 13] this could be a map from
 // string to string | number
 
-import { Auditor } from './audit/audit'
+import { Auditor } from './audit'
 
 export type ValueOf<T> = T[keyof T]
 export type FactFragment<SCHEMA> = FactId | keyof SCHEMA | ValueOf<SCHEMA>

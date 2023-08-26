@@ -1,7 +1,7 @@
 import { edict } from '@edict/edict'
 import { FC, useEffect, useState } from 'react'
 import { ITodo } from './types'
-import { consoleAuditor } from '../../../../rete/src/lib/audit/audit'
+import { consoleAuditor } from '../../../../rete/src/lib/audit'
 
 // Edict is a simple state management library leveraging a reactive rule-based
 // approach to simplify and decouple logic from data

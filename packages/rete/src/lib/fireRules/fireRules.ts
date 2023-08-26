@@ -8,11 +8,7 @@ import {
 } from '@edict/rete'
 import { raiseRecursionLimit } from '../raiseRecursionLimit/raiseRecursionLimit'
 import { bindingsToMatch } from '../bindingsToMatch/bindingsToMatch'
-import {
-  AuditEntryState,
-  AuditRecordType,
-  AuditRuleTrigger,
-} from '../audit/audit'
+import { AuditEntryState, AuditRecordType, AuditRuleTrigger } from '../audit'
 
 const DEFAULT_RECURSION_LIMIT = 16
 export const fireRules = <T>(

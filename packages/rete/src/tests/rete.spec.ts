@@ -1,6 +1,6 @@
 import { rete } from '../lib/rete'
 import { FactFragment, Field, MatchT } from '../lib/types'
-import { AuditorMode, consoleAuditor } from '../lib/audit/audit'
+import { AuditorMode, consoleAuditor } from '../lib/audit'
 
 type People = [id: number, color: string, leftOf: number, height: number][]
 enum Id {

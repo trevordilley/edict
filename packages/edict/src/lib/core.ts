@@ -11,6 +11,7 @@ import {
 } from './types'
 import * as _ from 'lodash'
 import {
+  Auditor,
   ConvertMatchFn,
   Field,
   PRODUCTION_ALREADY_EXISTS_BEHAVIOR,
@@ -19,7 +20,6 @@ import {
   viz,
 } from '@edict/rete'
 import { insertFactToFact } from './utils'
-import { Auditor } from 'packages/rete/src/lib/audit/audit'
 
 export const attr = <T>(): T => undefined as any
 

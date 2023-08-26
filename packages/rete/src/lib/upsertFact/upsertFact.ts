@@ -2,7 +2,7 @@ import { AlphaNode, Fact, Session, TokenKind } from '@edict/rete'
 import { getIdAttr } from '../getIdAttr/getIdAttr'
 import { hashIdAttr } from '../utils'
 import { rightActivationWithAlphaNode } from '../rightActivationWithAlphaNode/rightActivationWithAlphaNode'
-import { AuditAction, AuditRecordType } from '../audit/audit'
+import { AuditAction, AuditRecordType } from '../audit'
 
 export const upsertFact = <T>(
   session: Session<T>,

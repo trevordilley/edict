@@ -7,7 +7,7 @@ import {
   Session,
 } from '@edict/rete'
 import { defaultInitMatch } from '../defaultInitMatch/defaultInitMatch'
-import { Auditor } from '../audit/audit'
+import { Auditor } from '../audit'
 
 export const initSession = <T>(
   autoFire = true,

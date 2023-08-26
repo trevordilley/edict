@@ -2,7 +2,7 @@ import { AlphaNode, Session, TokenKind } from '@edict/rete'
 import { hashIdAttr } from '../utils'
 import { rightActivationWithAlphaNode } from '../rightActivationWithAlphaNode/rightActivationWithAlphaNode'
 import { fireRules } from '../fireRules/fireRules'
-import { AuditAction, AuditRecordType } from '../audit/audit'
+import { AuditAction, AuditRecordType } from '../audit'
 
 export const retractFactByIdAndAttr = <T>(
   session: Session<T>,

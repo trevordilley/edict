@@ -1,5 +1,5 @@
 import { edict } from '@edict/edict'
-import { consoleAuditor } from '../../../../rete/src/lib/audit/audit'
+import { consoleAuditor } from '../../../../rete/src/lib/audit'
 
 interface Schema {
   meetsCriteria: boolean

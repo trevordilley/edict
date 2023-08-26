@@ -1,6 +1,6 @@
 import { edict } from '@edict/edict'
 import { Sex } from '@faker-js/faker'
-import { consoleAuditor } from '../../../../../rete/src/lib/audit/audit'
+import { consoleAuditor } from '../../../../../rete/src/lib/audit'
 
 export enum ProvinceClassification {
   TINY = 'tiny',
