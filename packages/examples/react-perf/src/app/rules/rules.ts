@@ -44,7 +44,6 @@ export interface Location {
 export enum CivilianJob {
   FARMER = 'farmer',
   CIVIC = 'civic',
-  POLICE = 'police',
   WORKER = 'worker',
 }
 
@@ -63,28 +62,6 @@ const session = edict<Schema>(true, consoleAud)
 
 const { rule } = session
 export const { insert, retract, fire } = session
-
-const CRIME_RATIO = 0.05
-
-rule(
-  'Locations without the right number of locationPolice are crime ridden',
-  ({ locationPopulation, locationPolice }) => ({
-    $location: {
-      locationPopulation,
-      locationPolice,
-    },
-  })
-).enact({
-  then: ({ $location: { id, locationPopulation, locationPolice } }) => {
-    const locationIsCrimeRidden =
-      locationPolice / locationPopulation < CRIME_RATIO
-    insert({
-      [id]: {
-        locationIsCrimeRidden,
-      },
-    })
-  },
-})
 
 const FARMER_RATIO = 0.1
 rule(
@@ -217,8 +194,6 @@ rule(
           jobKey = 'locationCivics'
         } else if (job === CivilianJob.FARMER) {
           jobKey = 'locationFarmers'
-        } else if (job === CivilianJob.POLICE) {
-          jobKey = 'locationPolice'
         } else if (job === CivilianJob.WORKER) {
           jobKey = 'locationWorkers'
         } else throw new Error(`Unrecognized job! ${job}`)

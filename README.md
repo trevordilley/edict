@@ -1,8 +1,12 @@
-# `edict` 
+# `edict` is an efficient rule engine in Typescript
 
-Organize your business logic in terms of rules. 
+`edict` enables declarative reactive programming against _data patterns_.
 
-Essentially, `edict` enables declarative reactive programming against _data patterns_. 
+* **Declarative**: dependencies between rules are managed by `edict`, the right logic will execute in the right order without explicitly being defined.
+* **Reactive**: Logic is triggered when the _right_ data changes efficiently.
+* **Data _patterns_**: Instead of reacting to a specific value, `edict` can react to the creation/mutation of relationships between data points.
+
+We call the data patterns _rules_. 
 
 ```typescript
 type CompanySchema = {
@@ -16,20 +20,27 @@ type CompanySchema = {
 
 
 const session = edict<CompanySchema>()
-
-session
-  .rule(
-    'Companies apply a markup to their parent companies price',
+session.rule(
+    
+    // Rules can have descriptive names
+    'Child companies apply a markup to their price based on their parent companies price',
+   
+    // Schema should be destructured so we can use the names easily
     ({ basePrice, markupKind, markupAmount }) => ({
+      // Prefixing an $ to an id means "all ids that have these attributes", a join. 
       $parent: {
         basePrice,
-        priceSchedule,
-        priceScheduleAmount,
       },
+      
       $child: {
+        // $child will match only if the `parentCompany` value matches the $parent id  
         parentCompany: { join: '$parent' },
         basePrice,
+        
+        // Only match $child who are not overriding their parent
         overrideParent: { match: false },
+        markupKind,
+        markupAmount,
       },
     })
   )
@@ -38,198 +49,16 @@ session
       session.insert({
         [$child.id]: {
           basePrice:
-            $parent.priceSchedule === 'FIXED'
-              ? $parent.basePrice + $parent.priceScheduleAmount
-              : $parent.basePrice * $parent.priceScheduleAmount,
+            $child.markupKind === 'FIXED'
+              ? $parent.basePrice + $child.markupAmount
+              : $parent.basePrice * $child.markupAmount,
         },
       })
     },
   })
 ```
 
-
-<details>
-<summary>:point_left: Show me the code!:star:</summary>
-
-The example below defines password validation as a series of rules.
-For this use-case, using `edict` might be a bit like [using a flamethrower to clear snow off your driveway](https://abc7ny.com/kentucky-flamethrower-cousin-eddie-flamethower-video-national-lampoons-christmas-vacation/9126313/). However, password validation
-really illustrates in a clear, self-contained way what using `edict` is like. 
-
-```typescript
-import { edict } from '@edict/edict'
-
-interface Schema {
-  meetsCriteria: boolean
-  valid: boolean
-  reason: string
-  password: string
-}
-
-export const session = edict<Schema>(true)
-
-const MIN_LENGTH = 12
-session
-  .rule(
-    `Password must be at least ${MIN_LENGTH} characters long`,
-    ({ password }) => ({
-      Password: {
-        password,
-      },
-    })
-  )
-  .enact({
-    then: ({ Password: { password } }) => {
-      session.insert({
-        Length: {
-          meetsCriteria: password.length >= MIN_LENGTH,
-        },
-      })
-    },
-  })
-
-session
-  .rule('Password must contain special characters', ({ password }) => ({
-    Password: {
-      password,
-    },
-  }))
-  .enact({
-    then: ({ Password: { password } }) => {
-      const specialCharacter =
-        /^(?=.*[~`!@#$%^&*()--+={}\[\]|\\:;"'<>,.?/_₹]).*$/
-      session.insert({
-        SpecialCharacters: {
-          meetsCriteria: specialCharacter.test(password),
-        },
-      })
-    },
-  })
-
-session
-  .rule('Password must contain a digit', ({ password }) => ({
-    Password: {
-      password,
-    },
-  }))
-  .enact({
-    then: ({ Password: { password } }) => {
-      const containsNumber = /^(?=.*[0-9]).*$/
-      session.insert({
-        Digit: {
-          meetsCriteria: containsNumber.test(password),
-        },
-      })
-    },
-  })
-
-session
-  .rule('Password has an uppercase character', ({ password }) => ({
-    Password: {
-      password,
-    },
-  }))
-  .enact({
-    then: ({ Password: { password } }) => {
-      const containsUpperCase = /^(?=.*[A-Z]).*$/
-      session.insert({
-        UpperCase: {
-          meetsCriteria: containsUpperCase.test(password),
-        },
-      })
-    },
-  })
-
-session
-  .rule('Password has a lowercase character', ({ password }) => ({
-    Password: {
-      password,
-    },
-  }))
-  .enact({
-    then: ({ Password: { password } }) => {
-      const containsLowerCase = /^(?=.*[a-z]).*$/
-      session.insert({
-        LowerCase: {
-          meetsCriteria: containsLowerCase.test(password),
-        },
-      })
-    },
-  })
-
-session
-  .rule('Password is not a common password', ({ password }) => ({
-    Password: {
-      password,
-    },
-  }))
-  .enact({
-    then: ({ Password: { password } }) => {
-      const commonPassword = ['123456', 'abcdef', '111111', '222222']
-      session.insert({
-        IsNotCommon: {
-          meetsCriteria: !commonPassword.includes(password),
-        },
-      })
-    },
-  })
-
-session
-  .rule('Password is trimmed', () => ({
-    Password: {
-      password: { then: false }, // Don't retrigger rule from insert in `then` block
-    },
-  }))
-  .enact({
-    then: ({ Password: { password } }) => {
-      session.insert({
-        Password: {
-          password: password.trim(),
-        },
-      })
-    },
-  })
-
-session
-  .rule('Passwords meeting all criteria are valid', ({ meetsCriteria }) => ({
-    $criteria: {
-      meetsCriteria,
-    },
-  }))
-  .enact({
-    thenFinally: (results) => {
-      const valid = results()
-        .map(({ $criteria }) => $criteria.meetsCriteria)
-        .reduce((prev, cur) => prev && cur)
-      session.insert({
-        Password: {
-          valid,
-        },
-      })
-    },
-  })
-
-export const passwordQuery = session
-  .rule('Password Query', ({ valid }) => ({
-    Password: {
-      valid,
-    },
-  }))
-  .enact()
-
-session.insert({ Password: { password: 'abc123' } })
-session.fire()
-console.log(passwordQuery.queryOne()?.Password.valid) // false
-
-session.insert({ Password: { password: 'A!bc1234blikblooshblosh' } })
-session.fire()
-console.log(passwordQuery.queryOne()?.Password.valid) // true
-```
-</details>
-
-* [Examples](#examples)
 * [Installation](#installation)
-* [Acknowledgements!](#acknowledgements-)
-* [Project Breakdown](#project-breakdown)
 * [Usage](#usage)
   + [The Schema](#the-schema)
   + [The Session](#the-session)
@@ -245,57 +74,15 @@ console.log(passwordQuery.queryOne()?.Password.valid) // true
     - [Constraining matches to a specific value](#constraining-matches-to-a-specific-value)
 * [Avoiding infinite loops](#avoiding-infinite-loops)
 * [Debugging](#debugging)
-
-With `edict`, you can express your business logic as a set of rules. 
-
-> Why `edict`? What makes this library special? 
-> 
-> First it is built upon the Rete algorithm (see [acknowledgements](#acknowledgements)!), which enables efficient rule execution on large databases of facts.
-> 
-> Second, it takes advantage of javascripts syntax to write rules declaratively. Generally, rule engines need to create a new syntax entirely to make writing rules less cumbersome. Javascript has a couple key syntax features which we use liberally to make writing rules enjoyable.  
-
-## Examples
-
-* [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
-  * [password validation](packages/examples/react-password) is a really clear and concise example of using rules implementing a familiar requirement!
-  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the `edict` library into your game logic (in a basic way)
-  * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
-  * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
+* [Examples](#examples)
+* [Acknowledgements](#acknowledgements)
+* [Project Breakdown](#project-breakdown)
 
 ## Installation
 
-```bash
-yarn add @edict/edict 
-
-# or...
-
-npm i @edict/edict 
-```
-
-
-## Acknowledgements!
-
-`edict` is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle rules](https://github.com/oakes/odoyle-rules) and [Pararules](https://github.com/oakes/pararules)!
-`edict` aims to bring their ideas into the TypeScript ecosystem!
-
-`edict` leverages the powerful and efficient Rete Algorithm. The [@edict/rete](https://github.com/trevordilley/edict/tree/main/packages/rete) package used in `edict` 
-is an extremely literal port of [Pararules engine.nim](https://github.com/paranim/pararules/blob/master/src/pararules/engine.nim). This library wouldn't have been
-remotely possible without Zach's work. This library stands on his shoulders in every way!
-
-(Also, if Javascript didn't allow `$` in the variable names, or allow the simple syntax of json attribute names, this libraries API wouldn't have worked either.)
-
-I'd also like to thank my youngest child for waking me up at god-awful early hours to "flatten his blanket" and "turn his pillow the other way", allowing me plenty of
-early mornings to keep on this work!
-
-## Project Breakdown
-* [@edict/edict](packages/edict/) is the main library used by other applications
-* [@edict/rete](packages/rete/) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!
+`yarn add @edict/edict` or `npm i @edict/edict` 
 
 ## Usage
-We'll explore usage by example. 
-
-In this example we'll build an application that figures out which users are
-having a birthday!
 
 ### The Schema
 
@@ -342,14 +129,15 @@ const { rule } = mySession;
 const results = rule('When a birthday is today, celebrate the birthday!',
   ({ birthDay, todaysDate }) =>
     ({
-      // "today" matches the id when inserting the fact (see above)
+      // Matches the fact with id `today` with attribute `todaysDate`
+      // This would be inserted like this: `session.insert({today: { todaysDate: new Date() }})`
       today: {
         todaysDate,
       },
 
       // "$user" is a _bound_ id. By prefixing the id with "$" you signal to edict that
-      // you want to match ANY fact with the following attributes. This allows you to "join"
-      // many facts to be processed by this rule!
+      // you want to match ANY facts with the following attributes that have the same id. 
+      // This allows you to "join" many facts to be processed by this rule!
       $user: {
         birthDay,
       },
@@ -475,10 +263,10 @@ const usersCelebratingBirthdays = rule("All users celebrating their birthday", (
     },
   })
 ).enact(
-  {when: ({$user}) => $user.isCelebratingBirthDay}
+  { when: ({$user}) => $user.isCelebratingBirthDay }
 )
 
-const {fire} = mySession
+const { fire } = mySession
 
 // fire() will actually trigger your rules. If you call edict like
 // this: `edict(true)` then every insert or retraction will automatically
@@ -581,7 +369,7 @@ const useBirthdayCelebrators = () => {
 
 You'll probably be making quite a few hooks, and it can get tedious doing the above, 
 here's a general hook you can use with a given rule so you can focus on data transforming
-in hooks instead of plumbing
+instead of plumbing
 
 ```typescript
 
@@ -634,9 +422,6 @@ because `$user` starts with a `$`, this rule will apply to all facts which
 have an entry for `birthDay`. 
 
 #### Attribute joins to relate ids
-> **TODO: Make a test for these examples**
->
-> There might be issues in the code below, but the spirit of it is correct!
 
 Sometimes, you may want to match facts based on their relationship to
 each other. The example below illustrates such a condition 
@@ -725,48 +510,48 @@ rule("Updating the date",() => ({
 })
 ```
 ## Debugging 
-> The tooling around this is still very much under active development!
 
-When creating a new `edict` session, you can pass in an option to enable debugging
+`edict` supplies a `consoleAuditor()` which when added a session will log nested output to the console
+such that it's a little easier to see what facts have been inserted/updated/retracted, and within what rule. 
 
-**NOTE: Enabling profile WILL IMPACT PERFORMANCE!!!**
+If you're working in a node application, you'll want to hook into Chrome Devtools to see use the nice nesting 
+features. 
 
 ```typescript
+
+const auditor = consoleAuditor()
 const session = edict<Schema>(
-  // Autofire defaults to false 
-  false, 
-  
-  // `enabled: true` turns on debug profiling
-  { enabled: true}
+  false,
+  auditor
 )
 ```
-With profiling enabled, you now have access to various tools
 
-```typescript
+Then in your browser console you'll be able to enjoy output like this:
+![Log output in browser console using auditor](docs/imgs/auditor-screenshot.png)
 
-// A 'frame' is all the rules executed in a given `fire()`. Contains
-// The initial mutations applied on the first trigger, and then a list of 
-// rules triggered until the `fire()` completed. Includes timing data for the 
-// entire frame. The number of retained frames is equal to the value
-// of `maxFrameDumps` (defaults to 40)
-session.engineDebug.frames
 
-// How many frames have been created since starting the session,
-// useful to determine if you're overfiring (especially if `autoFire` is true)
-session.engineDebug.numFramesSinceInit
+## Examples
 
-// An array of the inserts and retractions that have
-// been added since the last `fire()` call. 
-session.engineDebug.mutationsSinceLastFire
+* [examples](packages/examples/) are where I keep my running versions of apps that use this library for testing.
+  * [password validation](packages/examples/react-password) is a really clear and concise example of using rules implementing a familiar requirement!
+  * [phaser](packages/examples/phaser-game/) A perf test using phaser. Also shows how to incorporate the `edict` library into your game logic (in a basic way)
+  * [cities](packages/examples/react-perf/) This example really digs into nested rules. The goal is to push `edict` performance and show rule usage in a non-trivial way
+  * [realworld](packages/examples/react-realworld/) An implementation of [Conduit](https://demo.realworld.io/#/) (by [gothinkster's RealWorldApp](https://github.com/gothinkster/realworld))
 
-// Returns a ton of `performance` API data 
-session.perf() 
+## Acknowledgements!
 
-// Dumps a string that is a graphviz dotfile which diagrams
-// the rete network. Probably not that useful to you
-session.dotFile()
-```
-Future changes in this space will be visualizations of rule
-execution, and delta's between the fact database before a `fire()` and after a
-`fire()` completes. 
+`edict` is inspired by [Zach Oakes'](https://github.com/oakes) libraries [O'doyle rules](https://github.com/oakes/odoyle-rules) and [Pararules](https://github.com/oakes/pararules)!
+`edict` aims to bring their ideas into the TypeScript ecosystem!
 
+`edict` leverages the powerful and efficient Rete Algorithm. The [@edict/rete](https://github.com/trevordilley/edict/tree/main/packages/rete) package used in `edict`
+is an extremely literal port of [Pararules engine.nim](https://github.com/paranim/pararules/blob/master/src/pararules/engine.nim). This library wouldn't have been
+remotely possible without Zach's work. This library stands on his shoulders in every way!
+
+(Also, if Javascript didn't allow `$` in the variable names, or allow the simple syntax of json attribute names, this libraries API wouldn't have worked either.)
+
+I'd also like to thank my youngest child for waking me up at god-awful early hours to "flatten his blanket" and "turn his pillow the other way", allowing me plenty of
+early mornings to keep on this work!
+
+## Project Breakdown
+* [@edict/edict](packages/edict/) is the main library used by other applications
+* [@edict/rete](packages/rete/) this is the port from Pararules that does all the heavy lifting. It's a separate library so anyone that wants to leverage a robust rules engine implementation in the javascript ecosystem can do so!

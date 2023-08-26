@@ -181,8 +181,8 @@ describe('company price scheduling...', function () {
           [cId]: {
             ...child,
             parentCompany: `${id}`,
-            priceSchedule: 'PERCENT',
-            priceScheduleAmount: 2,
+            markupKind: 'PERCENT',
+            markupAmount: Math.random() + 0.5,
           },
         })
         for (let k = 0; k < COMPLEXITY; k++) {
@@ -199,7 +199,7 @@ describe('company price scheduling...', function () {
               [cccId]: {
                 ...greatGrandChild,
                 parentCompany: `${ccId}`,
-                overrideParent: true,
+                overrideParent: Math.random() >= 0.5,
                 basePrice: 23,
               },
             })
@@ -210,6 +210,8 @@ describe('company price scheduling...', function () {
                 [ccccId]: {
                   ...greatGreatGrandChild,
                   parentCompany: `${cccId}`,
+                  markupKind: 'PERCENT',
+                  markupAmount: Math.random() + 0.5,
                 },
               })
               for (let n = 0; n < COMPLEXITY; n++) {
@@ -294,6 +296,20 @@ describe('company price scheduling...', function () {
 
     // Prove the math works, and that even though we have crazy insert orders we still properly calculate the
     // price propagation.
+
+    // For Debugging Purposes
+    const companies = []
+    for (const lineage of lineages) {
+      const l = []
+      for (const id of lineage) {
+        let curPrice = session.get(id.toString(), 'basePrice')!
+        const priceSchedule = session.get(id.toString()!, 'markupKind')!
+        const priceScheduleAmount = session.get(id.toString()!, 'markupAmount')!
+        l.push({ id, curPrice, priceSchedule, priceScheduleAmount })
+      }
+      companies.push(l)
+    }
+
     for (const lineage of lineages) {
       const [root, ...rest] = lineage
       let curPrice = session.get(root.toString(), 'basePrice')!
@@ -303,6 +319,9 @@ describe('company price scheduling...', function () {
         const priceScheduleAmount = session.get(id.toString()!, 'markupAmount')!
         const overrideParent = session.get(id.toString(), 'overrideParent')!
         const childPrice = session.get(id.toString(), 'basePrice')
+        if (priceSchedule !== 'FIXED') {
+          console.log('Not fixed')
+        }
         const expectedPrice = overrideParent
           ? childPrice
           : priceSchedule === 'FIXED'
