@@ -18,8 +18,8 @@ type PriceSchedule = 'PERCENT' | 'FIXED'
 type CompanySchema = {
   name: string
   basePrice: number
-  priceSchedule: PriceSchedule
-  priceScheduleAmount: number
+  markupKind: PriceSchedule
+  markupAmount: number
   parentCompany: string
   overrideParent: boolean
 }
@@ -39,17 +39,17 @@ describe('company price scheduling...', function () {
   const session = edict<CompanySchema>()
   session
     .rule(
-      'Parent Company Price Schedule propagates',
-      ({ basePrice, priceSchedule, priceScheduleAmount }) => ({
+      'Child companies apply a markup to their price based on their parent companies price',
+      ({ basePrice, markupKind, markupAmount }) => ({
         $parent: {
           basePrice,
-          priceSchedule,
-          priceScheduleAmount,
         },
         $child: {
           parentCompany: { join: '$parent' },
           basePrice,
           overrideParent: { match: false },
+          markupKind,
+          markupAmount,
         },
       })
     )
@@ -58,9 +58,9 @@ describe('company price scheduling...', function () {
         session.insert({
           [$child.id]: {
             basePrice:
-              $parent.priceSchedule === 'FIXED'
-                ? $parent.basePrice + $parent.priceScheduleAmount
-                : $parent.basePrice * $parent.priceScheduleAmount,
+              $child.markupKind === 'FIXED'
+                ? $parent.basePrice + $child.markupAmount
+                : $parent.basePrice * $child.markupAmount,
           },
         })
       },
@@ -71,15 +71,15 @@ describe('company price scheduling...', function () {
       'companies',
       ({
         parentCompany,
-        priceSchedule,
-        priceScheduleAmount,
+        markupKind,
+        markupAmount,
         basePrice,
         overrideParent,
       }) => ({
         $company: {
           parentCompany,
-          priceSchedule,
-          priceScheduleAmount,
+          markupKind: markupKind,
+          markupAmount: markupAmount,
           basePrice,
           overrideParent,
         },
@@ -91,8 +91,8 @@ describe('company price scheduling...', function () {
     id++,
     {
       name: faker.name.fullName(),
-      priceSchedule: 'FIXED',
-      priceScheduleAmount: 10,
+      markupKind: 'FIXED',
+      markupAmount: 10,
       overrideParent: false,
       basePrice: 10,
       parentCompany: 'parent',
@@ -248,13 +248,13 @@ describe('company price scheduling...', function () {
         const b = performance.now()
         session.insert({
           [parentIds[0]]: {
-            priceScheduleAmount: i * 20,
+            markupAmount: i * 20,
           },
           [parentIds[1]]: {
-            priceSchedule: i % 2 === 0 ? 'FIXED' : 'PERCENT',
+            markupKind: i % 2 === 0 ? 'FIXED' : 'PERCENT',
           },
           [parentIds[2]]: {
-            priceScheduleAmount: i + 10,
+            markupAmount: i + 10,
           },
         })
         const a = performance.now()
@@ -299,11 +299,8 @@ describe('company price scheduling...', function () {
       let curPrice = session.get(root.toString(), 'basePrice')!
       let pId = root!
       for (const id of rest) {
-        const priceSchedule = session.get(pId.toString()!, 'priceSchedule')!
-        const priceScheduleAmount = session.get(
-          pId.toString()!,
-          'priceScheduleAmount'
-        )!
+        const priceSchedule = session.get(id.toString()!, 'markupKind')!
+        const priceScheduleAmount = session.get(id.toString()!, 'markupAmount')!
         const overrideParent = session.get(id.toString(), 'overrideParent')!
         const childPrice = session.get(id.toString(), 'basePrice')
         const expectedPrice = overrideParent

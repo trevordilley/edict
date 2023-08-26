@@ -1,5 +1,51 @@
 # `edict` 
-Organize your business logic in terms of rules which trigger reactively!
+
+Organize your business logic in terms of rules. 
+
+Essentially, `edict` enables declarative reactive programming against _data patterns_. 
+
+```typescript
+type CompanySchema = {
+  name: string
+  basePrice: number
+  markupKind: "FIXED" | "PERCENT"
+  markupAmount: number
+  parentCompany: string
+  overrideParent: boolean
+}
+
+
+const session = edict<CompanySchema>()
+
+session
+  .rule(
+    'Companies apply a markup to their parent companies price',
+    ({ basePrice, markupKind, markupAmount }) => ({
+      $parent: {
+        basePrice,
+        priceSchedule,
+        priceScheduleAmount,
+      },
+      $child: {
+        parentCompany: { join: '$parent' },
+        basePrice,
+        overrideParent: { match: false },
+      },
+    })
+  )
+  .enact({
+    then: ({ $parent, $child }) => {
+      session.insert({
+        [$child.id]: {
+          basePrice:
+            $parent.priceSchedule === 'FIXED'
+              ? $parent.basePrice + $parent.priceScheduleAmount
+              : $parent.basePrice * $parent.priceScheduleAmount,
+        },
+      })
+    },
+  })
+```
 
 
 <details>
