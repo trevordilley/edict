@@ -18,10 +18,10 @@ type CompanySchema = {
   overrideParent: boolean
 }
 
-
+// Sessions contain facts and rules
 const session = edict<CompanySchema>()
+
 session.rule(
-    
     // Rules can have descriptive names
     'Child companies apply a markup to their price based on their parent companies price',
    
